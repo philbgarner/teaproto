@@ -890,6 +890,7 @@ export default function App() {
   }, [
     tempDropPerStep,
     satiationDropPerStep,
+    logicalRef,
     solidData,
     initialMobs,
     showMsg,
