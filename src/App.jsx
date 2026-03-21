@@ -5,6 +5,7 @@ import { generateContent } from "../mazetools/src/content";
 import { buildTileAtlas } from "../mazetools/src/rendering/tileAtlas";
 import { PerspectiveDungeonView } from "../mazetools/src/rendering/PerspectiveDungeonView";
 import { RECIPES } from "./tea";
+import SettingsTabs from "./SettingsTabs";
 
 import "./App.css";
 
@@ -267,6 +268,7 @@ function useEotBCamera(
       startTime: 0,
       animating: false,
     };
+    setCamera({ x: startX, z: startZ, yaw: 0 });
   }, [startX, startZ]);
 
   useEffect(() => {
@@ -386,11 +388,11 @@ function HandDisplay({ label, tea }) {
 // Constants
 // ---------------------------------------------------------------------------
 const DUNGEON_SEED = 42;
-const DUNGEON_W = 42;
-const DUNGEON_H = 42;
-const MOB_NAMES = ["Weary Traveler", "Village Elder", "Mysterious Stranger"];
+const DUNGEON_W = 32;
+const DUNGEON_H = DUNGEON_W;
+const MOB_NAMES = ["Skeleton", "Goblin", "Troll"];
 
-const TURNS_PER_WAVE = 30;
+const TURNS_PER_WAVE = 120;
 const WAVE_COUNTDOWN_THRESHOLD = 20;
 const PLAYER_MAX_HP = 30;
 const PLAYER_DEFENSE = 2;
@@ -446,18 +448,34 @@ const STATUS_CSS = {
 // App
 // ---------------------------------------------------------------------------
 export default function App() {
+  const [dungeonSeed, setDungeonSeed] = useState(DUNGEON_SEED);
+  const [dungeonWidth, setDungeonWidth] = useState(DUNGEON_W);
+  const [dungeonHeight, setDungeonHeight] = useState(DUNGEON_H);
+  const [minLeafSize, setMinLeafSize] = useState(6);
+  const [maxLeafSize, setMaxLeafSize] = useState(14);
+  const [minRoomSize, setMinRoomSize] = useState(3);
+  const [maxRoomSize, setMaxRoomSize] = useState(7);
+
   const dungeon = useMemo(
     () =>
       generateBspDungeon({
-        width: DUNGEON_W,
-        height: DUNGEON_H,
-        seed: DUNGEON_SEED,
-        minLeafSize: 6,
-        maxLeafSize: 14,
-        minRoomSize: 3,
-        maxRoomSize: 7,
+        width: dungeonWidth,
+        height: dungeonHeight,
+        seed: dungeonSeed,
+        minLeafSize,
+        maxLeafSize,
+        minRoomSize,
+        maxRoomSize,
       }),
-    [],
+    [
+      dungeonSeed,
+      dungeonWidth,
+      dungeonHeight,
+      minLeafSize,
+      maxLeafSize,
+      minRoomSize,
+      maxRoomSize,
+    ],
   );
 
   const solidData = useMemo(() => dungeon.textures.solid.image.data, [dungeon]);
@@ -596,6 +614,7 @@ export default function App() {
   const [tempDropPerStep, setTempDropPerStep] = useState(0.5);
   const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.5);
   const [supersatiationBonus, setSupersatiationBonus] = useState(50);
+  const [turnsPerWave, setTurnsPerWave] = useState(TURNS_PER_WAVE);
 
   // Wave / combat state
   const [adventurers, setAdventurers] = useState([]);
@@ -617,6 +636,31 @@ export default function App() {
   if (mobSatiationsRef.current === null) {
     mobSatiationsRef.current = initialMobs.map(() => 40);
   }
+
+  // Reset all game state whenever the dungeon regenerates
+  useEffect(() => {
+    const freshSatiations = initialMobs.map(() => 40);
+    setPlayerHands({ left: null, right: null });
+    setMobSatiations(freshSatiations);
+    setStoveStates(new Map());
+    setShowRecipeMenu(false);
+    setActiveStoveKey(null);
+    setMessage(null);
+    setAdventurers([]);
+    setCurrentWave(0);
+    setTurnCount(0);
+    setPlayerXp(0);
+    setXpDrops([]);
+    setPlayerHp(PLAYER_MAX_HP);
+    adventurersRef.current = [];
+    currentWaveRef.current = 0;
+    turnCountRef.current = 0;
+    playerXpRef.current = 0;
+    xpDropsRef.current = [];
+    playerHpRef.current = PLAYER_MAX_HP;
+    mobSatiationsRef.current = freshSatiations;
+    ruinedNotifiedRef.current = new Set();
+  }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mobiles = useMemo(
     () => [
@@ -667,11 +711,11 @@ export default function App() {
         let spawnX = room.x;
         let spawnZ = room.z + i;
         // clamp to bounds
-        spawnX = Math.max(1, Math.min(DUNGEON_W - 2, spawnX));
-        spawnZ = Math.max(1, Math.min(DUNGEON_H - 2, spawnZ));
+        spawnX = Math.max(1, Math.min(dungeonWidth - 2, spawnX));
+        spawnZ = Math.max(1, Math.min(dungeonHeight - 2, spawnZ));
         const key = `${spawnX}_${spawnZ}`;
         if (occupied.has(key)) {
-          spawnZ = Math.max(1, Math.min(DUNGEON_H - 2, room.z - i));
+          spawnZ = Math.max(1, Math.min(dungeonHeight - 2, room.z - i));
         }
         occupied.add(`${spawnX}_${spawnZ}`);
         spawned.push({
@@ -747,8 +791,8 @@ export default function App() {
     let stepMessage = null;
 
     // --- Wave spawning ---
-    if (newTurnCount % TURNS_PER_WAVE === 0) {
-      newWave = Math.floor(newTurnCount / TURNS_PER_WAVE);
+    if (newTurnCount % turnsPerWave === 0) {
+      newWave = Math.floor(newTurnCount / turnsPerWave);
       currentWaveRef.current = newWave;
       const spawned = spawnAdventurersForWave(newWave);
       newAdventurers = [...newAdventurers.filter((a) => a.alive), ...spawned];
@@ -776,8 +820,9 @@ export default function App() {
 
     // --- Adventurer AI ---
     function isWalkable(x, z) {
-      if (x < 0 || z < 0 || x >= DUNGEON_W || z >= DUNGEON_H) return false;
-      return solidData[z * DUNGEON_W + x] === 0;
+      if (x < 0 || z < 0 || x >= dungeonWidth || z >= dungeonHeight)
+        return false;
+      return solidData[z * dungeonWidth + x] === 0;
     }
 
     // Build occupied set (other adventurers + mob positions + player)
@@ -890,7 +935,6 @@ export default function App() {
   }, [
     tempDropPerStep,
     satiationDropPerStep,
-    logicalRef,
     solidData,
     initialMobs,
     showMsg,
@@ -910,8 +954,8 @@ export default function App() {
 
   const { camera, logicalRef } = useEotBCamera(
     solidData,
-    DUNGEON_W,
-    DUNGEON_H,
+    dungeonWidth,
+    dungeonHeight,
     spawnX,
     spawnZ,
     { onStep, blocked: showRecipeMenu },
@@ -1184,8 +1228,8 @@ export default function App() {
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-      const cellW = canvas.width / DUNGEON_W;
-      const cellH = canvas.height / DUNGEON_H;
+      const cellW = canvas.width / dungeonWidth;
+      const cellH = canvas.height / dungeonHeight;
       const hitRadius = Math.max(cellW * 1.2, 5);
       for (const mob of minimapMobs) {
         const cx = (mob.x + 0.5) * cellW * (rect.width / canvas.width);
@@ -1204,8 +1248,8 @@ export default function App() {
     drawMinimap(
       minimapRef.current,
       solidData,
-      DUNGEON_W,
-      DUNGEON_H,
+      dungeonWidth,
+      dungeonHeight,
       camera.x,
       camera.z,
       camera.yaw,
@@ -1256,8 +1300,8 @@ export default function App() {
             {texture && (
               <PerspectiveDungeonView
                 solidData={solidData}
-                width={DUNGEON_W}
-                height={DUNGEON_H}
+                width={dungeonWidth}
+                height={dungeonHeight}
                 cameraX={camera.x}
                 cameraZ={camera.z}
                 yaw={camera.yaw}
@@ -1282,7 +1326,7 @@ export default function App() {
 
             {/* Wave countdown overlay */}
             {(() => {
-              const turnsLeft = TURNS_PER_WAVE - (turnCount % TURNS_PER_WAVE);
+              const turnsLeft = turnsPerWave - (turnCount % turnsPerWave);
               const show =
                 turnsLeft <= WAVE_COUNTDOWN_THRESHOLD &&
                 adventurers.filter((a) => a.alive).length === 0;
@@ -1455,7 +1499,9 @@ export default function App() {
                 <div
                   style={{
                     position: "absolute",
-                    left: minimapTooltip.canvasX + 8,
+                    ...(minimapTooltip.canvasX > 98
+                      ? { right: 196 - minimapTooltip.canvasX + 8, left: "auto" }
+                      : { left: minimapTooltip.canvasX + 8 }),
                     top: minimapTooltip.canvasY - 8,
                     background: "rgba(0,0,0,0.88)",
                     border: `1px solid ${minimapTooltip.mob.cssColor}`,
@@ -1501,52 +1547,30 @@ export default function App() {
                 </div>
               )}
             </div>
-            <div style={{ fontSize: 11, color: "#888" }}>
-              <div style={{ marginBottom: 2 }}>
-                Cooling: {tempDropPerStep.toFixed(2)}°/step
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={3}
-                step={0.05}
-                value={tempDropPerStep}
-                onChange={(e) => setTempDropPerStep(parseFloat(e.target.value))}
-                style={{ width: "100%" }}
-              />
-            </div>
-            <div style={{ fontSize: 11, color: "#888" }}>
-              <div style={{ marginBottom: 2 }}>
-                Satiation loss: {satiationDropPerStep.toFixed(1)}/step
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={satiationDropPerStep}
-                onChange={(e) =>
-                  setSatiationDropPerStep(parseFloat(e.target.value))
-                }
-                style={{ width: "100%" }}
-              />
-            </div>
-            <div style={{ fontSize: 11, color: "#888" }}>
-              <div style={{ marginBottom: 2 }}>
-                Preference bonus: {supersatiationBonus}%
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={supersatiationBonus}
-                onChange={(e) =>
-                  setSupersatiationBonus(parseInt(e.target.value))
-                }
-                style={{ width: "100%" }}
-              />
-            </div>
+            <SettingsTabs
+              tempDropPerStep={tempDropPerStep}
+              setTempDropPerStep={setTempDropPerStep}
+              satiationDropPerStep={satiationDropPerStep}
+              turnsPerWave={turnsPerWave}
+              setTurnsPerWave={setTurnsPerWave}
+              setSatiationDropPerStep={setSatiationDropPerStep}
+              supersatiationBonus={supersatiationBonus}
+              setSupersatiationBonus={setSupersatiationBonus}
+              dungeonSeed={dungeonSeed}
+              setDungeonSeed={setDungeonSeed}
+              dungeonWidth={dungeonWidth}
+              setDungeonWidth={setDungeonWidth}
+              dungeonHeight={dungeonHeight}
+              setDungeonHeight={setDungeonHeight}
+              minLeafSize={minLeafSize}
+              setMinLeafSize={setMinLeafSize}
+              maxLeafSize={maxLeafSize}
+              setMaxLeafSize={setMaxLeafSize}
+              minRoomSize={minRoomSize}
+              setMinRoomSize={setMinRoomSize}
+              maxRoomSize={maxRoomSize}
+              setMaxRoomSize={setMaxRoomSize}
+            />
             <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
               <div>W / ↑ - move forward</div>
               <div>S / ↓ - move back</div>
