@@ -1,0 +1,3 @@
+[submodule "mazetools"]
+	path = mazetools
+	url = https://github.com/philbgarner/roguelike-mazetools
