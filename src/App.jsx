@@ -67,10 +67,10 @@ function makeStoveProto() {
   ctx.lineWidth = 3;
   ctx.strokeRect(3, 3, 58, 58);
   ctx.fillStyle = "#ff9900";
-  ctx.font = "bold 44px monospace";
+  ctx.font = "bold 12px monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("S", 32, 32);
+  ctx.fillText("Stove", 32, 32);
   const tex = new THREE.CanvasTexture(canvas);
   tex.magFilter = THREE.NearestFilter;
   tex.minFilter = THREE.NearestFilter;
@@ -82,14 +82,17 @@ function makeStoveProto() {
 }
 
 // ---------------------------------------------------------------------------
-// Mob sprite atlas (simple canvas glyph)
+// Mob + Adventurer sprite atlas (2 columns: col 0 = mob, col 1 = adventurer)
 // ---------------------------------------------------------------------------
 function makeMobSpriteAtlas() {
+  const TILE = 64;
   const canvas = document.createElement("canvas");
-  canvas.width = 64;
-  canvas.height = 64;
+  canvas.width = TILE * 2;
+  canvas.height = TILE;
   const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, 64, 64);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Col 0 — friendly mob (circle + "M")
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.arc(32, 28, 26, 0, Math.PI * 2);
@@ -99,11 +102,23 @@ function makeMobSpriteAtlas() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("M", 32, 28);
+
+  // Col 1 — adventurer (circle + "A")
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(TILE + 32, 28, 26, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#111";
+  ctx.font = "bold 32px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("A", TILE + 32, 28);
+
   const tex = new THREE.CanvasTexture(canvas);
   tex.magFilter = THREE.NearestFilter;
   tex.minFilter = THREE.NearestFilter;
   tex.generateMipmaps = false;
-  return { texture: tex, columns: 1, rows: 1 };
+  return { texture: tex, columns: 2, rows: 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -114,6 +129,33 @@ function cardinalDir(yaw) {
   const norm = ((yaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const idx = Math.round((norm / (Math.PI * 2)) * 8) % 8;
   return DIRS[idx];
+}
+
+function greedyStepToward(ax, az, tx, tz, walkableFn, occupiedFn) {
+  const dx = tx - ax;
+  const dz = tz - az;
+  if (dx === 0 && dz === 0) return null;
+  const moves =
+    Math.abs(dx) >= Math.abs(dz)
+      ? [
+          [Math.sign(dx), 0],
+          [0, Math.sign(dz)],
+          [0, -Math.sign(dz)],
+          [-Math.sign(dx), 0],
+        ]
+      : [
+          [0, Math.sign(dz)],
+          [Math.sign(dx), 0],
+          [-Math.sign(dx), 0],
+          [0, -Math.sign(dz)],
+        ];
+  for (const [ddx, ddz] of moves) {
+    if (ddx === 0 && ddz === 0) continue;
+    const nx = ax + ddx;
+    const nz = az + ddz;
+    if (walkableFn(nx, nz) && !occupiedFn(nx, nz)) return { x: nx, z: nz };
+  }
+  return null;
 }
 
 function drawMinimap(
@@ -348,6 +390,43 @@ const DUNGEON_W = 42;
 const DUNGEON_H = 42;
 const MOB_NAMES = ["Weary Traveler", "Village Elder", "Mysterious Stranger"];
 
+const TURNS_PER_WAVE = 30;
+const WAVE_COUNTDOWN_THRESHOLD = 20;
+const PLAYER_MAX_HP = 30;
+const PLAYER_DEFENSE = 2;
+const MOB_ATTACK = 3;
+const MOB_DEFENSE = 1;
+
+const ADVENTURER_TYPES = [
+  {
+    type: "warrior",
+    name: "Warrior",
+    hp: 20,
+    attack: 5,
+    defense: 2,
+    xp: 30,
+    colorRgb: [1.0, 0.15, 0.15],
+  },
+  {
+    type: "rogue",
+    name: "Rogue",
+    hp: 12,
+    attack: 7,
+    defense: 1,
+    xp: 25,
+    colorRgb: [0.9, 0.1, 0.9],
+  },
+  {
+    type: "mage",
+    name: "Mage",
+    hp: 10,
+    attack: 9,
+    defense: 0,
+    xp: 40,
+    colorRgb: [0.2, 0.3, 1.0],
+  },
+];
+
 const STATUS_RGB = {
   ecstatic: [0.8, 0.2, 1.0],
   gasping: [1.0, 0.1, 0.1],
@@ -445,10 +524,30 @@ export default function App() {
         z: Math.floor(room.rect.y + room.rect.h / 2),
         name: MOB_NAMES[idx],
         preferredRecipeId: RECIPES[(idx * 3 + 1) % RECIPES.length].id,
+        attack: MOB_ATTACK,
+        defense: MOB_DEFENSE,
       });
       idx++;
     }
     return mobs;
+  }, [dungeon]);
+
+  // Rooms sorted farthest-first from player spawn — used for adventurer spawning
+  const adventurerSpawnRooms = useMemo(() => {
+    const endRoom = dungeon.rooms.get(dungeon.endRoomId);
+    const endCx = endRoom ? endRoom.rect.x + endRoom.rect.w / 2 : 0;
+    const endCz = endRoom ? endRoom.rect.y + endRoom.rect.h / 2 : 0;
+    return Array.from(dungeon.rooms.entries())
+      .filter(([id]) => id !== dungeon.endRoomId)
+      .map(([, room]) => ({
+        x: Math.floor(room.rect.x + room.rect.w / 2),
+        z: Math.floor(room.rect.y + room.rect.h / 2),
+        dist: Math.hypot(
+          room.rect.x + room.rect.w / 2 - endCx,
+          room.rect.y + room.rect.h / 2 - endCz,
+        ),
+      }))
+      .sort((a, b) => b.dist - a.dist);
   }, [dungeon]);
 
   const mobSpriteAtlas = useMemo(() => makeMobSpriteAtlas(), []);
@@ -487,17 +586,6 @@ export default function App() {
       ),
     [mobSatiations],
   );
-  const mobiles = useMemo(
-    () =>
-      initialMobs.map((m, i) => ({
-        x: m.x,
-        z: m.z,
-        type: "mob",
-        tileId: 0,
-        color: STATUS_RGB[mobStatuses[i]] ?? STATUS_RGB.thirsty,
-      })),
-    [initialMobs, mobStatuses],
-  );
   // stoveStates: Map<"x_z", { brewing: null | { recipe, stepsRemaining, ready } }>
   const [stoveStates, setStoveStates] = useState(() => new Map());
   const [showRecipeMenu, setShowRecipeMenu] = useState(false);
@@ -506,8 +594,54 @@ export default function App() {
   const messageTimerRef = useRef(null);
   const ruinedNotifiedRef = useRef(new Set());
   const [tempDropPerStep, setTempDropPerStep] = useState(0.5);
-  const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.1);
+  const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.5);
   const [supersatiationBonus, setSupersatiationBonus] = useState(50);
+
+  // Wave / combat state
+  const [adventurers, setAdventurers] = useState([]);
+  const [currentWave, setCurrentWave] = useState(0);
+  const [turnCount, setTurnCount] = useState(0);
+  const [playerXp, setPlayerXp] = useState(0);
+  const [xpDrops, setXpDrops] = useState([]);
+  const [playerHp, setPlayerHp] = useState(PLAYER_MAX_HP);
+
+  // Refs for synchronous cross-state access during game step processing
+  const adventurersRef = useRef([]);
+  const currentWaveRef = useRef(0);
+  const turnCountRef = useRef(0);
+  const playerXpRef = useRef(0);
+  const xpDropsRef = useRef([]);
+  const playerHpRef = useRef(PLAYER_MAX_HP);
+  // initialMobs is stable (useMemo on []), so we can read it from a ref too
+  const mobSatiationsRef = useRef(null);
+  if (mobSatiationsRef.current === null) {
+    mobSatiationsRef.current = initialMobs.map(() => 40);
+  }
+
+  const mobiles = useMemo(
+    () => [
+      ...initialMobs.map((m, i) => ({
+        x: m.x,
+        z: m.z,
+        type: "mob",
+        tileId: 0,
+        color:
+          mobSatiations[i] <= 0
+            ? [0.25, 0.25, 0.25]
+            : (STATUS_RGB[mobStatuses[i]] ?? STATUS_RGB.thirsty),
+      })),
+      ...adventurers
+        .filter((a) => a.alive)
+        .map((a) => ({
+          x: a.x,
+          z: a.z,
+          type: "adventurer",
+          tileId: 1,
+          color: a.colorRgb,
+        })),
+    ],
+    [initialMobs, mobStatuses, mobSatiations, adventurers],
+  );
 
   const showMsg = useCallback((text) => {
     if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
@@ -515,8 +649,54 @@ export default function App() {
     messageTimerRef.current = setTimeout(() => setMessage(null), 5000);
   }, []);
 
-  // On each player step: cool tea in hands, count down brewing
+  const spawnAdventurersForWave = useCallback(
+    (waveNum) => {
+      const count = Math.min(1 + waveNum, 6);
+      const spawned = [];
+      const occupied = new Set(
+        adventurersRef.current
+          .filter((a) => a.alive)
+          .map((a) => `${a.x}_${a.z}`),
+      );
+      for (let i = 0; i < count; i++) {
+        const room =
+          adventurerSpawnRooms[i % Math.max(1, adventurerSpawnRooms.length)];
+        if (!room) continue;
+        const tmpl = ADVENTURER_TYPES[i % ADVENTURER_TYPES.length];
+        // offset slightly to avoid stacking
+        let spawnX = room.x;
+        let spawnZ = room.z + i;
+        // clamp to bounds
+        spawnX = Math.max(1, Math.min(DUNGEON_W - 2, spawnX));
+        spawnZ = Math.max(1, Math.min(DUNGEON_H - 2, spawnZ));
+        const key = `${spawnX}_${spawnZ}`;
+        if (occupied.has(key)) {
+          spawnZ = Math.max(1, Math.min(DUNGEON_H - 2, room.z - i));
+        }
+        occupied.add(`${spawnX}_${spawnZ}`);
+        spawned.push({
+          id: `adv_w${waveNum}_${i}`,
+          name: tmpl.name,
+          x: spawnX,
+          z: spawnZ,
+          alive: true,
+          hp: tmpl.hp + (waveNum - 1) * 3,
+          maxHp: tmpl.hp + (waveNum - 1) * 3,
+          attack: tmpl.attack + Math.floor((waveNum - 1) / 2),
+          defense: tmpl.defense,
+          xp: tmpl.xp + (waveNum - 1) * 5,
+          template: tmpl.type,
+          colorRgb: tmpl.colorRgb,
+        });
+      }
+      return spawned;
+    },
+    [adventurerSpawnRooms],
+  );
+
+  // On each player step: cool tea, count down brewing, run game loop
   const onStep = useCallback(() => {
+    // --- Tea cooling ---
     setPlayerHands((prev) => {
       let changed = false;
       const next = { left: prev.left, right: prev.right };
@@ -530,6 +710,8 @@ export default function App() {
       }
       return changed ? next : prev;
     });
+
+    // --- Stove brewing countdown ---
     setStoveStates((prev) => {
       let changed = false;
       const next = new Map(prev);
@@ -549,10 +731,170 @@ export default function App() {
       }
       return changed ? new Map(next) : prev;
     });
-    setMobSatiations((prev) =>
-      prev.map((s) => Math.max(0, s - satiationDropPerStep)),
+
+    // --- Game step processing (uses refs for synchronous cross-state reads) ---
+    const newTurnCount = turnCountRef.current + 1;
+    turnCountRef.current = newTurnCount;
+
+    let newAdventurers = [...adventurersRef.current];
+    let newMobSatiations = mobSatiationsRef.current.map((s) =>
+      Math.max(0, s - satiationDropPerStep),
     );
-  }, [tempDropPerStep, satiationDropPerStep]);
+    let newWave = currentWaveRef.current;
+    let newPlayerXp = playerXpRef.current;
+    let newXpDrops = [...xpDropsRef.current];
+    let newPlayerHp = playerHpRef.current;
+    let stepMessage = null;
+
+    // --- Wave spawning ---
+    if (newTurnCount % TURNS_PER_WAVE === 0) {
+      newWave = Math.floor(newTurnCount / TURNS_PER_WAVE);
+      currentWaveRef.current = newWave;
+      const spawned = spawnAdventurersForWave(newWave);
+      newAdventurers = [...newAdventurers.filter((a) => a.alive), ...spawned];
+      stepMessage = `Wave ${newWave}! ${spawned.length} adventurer${spawned.length !== 1 ? "s" : ""} have entered the dungeon!`;
+    }
+
+    // --- XP pickup (before moving to avoid collecting just-dropped XP) ---
+    const { x: px, z: pz } = logicalRef.current;
+    const pgx = Math.floor(px);
+    const pgz = Math.floor(pz);
+    const remainingDrops = [];
+    let xpGained = 0;
+    for (const drop of newXpDrops) {
+      if (drop.x === pgx && drop.z === pgz) {
+        xpGained += drop.amount;
+      } else {
+        remainingDrops.push(drop);
+      }
+    }
+    if (xpGained > 0) {
+      newPlayerXp += xpGained;
+      stepMessage = `Collected ${xpGained} XP! (Total: ${newPlayerXp})`;
+    }
+    newXpDrops = remainingDrops;
+
+    // --- Adventurer AI ---
+    function isWalkable(x, z) {
+      if (x < 0 || z < 0 || x >= DUNGEON_W || z >= DUNGEON_H) return false;
+      return solidData[z * DUNGEON_W + x] === 0;
+    }
+
+    // Build occupied set (other adventurers + mob positions + player)
+    const occupied = new Set([
+      `${pgx}_${pgz}`,
+      ...initialMobs.map((m) => `${m.x}_${m.z}`),
+    ]);
+
+    newAdventurers = newAdventurers.map((adv) => {
+      if (!adv.alive) return adv;
+
+      // Find nearest target: player or nearest conscious mob
+      let nearestTarget = { x: pgx, z: pgz, type: "player", idx: -1 };
+      let nearestDist = Math.hypot(adv.x - pgx, adv.z - pgz);
+      for (let i = 0; i < initialMobs.length; i++) {
+        if (newMobSatiations[i] <= 0) continue; // unconscious
+        const mob = initialMobs[i];
+        const d = Math.hypot(adv.x - mob.x, adv.z - mob.z);
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearestTarget = { x: mob.x, z: mob.z, type: "mob", idx: i };
+        }
+      }
+
+      const ddx = nearestTarget.x - adv.x;
+      const ddz = nearestTarget.z - adv.z;
+      const adjacent = Math.abs(ddx) + Math.abs(ddz) === 1;
+
+      if (adjacent) {
+        // Attack target
+        if (nearestTarget.type === "player") {
+          const damage = Math.max(1, adv.attack - PLAYER_DEFENSE);
+          newPlayerHp = Math.max(0, newPlayerHp - damage);
+          stepMessage = `The ${adv.name} attacks you for ${damage} damage! (${newPlayerHp}/${PLAYER_MAX_HP} HP)`;
+        } else {
+          const damage = Math.max(1, adv.attack - MOB_DEFENSE);
+          newMobSatiations[nearestTarget.idx] = Math.max(
+            0,
+            newMobSatiations[nearestTarget.idx] - damage,
+          );
+          if (newMobSatiations[nearestTarget.idx] <= 0) {
+            stepMessage = `${initialMobs[nearestTarget.idx].name} has fallen unconscious!`;
+          }
+        }
+        return adv;
+      }
+
+      // Move toward target
+      occupied.delete(`${adv.x}_${adv.z}`);
+      const pos = greedyStepToward(
+        adv.x,
+        adv.z,
+        nearestTarget.x,
+        nearestTarget.z,
+        isWalkable,
+        (x, z) => occupied.has(`${x}_${z}`),
+      );
+      if (pos) {
+        occupied.add(`${pos.x}_${pos.z}`);
+        return { ...adv, x: pos.x, z: pos.z };
+      }
+      occupied.add(`${adv.x}_${adv.z}`);
+      return adv;
+    });
+
+    // --- Conscious mob counterattack ---
+    for (let i = 0; i < initialMobs.length; i++) {
+      if (newMobSatiations[i] <= 0) continue; // unconscious
+      const mob = initialMobs[i];
+      for (let j = 0; j < newAdventurers.length; j++) {
+        const adv = newAdventurers[j];
+        if (!adv.alive) continue;
+        if (Math.abs(adv.x - mob.x) + Math.abs(adv.z - mob.z) === 1) {
+          const damage = Math.max(1, mob.attack - adv.defense);
+          const newHp = adv.hp - damage;
+          if (newHp <= 0) {
+            newAdventurers[j] = { ...adv, alive: false, hp: 0 };
+            newXpDrops.push({
+              id: `xp_${Date.now()}_${j}`,
+              x: adv.x,
+              z: adv.z,
+              amount: adv.xp,
+            });
+            stepMessage = `${mob.name} slew the ${adv.name}! (+${adv.xp} XP dropped)`;
+          } else {
+            newAdventurers[j] = { ...adv, hp: newHp };
+          }
+          break; // each mob attacks at most one adventurer per step
+        }
+      }
+    }
+
+    // --- Commit all ref + state updates ---
+    adventurersRef.current = newAdventurers;
+    currentWaveRef.current = newWave;
+    playerXpRef.current = newPlayerXp;
+    xpDropsRef.current = newXpDrops;
+    playerHpRef.current = newPlayerHp;
+    mobSatiationsRef.current = newMobSatiations;
+
+    setTurnCount(newTurnCount);
+    setCurrentWave(newWave);
+    setAdventurers([...newAdventurers]);
+    setPlayerXp(newPlayerXp);
+    setXpDrops([...newXpDrops]);
+    setPlayerHp(newPlayerHp);
+    setMobSatiations(newMobSatiations);
+
+    if (stepMessage) showMsg(stepMessage);
+  }, [
+    tempDropPerStep,
+    satiationDropPerStep,
+    solidData,
+    initialMobs,
+    showMsg,
+    spawnAdventurersForWave,
+  ]);
 
   // Show message when tea becomes ruined
   useEffect(() => {
@@ -611,8 +953,12 @@ export default function App() {
     const preferredRecipe = RECIPES.find(
       (r) => r.id === mob?.preferredRecipeId,
     );
+    const isUnconscious = mobSatiations[facingTarget.mobIdx] <= 0;
+    if (isUnconscious) {
+      return `${mob?.name} is unconscious — Press I to offer tea to revive`;
+    }
     return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press I to offer tea`;
-  }, [facingTarget, stoveStates, initialMobs]);
+  }, [facingTarget, stoveStates, initialMobs, mobSatiations]);
 
   // I key — interact / recipe menu navigation
   useEffect(() => {
@@ -700,7 +1046,8 @@ export default function App() {
             : null;
         const tea = hand ? playerHands[hand] : null;
         const mobStatus = mobStatuses[facingTarget.mobIdx];
-        if (tea && (mobStatus === "sated" || mobStatus === "refreshed" || mobStatus === "ecstatic")) {
+        const isUnconscious = mobSatiations[facingTarget.mobIdx] <= 0;
+        if (tea && !isUnconscious && mobStatus === "ecstatic") {
           showMsg(
             `${mob.name} says: "Oh, I couldn't possibly! I'm far too full right now — perhaps later."`,
           );
@@ -728,21 +1075,21 @@ export default function App() {
         }
         const [lo, hi] = tea.recipe.idealTemperatureRange;
         setPlayerHands((prev) => ({ ...prev, [hand]: null }));
+
+        function applyMobSatiation(value) {
+          const next = [...mobSatiationsRef.current];
+          next[facingTarget.mobIdx] = value;
+          mobSatiationsRef.current = next;
+          setMobSatiations(next);
+        }
+
         if (tea.ruined || tea.temperature < lo) {
-          setMobSatiations((prev) => {
-            const next = [...prev];
-            next[facingTarget.mobIdx] = 10;
-            return next;
-          });
+          applyMobSatiation(10);
           showMsg(
             `${mob.name} says: "This ${tea.name} is cold and ruined... How disappointing."`,
           );
         } else if (tea.temperature > hi) {
-          setMobSatiations((prev) => {
-            const next = [...prev];
-            next[facingTarget.mobIdx] = 30;
-            return next;
-          });
+          applyMobSatiation(30);
           showMsg(
             `${mob.name} says: "Ouch! This ${tea.name} is scalding hot! Dreadfully disappointing."`,
           );
@@ -752,11 +1099,7 @@ export default function App() {
           const bonus = isPreferred
             ? baseSatiation * (supersatiationBonus / 100)
             : 0;
-          setMobSatiations((prev) => {
-            const next = [...prev];
-            next[facingTarget.mobIdx] = baseSatiation + bonus;
-            return next;
-          });
+          applyMobSatiation(baseSatiation + bonus);
           if (isPreferred) {
             showMsg(
               `${mob.name} says: "My favourite! This ${tea.name} is absolutely perfect — I am overjoyed!"`,
@@ -778,6 +1121,7 @@ export default function App() {
     playerHands,
     initialMobs,
     mobStatuses,
+    mobSatiations,
     activeStoveKey,
     showMsg,
     onStep,
@@ -788,16 +1132,48 @@ export default function App() {
   const minimapRef = useRef(null);
   const [minimapTooltip, setMinimapTooltip] = useState(null);
   const minimapMobs = useMemo(
-    () =>
-      initialMobs.map((m, i) => ({
+    () => [
+      ...initialMobs.map((m, i) => ({
         x: m.x,
         z: m.z,
         name: m.name,
-        status: mobStatuses[i],
+        status: mobSatiations[i] <= 0 ? "unconscious" : mobStatuses[i],
         satiation: mobSatiations[i],
-        cssColor: STATUS_CSS[mobStatuses[i]] ?? STATUS_CSS.thirsty,
+        cssColor:
+          mobSatiations[i] <= 0
+            ? "#555"
+            : (STATUS_CSS[mobStatuses[i]] ?? STATUS_CSS.thirsty),
+        isAdventurer: false,
+        isXp: false,
       })),
-    [initialMobs, mobStatuses, mobSatiations],
+      ...adventurers
+        .filter((a) => a.alive)
+        .map((a) => ({
+          x: a.x,
+          z: a.z,
+          name: a.name,
+          hp: a.hp,
+          maxHp: a.maxHp,
+          cssColor:
+            a.template === "warrior"
+              ? "#e44"
+              : a.template === "rogue"
+                ? "#e4e"
+                : "#44e",
+          isAdventurer: true,
+          isXp: false,
+        })),
+      ...xpDrops.map((drop) => ({
+        x: drop.x,
+        z: drop.z,
+        name: `+${drop.amount} XP`,
+        amount: drop.amount,
+        cssColor: "#fd0",
+        isAdventurer: false,
+        isXp: true,
+      })),
+    ],
+    [initialMobs, mobStatuses, mobSatiations, adventurers, xpDrops],
   );
 
   const onMinimapMouseMove = useCallback(
@@ -865,6 +1241,11 @@ export default function App() {
           <span style={{ color: "#666", fontSize: 12 }}>
             seed: {DUNGEON_SEED}
           </span>
+          <span
+            style={{ color: currentWave > 0 ? "#f88" : "#555", fontSize: 12 }}
+          >
+            Wave {currentWave}
+          </span>
         </div>
 
         {/* Main area */}
@@ -897,6 +1278,34 @@ export default function App() {
                 style={{ width: "100%", height: "100%" }}
               />
             )}
+
+            {/* Wave countdown overlay */}
+            {(() => {
+              const turnsLeft = TURNS_PER_WAVE - (turnCount % TURNS_PER_WAVE);
+              const show =
+                turnsLeft <= WAVE_COUNTDOWN_THRESHOLD &&
+                adventurers.filter((a) => a.alive).length === 0;
+              if (!show) return null;
+              return (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 14,
+                    right: 14,
+                    background: "rgba(160,20,20,0.82)",
+                    border: "1px solid #f88",
+                    padding: "6px 14px",
+                    borderRadius: 4,
+                    fontSize: 13,
+                    color: "#fcc",
+                    pointerEvents: "none",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  ⚠ Next wave in {turnsLeft} turn{turnsLeft !== 1 ? "s" : ""}
+                </div>
+              );
+            })()}
 
             {/* Interaction prompt */}
             {promptText && !showRecipeMenu && (
@@ -1033,7 +1442,11 @@ export default function App() {
                 ref={minimapRef}
                 width={196}
                 height={196}
-                style={{ imageRendering: "pixelated", border: "1px solid #444", display: "block" }}
+                style={{
+                  imageRendering: "pixelated",
+                  border: "1px solid #444",
+                  display: "block",
+                }}
                 onMouseMove={onMinimapMouseMove}
                 onMouseLeave={() => setMinimapTooltip(null)}
               />
@@ -1054,16 +1467,36 @@ export default function App() {
                     zIndex: 10,
                   }}
                 >
-                  <div style={{ fontWeight: "bold", color: minimapTooltip.mob.cssColor }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      color: minimapTooltip.mob.cssColor,
+                    }}
+                  >
                     {minimapTooltip.mob.name}
                   </div>
-                  <div>
-                    Status:{" "}
-                    <span style={{ color: minimapTooltip.mob.cssColor }}>
-                      {minimapTooltip.mob.status}
-                    </span>
-                  </div>
-                  <div>Satiation: {Math.round(minimapTooltip.mob.satiation)}</div>
+                  {minimapTooltip.mob.isXp ? (
+                    <div style={{ color: "#fd0" }}>Walk here to collect</div>
+                  ) : minimapTooltip.mob.isAdventurer ? (
+                    <div>
+                      HP:{" "}
+                      <span style={{ color: minimapTooltip.mob.cssColor }}>
+                        {minimapTooltip.mob.hp}/{minimapTooltip.mob.maxHp}
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        Status:{" "}
+                        <span style={{ color: minimapTooltip.mob.cssColor }}>
+                          {minimapTooltip.mob.status}
+                        </span>
+                      </div>
+                      <div>
+                        Satiation: {Math.round(minimapTooltip.mob.satiation)}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -1141,6 +1574,14 @@ export default function App() {
             ({Math.floor(camera.x)}, {Math.floor(camera.z)})
           </span>
           <span>Facing: {cardinalDir(camera.yaw)}</span>
+          <span
+            style={{
+              color: playerHp <= 5 ? "#f44" : playerHp <= 15 ? "#fa0" : "#4f4",
+            }}
+          >
+            HP: {playerHp}/{PLAYER_MAX_HP}
+          </span>
+          <span style={{ color: "#fa0" }}>XP: {playerXp}</span>
         </div>
       </div>
 
