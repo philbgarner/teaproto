@@ -30,7 +30,17 @@ function loadRepackedAtlasTexture(sources) {
       canvas.height = TILE_PX;
       const ctx = canvas.getContext("2d");
       sources.forEach(({ x, y }, i) => {
-        ctx.drawImage(img, x, y, TILE_PX, TILE_PX, i * TILE_PX, 0, TILE_PX, TILE_PX);
+        ctx.drawImage(
+          img,
+          x,
+          y,
+          TILE_PX,
+          TILE_PX,
+          i * TILE_PX,
+          0,
+          TILE_PX,
+          TILE_PX,
+        );
       });
       const tex = new THREE.CanvasTexture(canvas);
       tex.magFilter = THREE.NearestFilter;
@@ -80,11 +90,11 @@ function makeMobSpriteAtlas() {
   canvas.height = 64;
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, 64, 64);
-  ctx.fillStyle = "#3a7a4a";
+  ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.arc(32, 28, 26, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#ccc";
+  ctx.fillStyle = "#333";
   ctx.font = "bold 32px monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -106,7 +116,16 @@ function cardinalDir(yaw) {
   return DIRS[idx];
 }
 
-function drawMinimap(canvas, solidData, width, height, playerX, playerZ, yaw) {
+function drawMinimap(
+  canvas,
+  solidData,
+  width,
+  height,
+  playerX,
+  playerZ,
+  yaw,
+  mobs,
+) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const cw = canvas.width;
@@ -120,6 +139,20 @@ function drawMinimap(canvas, solidData, width, height, playerX, playerZ, yaw) {
       const solid = solidData[cz * width + cx] > 0;
       ctx.fillStyle = solid ? "#333" : "#888";
       ctx.fillRect(cx * cellW, cz * cellH, cellW, cellH);
+    }
+  }
+  if (mobs) {
+    for (const mob of mobs) {
+      ctx.fillStyle = mob.cssColor;
+      ctx.beginPath();
+      ctx.arc(
+        (mob.x + 0.5) * cellW,
+        (mob.z + 0.5) * cellH,
+        Math.max(cellW * 0.7, 3),
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
     }
   }
   const px = playerX * cellW;
@@ -142,28 +175,55 @@ function drawMinimap(canvas, solidData, width, height, playerX, playerZ, yaw) {
 // ---------------------------------------------------------------------------
 const LERP_DURATION_MS = 150;
 
-function useEotBCamera(solidData, width, height, startX, startZ, { onStep, blocked } = {}) {
+function useEotBCamera(
+  solidData,
+  width,
+  height,
+  startX,
+  startZ,
+  { onStep, blocked } = {},
+) {
   const logicalRef = useRef({ x: startX, z: startZ, yaw: 0 });
   const animRef = useRef({
-    fromX: startX, fromZ: startZ, fromYaw: 0,
-    toX: startX, toZ: startZ, toYaw: 0,
-    startTime: 0, animating: false,
+    fromX: startX,
+    fromZ: startZ,
+    fromYaw: 0,
+    toX: startX,
+    toZ: startZ,
+    toYaw: 0,
+    startTime: 0,
+    animating: false,
   });
-  const [camera, setCamera] = useState(() => ({ x: startX, z: startZ, yaw: 0 }));
+  const [camera, setCamera] = useState(() => ({
+    x: startX,
+    z: startZ,
+    yaw: 0,
+  }));
   const solidRef = useRef(solidData);
   const onStepRef = useRef(onStep);
   const blockedRef = useRef(blocked);
 
-  useEffect(() => { solidRef.current = solidData; }, [solidData]);
-  useEffect(() => { onStepRef.current = onStep; }, [onStep]);
-  useEffect(() => { blockedRef.current = blocked; }, [blocked]);
+  useEffect(() => {
+    solidRef.current = solidData;
+  }, [solidData]);
+  useEffect(() => {
+    onStepRef.current = onStep;
+  }, [onStep]);
+  useEffect(() => {
+    blockedRef.current = blocked;
+  }, [blocked]);
 
   useEffect(() => {
     logicalRef.current = { x: startX, z: startZ, yaw: 0 };
     animRef.current = {
-      fromX: startX, fromZ: startZ, fromYaw: 0,
-      toX: startX, toZ: startZ, toYaw: 0,
-      startTime: 0, animating: false,
+      fromX: startX,
+      fromZ: startZ,
+      fromYaw: 0,
+      toX: startX,
+      toZ: startZ,
+      toYaw: 0,
+      startTime: 0,
+      animating: false,
     };
   }, [startX, startZ]);
 
@@ -186,8 +246,12 @@ function useEotBCamera(solidData, width, height, startX, startZ, { onStep, block
 
       function beginAnim(toX, toZ, toYaw, isMove) {
         animRef.current = {
-          fromX: x, fromZ: z, fromYaw: yaw,
-          toX, toZ, toYaw,
+          fromX: x,
+          fromZ: z,
+          fromYaw: yaw,
+          toX,
+          toZ,
+          toYaw,
           startTime: performance.now(),
           animating: true,
         };
@@ -197,11 +261,13 @@ function useEotBCamera(solidData, width, height, startX, startZ, { onStep, block
 
       if (e.code === "KeyW" || e.code === "ArrowUp") {
         e.preventDefault();
-        const ngx = gx + fdx, ngz = gz + fdz;
+        const ngx = gx + fdx,
+          ngz = gz + fdz;
         if (walkable(ngx, ngz)) beginAnim(ngx + 0.5, ngz + 0.5, yaw, true);
       } else if (e.code === "KeyS" || e.code === "ArrowDown") {
         e.preventDefault();
-        const ngx = gx - fdx, ngz = gz - fdz;
+        const ngx = gx - fdx,
+          ngz = gz - fdz;
         if (walkable(ngx, ngz)) beginAnim(ngx + 0.5, ngz + 0.5, yaw, true);
       } else if (e.code === "KeyA") {
         e.preventDefault();
@@ -249,18 +315,27 @@ function HandDisplay({ label, tea }) {
     );
   }
   const [lo, hi] = tea.recipe.idealTemperatureRange;
-  const tempColor = tea.ruined ? "#f44"
-    : tea.temperature > hi ? "#f80"
-    : "#4f4";
-  const tempLabel = tea.ruined ? "(RUINED)"
-    : tea.temperature > hi ? "(too hot)"
-    : "(ideal)";
+  const tempColor = tea.ruined
+    ? "#f44"
+    : tea.temperature > hi
+      ? "#f80"
+      : "#4f4";
+  const tempLabel = tea.ruined
+    ? "(RUINED)"
+    : tea.temperature > hi
+      ? "(too hot)"
+      : "(ideal)";
   return (
     <div>
       <span style={{ color: "#777" }}>{label}:</span>{" "}
       <span style={{ color: tea.ruined ? "#f44" : "#fa0" }}>{tea.name}</span>{" "}
-      <span style={{ color: tempColor }}>{tea.temperature}° {tempLabel}</span>
-      <span style={{ color: "#555", fontSize: 11 }}> [{lo}–{hi}°]</span>
+      <span style={{ color: tempColor }}>
+        {tea.temperature}° {tempLabel}
+      </span>
+      <span style={{ color: "#555", fontSize: 11 }}>
+        {" "}
+        [{lo}–{hi}°]
+      </span>
     </div>
   );
 }
@@ -272,6 +347,21 @@ const DUNGEON_SEED = 42;
 const DUNGEON_W = 42;
 const DUNGEON_H = 42;
 const MOB_NAMES = ["Weary Traveler", "Village Elder", "Mysterious Stranger"];
+
+const STATUS_RGB = {
+  ecstatic: [0.8, 0.2, 1.0],
+  gasping: [1.0, 0.1, 0.1],
+  thirsty: [1.0, 0.9, 0.0],
+  sated: [0.0, 0.5, 1.0],
+  refreshed: [0.2, 1.0, 0.3],
+};
+const STATUS_CSS = {
+  ecstatic: "#c3f",
+  gasping: "#f22",
+  thirsty: "#fe0",
+  sated: "#08f",
+  refreshed: "#3f5",
+};
 
 // ---------------------------------------------------------------------------
 // App
@@ -312,6 +402,19 @@ export default function App() {
         if (masks.getRegionId(x, y) !== dungeon.endRoomId) return;
         if (masks.getSolid(x, y) === "wall") return;
         if (masks.getDistanceToWall(x, y) !== 1) return;
+        // Skip cells adjacent to a corridor (doorway/entrance)
+        const neighbors = [
+          [x - 1, y],
+          [x + 1, y],
+          [x, y - 1],
+          [x, y + 1],
+        ];
+        const nearCorridor = neighbors.some(
+          ([nx, nz]) =>
+            masks.getSolid(nx, nz) !== "wall" &&
+            masks.getRegionId(nx, nz) === 0,
+        );
+        if (nearCorridor) return;
         emit.object({ x, z: y, type: "stove" });
         count++;
       },
@@ -341,6 +444,7 @@ export default function App() {
         x: Math.floor(room.rect.x + room.rect.w / 2),
         z: Math.floor(room.rect.y + room.rect.h / 2),
         name: MOB_NAMES[idx],
+        preferredRecipeId: RECIPES[(idx * 3 + 1) % RECIPES.length].id,
       });
       idx++;
     }
@@ -348,22 +452,52 @@ export default function App() {
   }, [dungeon]);
 
   const mobSpriteAtlas = useMemo(() => makeMobSpriteAtlas(), []);
-  const mobiles = useMemo(
-    () => initialMobs.map((m) => ({ x: m.x, z: m.z, type: "mob", tileId: 0 })),
-    [initialMobs],
-  );
 
   // Tile atlas + texture
-  const atlas = useMemo(() => buildTileAtlas(TILE_PX * 3, TILE_PX, TILE_PX, TILE_PX), []);
+  const atlas = useMemo(
+    () => buildTileAtlas(TILE_PX * 3, TILE_PX, TILE_PX, TILE_PX),
+    [],
+  );
   const [texture, setTexture] = useState(null);
   useEffect(() => {
-    loadRepackedAtlasTexture([SRC_FLOOR, SRC_CEILING, SRC_WALL]).then(setTexture);
+    loadRepackedAtlasTexture([SRC_FLOOR, SRC_CEILING, SRC_WALL]).then(
+      setTexture,
+    );
   }, []);
 
   // ---------------------------------------------------------------------------
   // Game state
   // ---------------------------------------------------------------------------
   const [playerHands, setPlayerHands] = useState({ left: null, right: null });
+  const [mobSatiations, setMobSatiations] = useState(() =>
+    initialMobs.map(() => 40),
+  );
+  const mobStatuses = useMemo(
+    () =>
+      mobSatiations.map((s) =>
+        s > 100
+          ? "ecstatic"
+          : s >= 75
+            ? "refreshed"
+            : s >= 50
+              ? "sated"
+              : s >= 25
+                ? "thirsty"
+                : "gasping",
+      ),
+    [mobSatiations],
+  );
+  const mobiles = useMemo(
+    () =>
+      initialMobs.map((m, i) => ({
+        x: m.x,
+        z: m.z,
+        type: "mob",
+        tileId: 0,
+        color: STATUS_RGB[mobStatuses[i]] ?? STATUS_RGB.thirsty,
+      })),
+    [initialMobs, mobStatuses],
+  );
   // stoveStates: Map<"x_z", { brewing: null | { recipe, stepsRemaining, ready } }>
   const [stoveStates, setStoveStates] = useState(() => new Map());
   const [showRecipeMenu, setShowRecipeMenu] = useState(false);
@@ -371,6 +505,9 @@ export default function App() {
   const [message, setMessage] = useState(null);
   const messageTimerRef = useRef(null);
   const ruinedNotifiedRef = useRef(new Set());
+  const [tempDropPerStep, setTempDropPerStep] = useState(0.5);
+  const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.1);
+  const [supersatiationBonus, setSupersatiationBonus] = useState(50);
 
   const showMsg = useCallback((text) => {
     if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
@@ -386,7 +523,7 @@ export default function App() {
       for (const hand of ["left", "right"]) {
         const tea = next[hand];
         if (!tea || tea.ruined) continue;
-        const newTemp = tea.temperature - 2;
+        const newTemp = tea.temperature - tempDropPerStep;
         const ruined = newTemp < tea.recipe.idealTemperatureRange[0];
         next[hand] = { ...tea, temperature: newTemp, ruined };
         changed = true;
@@ -400,15 +537,22 @@ export default function App() {
         if (!state.brewing || state.brewing.ready) continue;
         const steps = state.brewing.stepsRemaining - 1;
         if (steps <= 0) {
-          next.set(key, { brewing: { ...state.brewing, stepsRemaining: 0, ready: true } });
+          next.set(key, {
+            brewing: { ...state.brewing, stepsRemaining: 0, ready: true },
+          });
         } else {
-          next.set(key, { brewing: { ...state.brewing, stepsRemaining: steps } });
+          next.set(key, {
+            brewing: { ...state.brewing, stepsRemaining: steps },
+          });
         }
         changed = true;
       }
       return changed ? new Map(next) : prev;
     });
-  }, []);
+    setMobSatiations((prev) =>
+      prev.map((s) => Math.max(0, s - satiationDropPerStep)),
+    );
+  }, [tempDropPerStep, satiationDropPerStep]);
 
   // Show message when tea becomes ruined
   useEffect(() => {
@@ -422,7 +566,11 @@ export default function App() {
   }, [playerHands, showMsg]);
 
   const { camera, logicalRef } = useEotBCamera(
-    solidData, DUNGEON_W, DUNGEON_H, spawnX, spawnZ,
+    solidData,
+    DUNGEON_W,
+    DUNGEON_H,
+    spawnX,
+    spawnZ,
     { onStep, blocked: showRecipeMenu },
   );
 
@@ -438,7 +586,10 @@ export default function App() {
     const tz = gz + fdz;
     const si = stovePlacements.findIndex((s) => s.x === tx && s.z === tz);
     if (si !== -1) {
-      return { type: "stove", stoveKey: `${stovePlacements[si].x}_${stovePlacements[si].z}` };
+      return {
+        type: "stove",
+        stoveKey: `${stovePlacements[si].x}_${stovePlacements[si].z}`,
+      };
     }
     const mi = initialMobs.findIndex((m) => m.x === tx && m.z === tz);
     if (mi !== -1) return { type: "mob", mobIdx: mi };
@@ -452,11 +603,15 @@ export default function App() {
     if (facingTarget.type === "stove") {
       const state = stoveStates.get(facingTarget.stoveKey);
       if (!state?.brewing) return "Stove — Press I to brew tea";
-      if (state.brewing.ready) return `${state.brewing.recipe.name} is ready! — Press I to collect`;
+      if (state.brewing.ready)
+        return `${state.brewing.recipe.name} is ready! — Press I to collect`;
       return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press I for status`;
     }
     const mob = initialMobs[facingTarget.mobIdx];
-    return `${mob?.name} — Press I to offer tea`;
+    const preferredRecipe = RECIPES.find(
+      (r) => r.id === mob?.preferredRecipeId,
+    );
+    return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press I to offer tea`;
   }, [facingTarget, stoveStates, initialMobs]);
 
   // I key — interact / recipe menu navigation
@@ -475,13 +630,25 @@ export default function App() {
           setStoveStates((prev) => {
             const next = new Map(prev);
             next.set(activeStoveKey, {
-              brewing: { recipe, stepsRemaining: recipe.timeToBrew, ready: false },
+              brewing: {
+                recipe,
+                stepsRemaining: recipe.timeToBrew,
+                ready: false,
+              },
             });
             return next;
           });
           setShowRecipeMenu(false);
-          showMsg(`Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`);
+          showMsg(
+            `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
+          );
         }
+        return;
+      }
+
+      if (e.code === "Period") {
+        e.preventDefault();
+        onStep();
         return;
       }
 
@@ -503,7 +670,11 @@ export default function App() {
             temperature: recipe.idealTemperatureRange[1] + 15,
             ruined: false,
           };
-          const hand = !playerHands.left ? "left" : !playerHands.right ? "right" : null;
+          const hand = !playerHands.left
+            ? "left"
+            : !playerHands.right
+              ? "right"
+              : null;
           if (!hand) {
             showMsg("Your hands are full!");
             return;
@@ -522,35 +693,148 @@ export default function App() {
         }
       } else if (facingTarget.type === "mob") {
         const mob = initialMobs[facingTarget.mobIdx];
-        const hand = playerHands.left ? "left" : playerHands.right ? "right" : null;
+        const hand = playerHands.left
+          ? "left"
+          : playerHands.right
+            ? "right"
+            : null;
         const tea = hand ? playerHands[hand] : null;
+        const mobStatus = mobStatuses[facingTarget.mobIdx];
+        if (tea && (mobStatus === "sated" || mobStatus === "refreshed" || mobStatus === "ecstatic")) {
+          showMsg(
+            `${mob.name} says: "Oh, I couldn't possibly! I'm far too full right now — perhaps later."`,
+          );
+          return;
+        }
         if (!tea) {
-          showMsg(`${mob.name} looks at you expectantly.`);
+          const preferredRecipe = RECIPES.find(
+            (r) => r.id === mob.preferredRecipeId,
+          );
+          const status = mobStatuses[facingTarget.mobIdx];
+          const thirstLine =
+            status === "gasping"
+              ? "I'm absolutely desperate for something to drink!"
+              : status === "thirsty"
+                ? "I'm quite parched."
+                : status === "sated"
+                  ? "I wouldn't mind some tea."
+                  : status === "refreshed"
+                    ? "I'm doing well, but tea is always welcome."
+                    : "I'm fully satisfied, thank you.";
+          showMsg(
+            `${mob.name} says: "I'd love some ${preferredRecipe?.name ?? "tea"}... ${thirstLine}"`,
+          );
           return;
         }
         const [lo, hi] = tea.recipe.idealTemperatureRange;
         setPlayerHands((prev) => ({ ...prev, [hand]: null }));
         if (tea.ruined || tea.temperature < lo) {
-          showMsg(`${mob.name} says: "This ${tea.name} is cold and ruined... How disappointing."`);
-        } else if (tea.temperature > hi) {
-          showMsg(`${mob.name} says: "Ouch! This ${tea.name} is scalding hot! Dreadfully disappointing."`);
-        } else {
+          setMobSatiations((prev) => {
+            const next = [...prev];
+            next[facingTarget.mobIdx] = 10;
+            return next;
+          });
           showMsg(
-            `${mob.name} says: "Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!"`,
+            `${mob.name} says: "This ${tea.name} is cold and ruined... How disappointing."`,
           );
+        } else if (tea.temperature > hi) {
+          setMobSatiations((prev) => {
+            const next = [...prev];
+            next[facingTarget.mobIdx] = 30;
+            return next;
+          });
+          showMsg(
+            `${mob.name} says: "Ouch! This ${tea.name} is scalding hot! Dreadfully disappointing."`,
+          );
+        } else {
+          const isPreferred = mob.preferredRecipeId === tea.recipe.id;
+          const baseSatiation = 100;
+          const bonus = isPreferred
+            ? baseSatiation * (supersatiationBonus / 100)
+            : 0;
+          setMobSatiations((prev) => {
+            const next = [...prev];
+            next[facingTarget.mobIdx] = baseSatiation + bonus;
+            return next;
+          });
+          if (isPreferred) {
+            showMsg(
+              `${mob.name} says: "My favourite! This ${tea.name} is absolutely perfect — I am overjoyed!"`,
+            );
+          } else {
+            showMsg(
+              `${mob.name} says: "Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!"`,
+            );
+          }
         }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [showRecipeMenu, facingTarget, stoveStates, playerHands, initialMobs, activeStoveKey, showMsg]);
+  }, [
+    showRecipeMenu,
+    facingTarget,
+    stoveStates,
+    playerHands,
+    initialMobs,
+    mobStatuses,
+    activeStoveKey,
+    showMsg,
+    onStep,
+    supersatiationBonus,
+  ]);
 
   // Minimap
   const minimapRef = useRef(null);
+  const [minimapTooltip, setMinimapTooltip] = useState(null);
+  const minimapMobs = useMemo(
+    () =>
+      initialMobs.map((m, i) => ({
+        x: m.x,
+        z: m.z,
+        name: m.name,
+        status: mobStatuses[i],
+        satiation: mobSatiations[i],
+        cssColor: STATUS_CSS[mobStatuses[i]] ?? STATUS_CSS.thirsty,
+      })),
+    [initialMobs, mobStatuses, mobSatiations],
+  );
+
+  const onMinimapMouseMove = useCallback(
+    (e) => {
+      const canvas = minimapRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const cellW = canvas.width / DUNGEON_W;
+      const cellH = canvas.height / DUNGEON_H;
+      const hitRadius = Math.max(cellW * 1.2, 5);
+      for (const mob of minimapMobs) {
+        const cx = (mob.x + 0.5) * cellW * (rect.width / canvas.width);
+        const cz = (mob.z + 0.5) * cellH * (rect.height / canvas.height);
+        if (Math.hypot(mx - cx, my - cz) <= hitRadius) {
+          setMinimapTooltip({ mob, canvasX: cx, canvasY: cz });
+          return;
+        }
+      }
+      setMinimapTooltip(null);
+    },
+    [minimapMobs],
+  );
   useEffect(() => {
     if (!minimapRef.current) return;
-    drawMinimap(minimapRef.current, solidData, DUNGEON_W, DUNGEON_H, camera.x, camera.z, camera.yaw);
-  }, [solidData, camera]);
+    drawMinimap(
+      minimapRef.current,
+      solidData,
+      DUNGEON_W,
+      DUNGEON_H,
+      camera.x,
+      camera.z,
+      camera.yaw,
+      minimapMobs,
+    );
+  }, [solidData, camera, minimapMobs]);
 
   return (
     <>
@@ -578,7 +862,9 @@ export default function App() {
           }}
         >
           <span style={{ fontWeight: "bold", color: "#eee" }}>Tea Dungeon</span>
-          <span style={{ color: "#666", fontSize: 12 }}>seed: {DUNGEON_SEED}</span>
+          <span style={{ color: "#666", fontSize: 12 }}>
+            seed: {DUNGEON_SEED}
+          </span>
         </div>
 
         {/* Main area */}
@@ -651,7 +937,14 @@ export default function App() {
                   fontFamily: "monospace",
                 }}
               >
-                <div style={{ fontWeight: "bold", marginBottom: 12, color: "#fa0", fontSize: 15 }}>
+                <div
+                  style={{
+                    fontWeight: "bold",
+                    marginBottom: 12,
+                    color: "#fa0",
+                    fontSize: 15,
+                  }}
+                >
                   Select Recipe
                 </div>
                 {RECIPES.map((recipe, i) => (
@@ -661,12 +954,18 @@ export default function App() {
                       setStoveStates((prev) => {
                         const next = new Map(prev);
                         next.set(activeStoveKey, {
-                          brewing: { recipe, stepsRemaining: recipe.timeToBrew, ready: false },
+                          brewing: {
+                            recipe,
+                            stepsRemaining: recipe.timeToBrew,
+                            ready: false,
+                          },
                         });
                         return next;
                       });
                       setShowRecipeMenu(false);
-                      showMsg(`Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`);
+                      showMsg(
+                        `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
+                      );
                     }}
                     style={{
                       padding: "6px 8px",
@@ -680,7 +979,8 @@ export default function App() {
                     <span style={{ color: "#fa0" }}>[{i + 1}]</span>{" "}
                     {recipe.name}{" "}
                     <span style={{ color: "#777" }}>
-                      ({recipe.timeToBrew} steps, {recipe.idealTemperatureRange[0]}–
+                      ({recipe.timeToBrew} steps,{" "}
+                      {recipe.idealTemperatureRange[0]}–
                       {recipe.idealTemperatureRange[1]}°)
                     </span>
                   </div>
@@ -728,18 +1028,98 @@ export default function App() {
             }}
           >
             <span style={{ fontSize: 11, color: "#888" }}>Minimap</span>
-            <canvas
-              ref={minimapRef}
-              width={196}
-              height={196}
-              style={{ imageRendering: "pixelated", border: "1px solid #444" }}
-            />
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <canvas
+                ref={minimapRef}
+                width={196}
+                height={196}
+                style={{ imageRendering: "pixelated", border: "1px solid #444", display: "block" }}
+                onMouseMove={onMinimapMouseMove}
+                onMouseLeave={() => setMinimapTooltip(null)}
+              />
+              {minimapTooltip && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: minimapTooltip.canvasX + 8,
+                    top: minimapTooltip.canvasY - 8,
+                    background: "rgba(0,0,0,0.88)",
+                    border: `1px solid ${minimapTooltip.mob.cssColor}`,
+                    borderRadius: 4,
+                    padding: "4px 8px",
+                    fontSize: 11,
+                    color: "#eee",
+                    pointerEvents: "none",
+                    whiteSpace: "nowrap",
+                    zIndex: 10,
+                  }}
+                >
+                  <div style={{ fontWeight: "bold", color: minimapTooltip.mob.cssColor }}>
+                    {minimapTooltip.mob.name}
+                  </div>
+                  <div>
+                    Status:{" "}
+                    <span style={{ color: minimapTooltip.mob.cssColor }}>
+                      {minimapTooltip.mob.status}
+                    </span>
+                  </div>
+                  <div>Satiation: {Math.round(minimapTooltip.mob.satiation)}</div>
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: "#888" }}>
+              <div style={{ marginBottom: 2 }}>
+                Cooling: {tempDropPerStep.toFixed(2)}°/step
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={3}
+                step={0.05}
+                value={tempDropPerStep}
+                onChange={(e) => setTempDropPerStep(parseFloat(e.target.value))}
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div style={{ fontSize: 11, color: "#888" }}>
+              <div style={{ marginBottom: 2 }}>
+                Satiation loss: {satiationDropPerStep.toFixed(1)}/step
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={satiationDropPerStep}
+                onChange={(e) =>
+                  setSatiationDropPerStep(parseFloat(e.target.value))
+                }
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div style={{ fontSize: 11, color: "#888" }}>
+              <div style={{ marginBottom: 2 }}>
+                Preference bonus: {supersatiationBonus}%
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={supersatiationBonus}
+                onChange={(e) =>
+                  setSupersatiationBonus(parseInt(e.target.value))
+                }
+                style={{ width: "100%" }}
+              />
+            </div>
             <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
-              <div>W / ↑ — move forward</div>
-              <div>S / ↓ — move back</div>
-              <div>A — turn left</div>
-              <div>D — turn right</div>
-              <div>I — interact</div>
+              <div>W / ↑ - move forward</div>
+              <div>S / ↓ - move back</div>
+              <div>A - turn left</div>
+              <div>D - turn right</div>
+              <div>I - interact</div>
+              <div>. (period) - Wait a Turn</div>
             </div>
           </div>
         </div>
