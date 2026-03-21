@@ -50,7 +50,7 @@ function loadRepackedAtlasTexture(sources) {
       resolve(tex);
     };
     img.onerror = reject;
-    img.src = "/examples/eotb/tileset.png";
+    img.src = `${import.meta.env.BASE_URL}examples/eotb/tileset.png`;
   });
 }
 
