@@ -242,19 +242,17 @@ function useEotBCamera(
     z: startZ,
     yaw: 0,
   }));
+  const [prevStartX, setPrevStartX] = useState(startX);
+  const [prevStartZ, setPrevStartZ] = useState(startZ);
   const solidRef = useRef(solidData);
   const onStepRef = useRef(onStep);
   const blockedRef = useRef(blocked);
 
-  useEffect(() => {
-    solidRef.current = solidData;
-  }, [solidData]);
-  useEffect(() => {
-    onStepRef.current = onStep;
-  }, [onStep]);
-  useEffect(() => {
-    blockedRef.current = blocked;
-  }, [blocked]);
+  if (prevStartX !== startX || prevStartZ !== startZ) {
+    setPrevStartX(startX);
+    setPrevStartZ(startZ);
+    setCamera({ x: startX, z: startZ, yaw: 0 });
+  }
 
   useEffect(() => {
     logicalRef.current = { x: startX, z: startZ, yaw: 0 };
@@ -268,8 +266,17 @@ function useEotBCamera(
       startTime: 0,
       animating: false,
     };
-    setCamera({ x: startX, z: startZ, yaw: 0 });
   }, [startX, startZ]);
+
+  useEffect(() => {
+    solidRef.current = solidData;
+  }, [solidData]);
+  useEffect(() => {
+    onStepRef.current = onStep;
+  }, [onStep]);
+  useEffect(() => {
+    blockedRef.current = blocked;
+  }, [blocked]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -1500,7 +1507,10 @@ export default function App() {
                   style={{
                     position: "absolute",
                     ...(minimapTooltip.canvasX > 98
-                      ? { right: 196 - minimapTooltip.canvasX + 8, left: "auto" }
+                      ? {
+                          right: 196 - minimapTooltip.canvasX + 8,
+                          left: "auto",
+                        }
                       : { left: minimapTooltip.canvasX + 8 }),
                     top: minimapTooltip.canvasY - 8,
                     background: "rgba(0,0,0,0.88)",
