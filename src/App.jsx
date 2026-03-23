@@ -707,6 +707,32 @@ export default function App() {
   // Map<regionId, cumulativeRise> — only regions containing cozy objects heat up
   const [roomTempRise, setRoomTempRise] = useState(() => new Map());
   const regionIdData = useMemo(() => dungeon.fullRegionIds, [dungeon]);
+
+  // Precompute unique adjacent region pairs for temperature flow.
+  // Scan every cell and check right/down neighbors; a pair is added only once (a < b).
+  const regionAdjacency = useMemo(() => {
+    const pairs = new Set();
+    const W = dungeonWidth;
+    const H = dungeonHeight;
+    for (let z = 0; z < H; z++) {
+      for (let x = 0; x < W; x++) {
+        const i = z * W + x;
+        if (solidData[i] !== 0) continue;
+        const a = regionIdData[i];
+        // right neighbor
+        if (x + 1 < W && solidData[i + 1] === 0) {
+          const b = regionIdData[i + 1];
+          if (a !== b) pairs.add(a < b ? `${a},${b}` : `${b},${a}`);
+        }
+        // down neighbor
+        if (z + 1 < H && solidData[i + W] === 0) {
+          const b = regionIdData[i + W];
+          if (a !== b) pairs.add(a < b ? `${a},${b}` : `${b},${a}`);
+        }
+      }
+    }
+    return Array.from(pairs).map((s) => s.split(",").map(Number));
+  }, [dungeon, solidData, regionIdData, dungeonWidth, dungeonHeight]);
   const dynamicTempData = useMemo(() => {
     const out = new Uint8Array(temperatureData.length);
     for (let i = 0; i < temperatureData.length; i++) {
@@ -1206,23 +1232,34 @@ export default function App() {
     setIngredientDrops([...newIngredientDrops]);
     setMobSatiations(newMobSatiations);
 
-    // --- Room heating from cozy objects (stoves) ---
+    // --- Room heating from cozy objects (stoves) + temperature flow between rooms ---
+    // TODO: Introduce temperature blocks with doors that restrict flow between regions (later).
     const cozyByRegion = new Map();
     for (const s of stovePlacements) {
       if (s.type !== "stove") continue;
-      const idx = s.z * dungeonWidth + s.x;
-      const regionId = regionIdData[idx];
+      const regionId = regionIdData[s.z * dungeonWidth + s.x];
       cozyByRegion.set(regionId, (cozyByRegion.get(regionId) ?? 0) + 1);
     }
-    if (cozyByRegion.size > 0) {
-      setRoomTempRise((prev) => {
-        const next = new Map(prev);
-        for (const [regionId, count] of cozyByRegion) {
-          next.set(regionId, Math.min(128, (next.get(regionId) ?? 0) + count * heatingPerStep));
-        }
-        return next;
-      });
-    }
+    setRoomTempRise((prev) => {
+      const next = new Map(prev);
+
+      // Apply heating from cozy objects
+      for (const [regionId, count] of cozyByRegion) {
+        next.set(regionId, Math.min(128, (next.get(regionId) ?? 0) + count * heatingPerStep));
+      }
+
+      // Flow temperature between adjacent region pairs (each pair processed once)
+      for (const [a, b] of regionAdjacency) {
+        const riseA = next.get(a) ?? 0;
+        const riseB = next.get(b) ?? 0;
+        if (riseA === riseB) continue;
+        const flow = (riseA - riseB) * 0.1;
+        next.set(a, riseA - flow);
+        next.set(b, riseB + flow);
+      }
+
+      return next;
+    });
 
     if (stepMessage) showMsg(stepMessage);
     for (const { entityId, text } of pendingSpeechBubbles) {
@@ -1235,6 +1272,7 @@ export default function App() {
     satiationDropPerStep,
     solidData,
     regionIdData,
+    regionAdjacency,
     dungeonWidth,
     initialMobs,
     showMsg,
