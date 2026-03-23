@@ -155,6 +155,23 @@ function cardinalDir(yaw) {
   return DIRS[idx];
 }
 
+// Bresenham line-of-sight: returns true if ax,az can see bx,bz with no walls in between.
+// Checks all intermediate cells (not endpoints) for walkability.
+function hasLineOfSight(ax, az, bx, bz, walkableFn) {
+  let x0 = ax, z0 = az;
+  const x1 = bx, z1 = bz;
+  const dx = Math.abs(x1 - x0), dz = Math.abs(z1 - z0);
+  const sx = x0 < x1 ? 1 : -1, sz = z0 < z1 ? 1 : -1;
+  let err = dx - dz;
+  while (true) {
+    if (x0 === x1 && z0 === z1) return true;
+    if (!walkableFn(x0, z0)) return false;
+    const e2 = 2 * err;
+    if (e2 > -dz) { err -= dz; x0 += sx; }
+    if (e2 < dx) { err += dx; z0 += sz; }
+  }
+}
+
 function greedyStepToward(ax, az, tx, tz, walkableFn, occupiedFn) {
   const dx = tx - ax;
   const dz = tz - az;
@@ -364,6 +381,33 @@ const DUNGEON_SEED = 42;
 const DUNGEON_W = 32;
 const DUNGEON_H = DUNGEON_W;
 const MOB_NAMES = ["Skeleton", "Goblin", "Troll"];
+
+// Dialog pools for when an adventurer first spots the ghost (player)
+const GHOST_DIALOG = [
+  "A ghost! Good heavens — I wasn't expecting that.",
+  "Is that... a ghost?! By all the teapots in the realm!",
+  "Oh! Oh my. There's definitely a ghost right there.",
+  "W-wait. Is that a spectre? This dungeon is stranger than I thought.",
+  "A ghost! I must be losing my mind... or the dungeon is haunted. Probably both.",
+  "There's definitely a ghost in here. I'm choosing to remain calm about this.",
+  "Hm. A ghost. Not what I planned for today, but here we are.",
+  "So there's a ghost. Fine. I've seen stranger things in a dungeon.",
+  "A ghost. Well... at least it's not another adventurer.",
+  "I wonder if ghosts prefer tea. I should ask, if it doesn't kill me first.",
+];
+const GHOST_DIALOG_WITH_TEA = [
+  "A ghost! And — wait, why is my cup floating?! Oh. Oh no.",
+  "Is that a ghost?! And it's... it appears to be drifting alongside my tea. Fascinating. Terrifying.",
+  "A ghost! Good heavens — now there's a disembodied cup tumbling through the air alongside it.",
+  "W-what?! A ghost AND a levitating cup of tea? This dungeon has gone completely mad.",
+  "A ghost! By the kettle — my tea appears to be floating of its own accord now.",
+  "There's a ghost, and my cup appears to be floating. I'm going to carry on.",
+  "A ghost nearby... and a disembodied cup of tea hovering in the air. Perfectly normal dungeon.",
+  "The ghost seems interested in the tea. Or maybe the cup is just haunted now. Hard to say.",
+  "I suppose a floating cup of tea is less alarming than a ghost. Only slightly.",
+  "My tea is levitating. There's a ghost. I am fine. Everything is fine.",
+];
+const GHOST_SIGHT_RADIUS = 8;
 
 const TURNS_PER_WAVE = 120;
 const WAVE_COUNTDOWN_THRESHOLD = 20;
@@ -632,6 +676,27 @@ export default function App() {
   const [activeStoveKey, setActiveStoveKey] = useState(null);
   const { message, setMessage, showMsg } = useMessage();
   const ruinedNotifiedRef = useRef(new Set());
+
+  // ---------------------------------------------------------------------------
+  // Speech bubbles — keyed by entity id; position looked up from live state
+  // ---------------------------------------------------------------------------
+  const [speechBubbles, setSpeechBubbles] = useState({}); // { [entityId]: { text } }
+  const speechBubbleTimersRef = useRef({});
+
+  const showSpeechBubble = useCallback((entityId, text, duration = 6000) => {
+    setSpeechBubbles((prev) => ({ ...prev, [entityId]: { text } }));
+    if (speechBubbleTimersRef.current[entityId]) {
+      clearTimeout(speechBubbleTimersRef.current[entityId]);
+    }
+    speechBubbleTimersRef.current[entityId] = setTimeout(() => {
+      setSpeechBubbles((prev) => {
+        const next = { ...prev };
+        delete next[entityId];
+        return next;
+      });
+      delete speechBubbleTimersRef.current[entityId];
+    }, duration);
+  }, []);
   const [tempDropPerStep, setTempDropPerStep] = useState(0.5);
   const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.5);
   const [supersatiationBonus, setSupersatiationBonus] = useState(50);
@@ -666,6 +731,13 @@ export default function App() {
   const playerHpRef = useRef(PLAYER_MAX_HP);
   const ingredientsRef = useRef({ rations: 0, herbs: 0, dust: 0 });
   const ingredientDropsRef = useRef([]);
+  // Sync ref for playerHands so onStep can read current value without a dep
+  const playerHandsRef = useRef({ left: null, right: null });
+  playerHandsRef.current = playerHands;
+
+  // Track which adventurers have already reacted to spotting the ghost (player)
+  const adventurerSightingsRef = useRef(new Set());
+
   // initialMobs is stable (useMemo on []), so we can read it from a ref too
   const mobSatiationsRef = useRef(null);
   if (mobSatiationsRef.current === null) {
@@ -719,6 +791,7 @@ export default function App() {
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
     ruinedNotifiedRef.current = new Set();
+    adventurerSightingsRef.current = new Set();
 
     // Regenerate hidden passages
     const rng = makeContentRng(dungeonSeed ^ 0xabcdef);
@@ -756,6 +829,24 @@ export default function App() {
     ],
     [initialMobs, mobStatuses, mobSatiations, adventurers],
   );
+
+  // Resolve speech bubbles: look up current entity positions so bubbles follow movers
+  const activeSpeechBubbles = useMemo(() => {
+    return Object.entries(speechBubbles).flatMap(([entityId, bubble]) => {
+      let x, z, speakerName;
+      if (entityId.startsWith("mob_")) {
+        const idx = parseInt(entityId.slice(4), 10);
+        const mob = initialMobs[idx];
+        if (!mob) return [];
+        x = mob.x; z = mob.z; speakerName = mob.name;
+      } else {
+        const adv = adventurers.find((a) => a.id === entityId && a.alive);
+        if (!adv) return [];
+        x = adv.x; z = adv.z; speakerName = adv.name;
+      }
+      return [{ id: entityId, x, z, text: bubble.text, speakerName }];
+    });
+  }, [speechBubbles, initialMobs, adventurers]);
 
   const spawnAdventurersForWave = useCallback(
     (waveNum) => {
@@ -856,6 +947,7 @@ export default function App() {
     let newIngredients = { ...ingredientsRef.current };
     let newIngredientDrops = [...ingredientDropsRef.current];
     let stepMessage = null;
+    const pendingSpeechBubbles = []; // { entityId, text } collected during processing
 
     // --- Wave spawning ---
     if (newTurnCount % turnsPerWave === 0) {
@@ -916,71 +1008,82 @@ export default function App() {
     newAdventurers = newAdventurers.map((adv) => {
       if (!adv.alive) return adv;
 
-      // Find nearest target: player or nearest conscious mob (combat priority)
-      let nearestTarget = { x: pgx, z: pgz, type: "player", idx: -1 };
-      let nearestDist = Math.hypot(adv.x - pgx, adv.z - pgz);
+      // Ghost sighting: adventurer spots the ghost (player) for the first time
+      if (!adventurerSightingsRef.current.has(adv.id)) {
+        const playerDist = Math.hypot(adv.x - pgx, adv.z - pgz);
+        if (playerDist <= GHOST_SIGHT_RADIUS && hasLineOfSight(adv.x, adv.z, pgx, pgz, isWalkable)) {
+          adventurerSightingsRef.current.add(adv.id);
+          const hasTeaInHand = !!(playerHandsRef.current.left || playerHandsRef.current.right);
+          const pool = hasTeaInHand ? GHOST_DIALOG_WITH_TEA : GHOST_DIALOG;
+          pendingSpeechBubbles.push({
+            entityId: adv.id,
+            text: pool[Math.floor(Math.random() * pool.length)],
+          });
+        }
+      }
+
+      // Factions: adventurers are hostile to monsters, neutral to player.
+      // Priority: fight any conscious monster in line of sight; otherwise seek nearest stove.
+
+      // Find nearest visible (line-of-sight) conscious monster
+      let combatTarget = null;
+      let combatDist = Infinity;
       for (let i = 0; i < initialMobs.length; i++) {
         if (newMobSatiations[i] <= 0) continue; // unconscious
         const mob = initialMobs[i];
         const d = Math.hypot(adv.x - mob.x, adv.z - mob.z);
-        if (d < nearestDist) {
-          nearestDist = d;
-          nearestTarget = { x: mob.x, z: mob.z, type: "mob", idx: i };
+        if (d < combatDist && hasLineOfSight(adv.x, adv.z, mob.x, mob.z, isWalkable)) {
+          combatDist = d;
+          combatTarget = { x: mob.x, z: mob.z, type: "mob", idx: i };
         }
       }
 
-      // Secondary targets: loot drops and stoves (only if closer than any combat target)
-      for (let i = 0; i < newIngredientDrops.length; i++) {
-        const drop = newIngredientDrops[i];
-        const d = Math.hypot(adv.x - drop.x, adv.z - drop.z);
-        if (d < nearestDist) {
-          nearestDist = d;
-          nearestTarget = { x: drop.x, z: drop.z, type: "loot", lootIdx: i };
-        }
-      }
-      for (const stove of stovePlacements) {
-        const d = Math.hypot(adv.x - stove.x, adv.z - stove.z);
-        if (d < nearestDist) {
-          nearestDist = d;
-          nearestTarget = { x: stove.x, z: stove.z, type: "stove" };
-        }
-      }
-
-      const ddx = nearestTarget.x - adv.x;
-      const ddz = nearestTarget.z - adv.z;
-      const adjacent = Math.abs(ddx) + Math.abs(ddz) === 1;
-
-      if (
-        adjacent &&
-        (nearestTarget.type === "player" || nearestTarget.type === "mob")
-      ) {
-        // Attack combat target
-        if (nearestTarget.type === "player") {
-          const damage = Math.max(1, adv.attack - PLAYER_DEFENSE);
-          newPlayerHp = Math.max(0, newPlayerHp - damage);
-          stepMessage = `The ${adv.name} attacks you for ${damage} damage! (${newPlayerHp}/${PLAYER_MAX_HP} HP)`;
-        } else {
+      if (combatTarget) {
+        // Adjacent to monster: attack
+        const ddx = combatTarget.x - adv.x;
+        const ddz = combatTarget.z - adv.z;
+        if (Math.abs(ddx) + Math.abs(ddz) === 1) {
           const damage = Math.max(1, adv.attack - MOB_DEFENSE);
-          newMobSatiations[nearestTarget.idx] = Math.max(
+          newMobSatiations[combatTarget.idx] = Math.max(
             0,
-            newMobSatiations[nearestTarget.idx] - damage,
+            newMobSatiations[combatTarget.idx] - damage,
           );
-          if (newMobSatiations[nearestTarget.idx] <= 0) {
-            stepMessage = `${initialMobs[nearestTarget.idx].name} has fallen unconscious!`;
+          if (newMobSatiations[combatTarget.idx] <= 0) {
+            stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
           }
+          return adv;
         }
+        // Move toward monster
+        occupied.delete(`${adv.x}_${adv.z}`);
+        const pos = greedyStepToward(
+          adv.x, adv.z, combatTarget.x, combatTarget.z,
+          isWalkable, (x, z) => occupied.has(`${x}_${z}`),
+        );
+        if (pos) {
+          occupied.add(`${pos.x}_${pos.z}`);
+          return { ...adv, x: pos.x, z: pos.z };
+        }
+        occupied.add(`${adv.x}_${adv.z}`);
         return adv;
       }
 
-      // Move toward target
+      // No combat target: pathfind to nearest stove
+      let stoveTarget = null;
+      let stoveDist = Infinity;
+      for (const stove of stovePlacements) {
+        const d = Math.hypot(adv.x - stove.x, adv.z - stove.z);
+        if (d < stoveDist) {
+          stoveDist = d;
+          stoveTarget = { x: stove.x, z: stove.z };
+        }
+      }
+
+      if (!stoveTarget) return adv;
+
       occupied.delete(`${adv.x}_${adv.z}`);
       const pos = greedyStepToward(
-        adv.x,
-        adv.z,
-        nearestTarget.x,
-        nearestTarget.z,
-        isWalkable,
-        (x, z) => occupied.has(`${x}_${z}`),
+        adv.x, adv.z, stoveTarget.x, stoveTarget.z,
+        isWalkable, (x, z) => occupied.has(`${x}_${z}`),
       );
       if (pos) {
         occupied.add(`${pos.x}_${pos.z}`);
@@ -1085,6 +1188,9 @@ export default function App() {
     setMobSatiations(newMobSatiations);
 
     if (stepMessage) showMsg(stepMessage);
+    for (const { entityId, text } of pendingSpeechBubbles) {
+      showSpeechBubble(entityId, text, 6000);
+    }
   }, [
     gameState,
     tempDropPerStep,
@@ -1092,6 +1198,7 @@ export default function App() {
     solidData,
     initialMobs,
     showMsg,
+    showSpeechBubble,
     spawnAdventurersForWave,
     stovePlacements,
   ]);
@@ -1346,9 +1453,11 @@ export default function App() {
         const tea = hand ? playerHands[hand] : null;
         const mobStatus = mobStatuses[facingTarget.mobIdx];
         const isUnconscious = mobSatiations[facingTarget.mobIdx] <= 0;
+        const mobBubbleId = `mob_${facingTarget.mobIdx}`;
         if (tea && !isUnconscious && mobStatus === "ecstatic") {
-          showMsg(
-            `${mob.name} says: "Oh, I couldn't possibly! I'm far too full right now — perhaps later."`,
+          showSpeechBubble(
+            mobBubbleId,
+            "Oh, I couldn't possibly! I'm far too full right now — perhaps later.",
           );
           return;
         }
@@ -1367,8 +1476,9 @@ export default function App() {
                   : status === "refreshed"
                     ? "I'm doing well, but tea is always welcome."
                     : "I'm fully satisfied, thank you.";
-          showMsg(
-            `${mob.name} says: "I'd love some ${preferredRecipe?.name ?? "tea"}... ${thirstLine}"`,
+          showSpeechBubble(
+            mobBubbleId,
+            `I'd love some ${preferredRecipe?.name ?? "tea"}... ${thirstLine}`,
           );
           return;
         }
@@ -1384,13 +1494,15 @@ export default function App() {
 
         if (tea.ruined || tea.temperature < lo) {
           applyMobSatiation(10);
-          showMsg(
-            `${mob.name} says: "This ${tea.name} is cold and ruined... How disappointing."`,
+          showSpeechBubble(
+            mobBubbleId,
+            `This ${tea.name} is cold and ruined... How disappointing.`,
           );
         } else if (tea.temperature > hi) {
           applyMobSatiation(30);
-          showMsg(
-            `${mob.name} says: "Ouch! This ${tea.name} is scalding hot! Dreadfully disappointing."`,
+          showSpeechBubble(
+            mobBubbleId,
+            `Ouch! This ${tea.name} is scalding hot! Dreadfully disappointing.`,
           );
         } else {
           const isPreferred = mob.preferredRecipeId === tea.recipe.id;
@@ -1400,12 +1512,14 @@ export default function App() {
             : 0;
           applyMobSatiation(baseSatiation + bonus);
           if (isPreferred) {
-            showMsg(
-              `${mob.name} says: "My favourite! This ${tea.name} is absolutely perfect — I am overjoyed!"`,
+            showSpeechBubble(
+              mobBubbleId,
+              `My favourite! This ${tea.name} is absolutely perfect — I am overjoyed!`,
             );
           } else {
-            showMsg(
-              `${mob.name} says: "Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!"`,
+            showSpeechBubble(
+              mobBubbleId,
+              `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
             );
           }
         }
@@ -1423,6 +1537,7 @@ export default function App() {
     mobSatiations,
     activeStoveKey,
     showMsg,
+    showSpeechBubble,
     onStep,
     supersatiationBonus,
     ingredients,
@@ -1538,6 +1653,7 @@ export default function App() {
                 mobiles={mobiles}
                 spriteAtlas={mobSpriteAtlas}
                 passageMask={passageMask ?? undefined}
+                speechBubbles={activeSpeechBubbles}
                 style={{ width: "100%", height: "100%" }}
               />
             )}

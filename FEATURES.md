@@ -159,16 +159,30 @@ Each wave N (first wave is wave 1):
 
 Adventurers spawn at the rooms farthest from the end room.
 
-### AI Target Priority
+### Factions
 
-The adventurer moves toward the **nearest** of the following each turn:
+| Entity | Faction | Stance toward player | Stance toward mobs | Stance toward adventurers |
+|--------|---------|---------------------|--------------------|--------------------------|
+| Player | `player` | — | friendly | neutral |
+| Mobs | `monster` | friendly | — | hostile |
+| Adventurers | `adventurer` | neutral | hostile | — |
 
-1. Player
-2. Any conscious mob
-3. Ingredient drop on the ground *(only if closer than any combat target)*
-4. Stove tile *(only if closer than any combat target)*
+Player and mobs are in separate factions but treat each other as friendly. Adventurers are neutral to the player (will not attack) and hostile to mobs.
 
-When adjacent to the player or a conscious mob, the adventurer attacks instead of moving. When it walks onto an ingredient drop tile the item is removed from the world ("The Warrior snatched the Iron Rations!"). Walking onto a stove tile triggers game over.
+### AI Behaviour
+
+Each turn the adventurer:
+
+1. **Checks for monsters in line of sight.** If any conscious mob is visible:
+   - If adjacent: attacks that mob (damage = max(1, attack − mob.defense)).
+   - Otherwise: moves toward the nearest visible mob.
+2. **Seeks the nearest stove** when no monster is in line of sight.
+
+### Ghost Sighting Dialog
+
+The player is a ghost. The first time each adventurer gains line-of-sight to the player (within 8 tiles), it blurts a one-off reaction line. The line is drawn randomly from a pool of surprised and bemused reactions. If the player is carrying at least one cup of tea, the line instead references a floating or disembodied cup of tea (the cup appears to move on its own because the ghost holding it is invisible to them).
+
+Walking onto a stove tile triggers game over.
 
 Attack damage = max(1, adventurer.attack − defender.defense).
 
