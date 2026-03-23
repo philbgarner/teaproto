@@ -1,10 +1,26 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { generateBspDungeon } from "../mazetools/src/bsp";
-import { generateContent } from "../mazetools/src/content";
+import {
+  generateContent,
+  generateHiddenPassages,
+  makeContentRng,
+} from "../mazetools/src/content";
 import { buildTileAtlas } from "../mazetools/src/rendering/tileAtlas";
 import { PerspectiveDungeonView } from "../mazetools/src/rendering/PerspectiveDungeonView";
+import {
+  buildPassageMask,
+  enablePassageInMask,
+  disablePassageInMask,
+} from "../mazetools/src/rendering/hiddenPassagesMask";
+import {
+  startPassageTraversal,
+  consumePassageStep,
+  cancelPassageTraversal,
+} from "../mazetools/src/turn/passageTraversal";
 import { RECIPES } from "./tea";
+import { useMusic } from "./useMusic";
+
 import SettingsTabs from "./SettingsTabs";
 
 import "./App.css";
@@ -168,6 +184,7 @@ function drawMinimap(
   playerZ,
   yaw,
   mobs,
+  passages,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -182,6 +199,14 @@ function drawMinimap(
       const solid = solidData[cz * width + cx] > 0;
       ctx.fillStyle = solid ? "#333" : "#888";
       ctx.fillRect(cx * cellW, cz * cellH, cellW, cellH);
+    }
+  }
+  if (passages) {
+    for (const p of passages) {
+      ctx.fillStyle = p.enabled ? "#00ffff" : "#006666";
+      for (const cell of p.cells) {
+        ctx.fillRect(cell.x * cellW, cell.y * cellH, cellW, cellH);
+      }
     }
   }
   if (mobs) {
@@ -224,7 +249,7 @@ function useEotBCamera(
   height,
   startX,
   startZ,
-  { onStep, blocked } = {},
+  { onStep, blocked, onBlockedMove } = {},
 ) {
   const logicalRef = useRef({ x: startX, z: startZ, yaw: 0 });
   const animRef = useRef({
@@ -247,6 +272,7 @@ function useEotBCamera(
   const solidRef = useRef(solidData);
   const onStepRef = useRef(onStep);
   const blockedRef = useRef(blocked);
+  const onBlockedMoveRef = useRef(onBlockedMove);
 
   if (prevStartX !== startX || prevStartZ !== startZ) {
     setPrevStartX(startX);
@@ -277,6 +303,9 @@ function useEotBCamera(
   useEffect(() => {
     blockedRef.current = blocked;
   }, [blocked]);
+  useEffect(() => {
+    onBlockedMoveRef.current = onBlockedMove;
+  }, [onBlockedMove]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -315,15 +344,27 @@ function useEotBCamera(
         const ngx = gx + fdx,
           ngz = gz + fdz;
         if (walkable(ngx, ngz)) beginAnim(ngx + 0.5, ngz + 0.5, yaw, true);
+        else onBlockedMoveRef.current?.(fdx, fdz);
       } else if (e.code === "KeyS" || e.code === "ArrowDown") {
         e.preventDefault();
         const ngx = gx - fdx,
           ngz = gz - fdz;
         if (walkable(ngx, ngz)) beginAnim(ngx + 0.5, ngz + 0.5, yaw, true);
+        else onBlockedMoveRef.current?.(-fdx, -fdz);
       } else if (e.code === "KeyA") {
         e.preventDefault();
-        beginAnim(x, z, yaw + Math.PI / 2, false);
+        const sgx = gx + fdz,
+          sgz = gz - fdx;
+        if (walkable(sgx, sgz)) beginAnim(sgx + 0.5, sgz + 0.5, yaw, true);
       } else if (e.code === "KeyD") {
+        e.preventDefault();
+        const sgx = gx - fdz,
+          sgz = gz + fdx;
+        if (walkable(sgx, sgz)) beginAnim(sgx + 0.5, sgz + 0.5, yaw, true);
+      } else if (e.code === "KeyQ") {
+        e.preventDefault();
+        beginAnim(x, z, yaw + Math.PI / 2, false);
+      } else if (e.code === "KeyE") {
         e.preventDefault();
         beginAnim(x, z, yaw - Math.PI / 2, false);
       }
@@ -351,7 +392,25 @@ function useEotBCamera(
     return () => cancelAnimationFrame(rafId);
   }, []);
 
-  return { camera, logicalRef };
+  function doMove(dx, dz) {
+    const { x, z, yaw } = logicalRef.current;
+    const toX = x + dx;
+    const toZ = z + dz;
+    animRef.current = {
+      fromX: x,
+      fromZ: z,
+      fromYaw: yaw,
+      toX,
+      toZ,
+      toYaw: yaw,
+      startTime: performance.now(),
+      animating: true,
+    };
+    logicalRef.current = { x: toX, z: toZ, yaw };
+    onStepRef.current?.();
+  }
+
+  return { camera, logicalRef, doMove };
 }
 
 // ---------------------------------------------------------------------------
@@ -405,7 +464,9 @@ const PLAYER_MAX_HP = 30;
 const PLAYER_DEFENSE = 2;
 const MOB_ATTACK = 3;
 const MOB_DEFENSE = 1;
+const WIN_WAVES = 10;
 
+// ingredientId matches RECIPES ingredientId
 const ADVENTURER_TYPES = [
   {
     type: "warrior",
@@ -415,6 +476,7 @@ const ADVENTURER_TYPES = [
     defense: 2,
     xp: 30,
     colorRgb: [1.0, 0.15, 0.15],
+    drop: { id: "rations", name: "Iron Rations" },
   },
   {
     type: "rogue",
@@ -424,6 +486,7 @@ const ADVENTURER_TYPES = [
     defense: 1,
     xp: 25,
     colorRgb: [0.9, 0.1, 0.9],
+    drop: { id: "herbs", name: "Wild Herbs" },
   },
   {
     type: "mage",
@@ -433,6 +496,7 @@ const ADVENTURER_TYPES = [
     defense: 0,
     xp: 40,
     colorRgb: [0.2, 0.3, 1.0],
+    drop: { id: "dust", name: "Arcane Dust" },
   },
 ];
 
@@ -450,6 +514,17 @@ const STATUS_CSS = {
   sated: "#08f",
   refreshed: "#3f5",
 };
+
+// ---------------------------------------------------------------------------
+// Seeded LCG RNG (Numerical Recipes constants)
+// ---------------------------------------------------------------------------
+function makeRng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(1664525, s) + 1013904223) >>> 0;
+    return s / 0xffffffff;
+  };
+}
 
 // ---------------------------------------------------------------------------
 // App
@@ -575,6 +650,39 @@ export default function App() {
       .sort((a, b) => b.dist - a.dist);
   }, [dungeon]);
 
+  // Scatter ingredients across non-end rooms at game start
+  const initialIngredientDrops = useMemo(() => {
+    const rng = makeRng(dungeonSeed ^ 0x1337beef);
+    const ingTypes = [
+      { id: "rations", name: "Iron Rations" },
+      { id: "herbs", name: "Wild Herbs" },
+      { id: "dust", name: "Arcane Dust" },
+    ];
+    const nonEndRooms = Array.from(dungeon.rooms.entries())
+      .filter(([id]) => id !== dungeon.endRoomId)
+      .map(([, room]) => room);
+    if (!nonEndRooms.length) return [];
+
+    const drops = [];
+    // 2 of each ingredient type = 6 items total
+    for (let i = 0; i < 6; i++) {
+      const ingType = ingTypes[i % ingTypes.length];
+      const room = nonEndRooms[Math.floor(rng() * nonEndRooms.length)];
+      const x =
+        room.rect.x + 1 + Math.floor(rng() * Math.max(1, room.rect.w - 2));
+      const z =
+        room.rect.y + 1 + Math.floor(rng() * Math.max(1, room.rect.h - 2));
+      drops.push({
+        id: ingType.id,
+        name: ingType.name,
+        x,
+        z,
+        dropKey: `scatter_${i}`,
+      });
+    }
+    return drops;
+  }, [dungeon, dungeonSeed]);
+
   const mobSpriteAtlas = useMemo(() => makeMobSpriteAtlas(), []);
 
   // Tile atlas + texture
@@ -631,6 +739,18 @@ export default function App() {
   const [xpDrops, setXpDrops] = useState([]);
   const [playerHp, setPlayerHp] = useState(PLAYER_MAX_HP);
 
+  // Ingredient inventory  { rations: 0, herbs: 0, dust: 0 }
+  const [ingredients, setIngredients] = useState({
+    rations: 0,
+    herbs: 0,
+    dust: 0,
+  });
+  const [ingredientDrops, setIngredientDrops] = useState([]);
+
+  // Game-flow state
+  const [gameState, setGameState] = useState("playing"); // "playing" | "gameover" | "won"
+  const [gameOverReason, setGameOverReason] = useState(null);
+
   // Refs for synchronous cross-state access during game step processing
   const adventurersRef = useRef([]);
   const currentWaveRef = useRef(0);
@@ -638,11 +758,31 @@ export default function App() {
   const playerXpRef = useRef(0);
   const xpDropsRef = useRef([]);
   const playerHpRef = useRef(PLAYER_MAX_HP);
+  const ingredientsRef = useRef({ rations: 0, herbs: 0, dust: 0 });
+  const ingredientDropsRef = useRef([]);
   // initialMobs is stable (useMemo on []), so we can read it from a ref too
   const mobSatiationsRef = useRef(null);
   if (mobSatiationsRef.current === null) {
     mobSatiationsRef.current = initialMobs.map(() => 40);
   }
+
+  // Hidden passages
+  const passagesRef = useRef([]);
+  const [passageMask, setPassageMask] = useState(null);
+  const [passageTraversal, _setPassageTraversal] = useState({ kind: "idle" });
+  const passageTraversalRef = useRef({ kind: "idle" });
+  function setPassageTraversal(s) {
+    passageTraversalRef.current = s;
+    _setPassageTraversal(s);
+  }
+  const [traversalFactor, setTraversalFactor] = useState(2.0);
+  const traversalFactorRef = useRef(2.0);
+  const traversalStartRef = useRef({ totalSteps: 0, factor: 2.0 });
+
+  const { play: playMainTheme } = useMusic("music/MUS_1_MainTheme_Cozy.ogg", {
+    volume: 0.3,
+    loop: true,
+  });
 
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
@@ -659,14 +799,31 @@ export default function App() {
     setPlayerXp(0);
     setXpDrops([]);
     setPlayerHp(PLAYER_MAX_HP);
+    setIngredients({ rations: 0, herbs: 0, dust: 0 });
+    setIngredientDrops([...initialIngredientDrops]);
+    setGameState("playing");
+    setGameOverReason(null);
     adventurersRef.current = [];
     currentWaveRef.current = 0;
     turnCountRef.current = 0;
     playerXpRef.current = 0;
     xpDropsRef.current = [];
     playerHpRef.current = PLAYER_MAX_HP;
+    ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
+    ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
     ruinedNotifiedRef.current = new Set();
+
+    // Regenerate hidden passages
+    const rng = makeContentRng(dungeonSeed ^ 0xabcdef);
+    const { passages } = generateHiddenPassages(dungeon, rng, { count: 2 });
+    passagesRef.current = passages;
+    setPassageMask(
+      buildPassageMask(dungeon.width, dungeon.height, { passages }),
+    );
+    setPassageTraversal({ kind: "idle" });
+
+    playMainTheme();
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mobiles = useMemo(
@@ -747,6 +904,7 @@ export default function App() {
 
   // On each player step: cool tea, count down brewing, run game loop
   const onStep = useCallback(() => {
+    if (gameState !== "playing") return;
     // --- Tea cooling ---
     setPlayerHands((prev) => {
       let changed = false;
@@ -795,6 +953,8 @@ export default function App() {
     let newPlayerXp = playerXpRef.current;
     let newXpDrops = [...xpDropsRef.current];
     let newPlayerHp = playerHpRef.current;
+    let newIngredients = { ...ingredientsRef.current };
+    let newIngredientDrops = [...ingredientDropsRef.current];
     let stepMessage = null;
 
     // --- Wave spawning ---
@@ -825,6 +985,21 @@ export default function App() {
     }
     newXpDrops = remainingDrops;
 
+    // --- Ingredient pickup ---
+    const remainingIngDrops = [];
+    for (const drop of newIngredientDrops) {
+      if (drop.x === pgx && drop.z === pgz) {
+        newIngredients = {
+          ...newIngredients,
+          [drop.id]: (newIngredients[drop.id] ?? 0) + 1,
+        };
+        stepMessage = `Collected ${drop.name}!`;
+      } else {
+        remainingIngDrops.push(drop);
+      }
+    }
+    newIngredientDrops = remainingIngDrops;
+
     // --- Adventurer AI ---
     function isWalkable(x, z) {
       if (x < 0 || z < 0 || x >= dungeonWidth || z >= dungeonHeight)
@@ -841,7 +1016,7 @@ export default function App() {
     newAdventurers = newAdventurers.map((adv) => {
       if (!adv.alive) return adv;
 
-      // Find nearest target: player or nearest conscious mob
+      // Find nearest target: player or nearest conscious mob (combat priority)
       let nearestTarget = { x: pgx, z: pgz, type: "player", idx: -1 };
       let nearestDist = Math.hypot(adv.x - pgx, adv.z - pgz);
       for (let i = 0; i < initialMobs.length; i++) {
@@ -854,12 +1029,32 @@ export default function App() {
         }
       }
 
+      // Secondary targets: loot drops and stoves (only if closer than any combat target)
+      for (let i = 0; i < newIngredientDrops.length; i++) {
+        const drop = newIngredientDrops[i];
+        const d = Math.hypot(adv.x - drop.x, adv.z - drop.z);
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearestTarget = { x: drop.x, z: drop.z, type: "loot", lootIdx: i };
+        }
+      }
+      for (const stove of stovePlacements) {
+        const d = Math.hypot(adv.x - stove.x, adv.z - stove.z);
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearestTarget = { x: stove.x, z: stove.z, type: "stove" };
+        }
+      }
+
       const ddx = nearestTarget.x - adv.x;
       const ddz = nearestTarget.z - adv.z;
       const adjacent = Math.abs(ddx) + Math.abs(ddz) === 1;
 
-      if (adjacent) {
-        // Attack target
+      if (
+        adjacent &&
+        (nearestTarget.type === "player" || nearestTarget.type === "mob")
+      ) {
+        // Attack combat target
         if (nearestTarget.type === "player") {
           const damage = Math.max(1, adv.attack - PLAYER_DEFENSE);
           newPlayerHp = Math.max(0, newPlayerHp - damage);
@@ -895,6 +1090,18 @@ export default function App() {
       return adv;
     });
 
+    // --- Adventurers pick up loot they've walked onto ---
+    for (const adv of newAdventurers) {
+      if (!adv.alive) continue;
+      const lootIdx = newIngredientDrops.findIndex(
+        (d) => d.x === adv.x && d.z === adv.z,
+      );
+      if (lootIdx !== -1) {
+        const loot = newIngredientDrops.splice(lootIdx, 1)[0];
+        stepMessage = `The ${adv.name} snatched the ${loot.name}!`;
+      }
+    }
+
     // --- Conscious mob counterattack ---
     for (let i = 0; i < initialMobs.length; i++) {
       if (newMobSatiations[i] <= 0) continue; // unconscious
@@ -913,7 +1120,18 @@ export default function App() {
               z: adv.z,
               amount: adv.xp,
             });
-            stepMessage = `${mob.name} slew the ${adv.name}! (+${adv.xp} XP dropped)`;
+            // Drop ingredient based on adventurer type
+            const tmpl = ADVENTURER_TYPES.find((t) => t.type === adv.template);
+            if (tmpl?.drop) {
+              newIngredientDrops.push({
+                id: tmpl.drop.id,
+                name: tmpl.drop.name,
+                x: adv.x,
+                z: adv.z,
+                dropKey: `ing_${Date.now()}_${j}`,
+              });
+            }
+            stepMessage = `${mob.name} slew the ${adv.name}! (+${adv.xp} XP, ${tmpl?.drop?.name ?? "?"} dropped)`;
           } else {
             newAdventurers[j] = { ...adv, hp: newHp };
           }
@@ -922,12 +1140,38 @@ export default function App() {
       }
     }
 
+    // --- Tea station game-over: any adventurer on a stove tile ---
+    const stoveSet = new Set(stovePlacements.map((s) => `${s.x}_${s.z}`));
+    for (const adv of newAdventurers) {
+      if (!adv.alive) continue;
+      if (stoveSet.has(`${adv.x}_${adv.z}`)) {
+        setGameState("gameover");
+        setGameOverReason(`The ${adv.name} smashed your tea station!`);
+        return;
+      }
+    }
+
+    // --- Player HP game-over ---
+    if (newPlayerHp <= 0) {
+      setGameState("gameover");
+      setGameOverReason("You have been defeated by the adventurers!");
+      return;
+    }
+
+    // --- Win condition ---
+    if (newWave >= WIN_WAVES) {
+      setGameState("won");
+      return;
+    }
+
     // --- Commit all ref + state updates ---
     adventurersRef.current = newAdventurers;
     currentWaveRef.current = newWave;
     playerXpRef.current = newPlayerXp;
     xpDropsRef.current = newXpDrops;
     playerHpRef.current = newPlayerHp;
+    ingredientsRef.current = newIngredients;
+    ingredientDropsRef.current = newIngredientDrops;
     mobSatiationsRef.current = newMobSatiations;
 
     setTurnCount(newTurnCount);
@@ -936,16 +1180,20 @@ export default function App() {
     setPlayerXp(newPlayerXp);
     setXpDrops([...newXpDrops]);
     setPlayerHp(newPlayerHp);
+    setIngredients(newIngredients);
+    setIngredientDrops([...newIngredientDrops]);
     setMobSatiations(newMobSatiations);
 
     if (stepMessage) showMsg(stepMessage);
   }, [
+    gameState,
     tempDropPerStep,
     satiationDropPerStep,
     solidData,
     initialMobs,
     showMsg,
     spawnAdventurersForWave,
+    stovePlacements,
   ]);
 
   // Show message when tea becomes ruined
@@ -959,14 +1207,94 @@ export default function App() {
     }
   }, [playerHands, showMsg]);
 
-  const { camera, logicalRef } = useEotBCamera(
+  const onBlockedMove = useCallback((dx, dz) => {
+    const passages = passagesRef.current;
+    if (!passages.length) return;
+    const { x, z } = logicalRef.current;
+    const px = Math.floor(x);
+    const pz = Math.floor(z);
+    for (const p of passages) {
+      if (!p.enabled) continue;
+      const traversal = startPassageTraversal(p, { x: px, y: pz });
+      if (!traversal || traversal.kind !== "active") continue;
+      const first = traversal.remainingCells[0];
+      if (first.x === px + dx && first.y === pz + dz) {
+        traversalStartRef.current = {
+          totalSteps: traversal.remainingCells.length,
+          factor: traversalFactorRef.current,
+        };
+        setPassageTraversal(traversal);
+        showMsg("Entering secret passage…");
+        return;
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const { camera, logicalRef, doMove } = useEotBCamera(
     solidData,
     dungeonWidth,
     dungeonHeight,
     spawnX,
     spawnZ,
-    { onStep, blocked: showRecipeMenu },
+    {
+      onStep,
+      blocked: showRecipeMenu || gameState !== "playing",
+      onBlockedMove,
+    },
   );
+
+  // Passage traversal step-loop
+  useEffect(() => {
+    if (passageTraversal.kind !== "active") return;
+    const { cell, next } = consumePassageStep(passageTraversal);
+    setPassageTraversal(next);
+    const { x, z } = logicalRef.current;
+    doMove(cell.x + 0.5 - x, cell.y + 0.5 - z);
+    if (next.kind === "idle") {
+      const { totalSteps, factor } = traversalStartRef.current;
+      const turns = Math.round(totalSteps / factor);
+      showMsg(
+        `Secret passage traversed — ${totalSteps} step${totalSteps !== 1 ? "s" : ""} (${turns} turn${turns !== 1 ? "s" : ""} at ${factor}×).`,
+      );
+    }
+  }, [passageTraversal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // E key — toggle passage at player position
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.code !== "KeyF") return;
+      if (passageTraversal.kind === "active") {
+        setPassageTraversal(cancelPassageTraversal());
+        return;
+      }
+      const passages = passagesRef.current;
+      if (!passages.length || !passageMask) return;
+      const { x, z } = logicalRef.current;
+      const px = Math.floor(x);
+      const pz = Math.floor(z);
+      for (const p of passages) {
+        if (
+          (p.start.x === px && p.start.y === pz) ||
+          (p.end.x === px && p.end.y === pz)
+        ) {
+          p.enabled = !p.enabled;
+          const newMask = new Uint8Array(passageMask);
+          if (p.enabled) {
+            enablePassageInMask(newMask, dungeonWidth, p);
+            showMsg("Passage unlocked!");
+          } else {
+            disablePassageInMask(newMask, dungeonWidth, p);
+            showMsg("Passage locked.");
+          }
+          setPassageMask(newMask);
+          return;
+        }
+      }
+      showMsg("Nothing to interact with here.");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [passageTraversal, passageMask, dungeonWidth, showMsg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Detect what the player is facing (uses logical position for immediate response)
   // camera is a dep to force recompute after each move/turn
@@ -1025,6 +1353,24 @@ export default function App() {
         if (num >= 1 && num <= RECIPES.length) {
           e.preventDefault();
           const recipe = RECIPES[num - 1];
+          if (
+            recipe.ingredientId &&
+            (ingredients[recipe.ingredientId] ?? 0) < 1
+          ) {
+            showMsg(
+              `You need ${recipe.ingredientName} to brew ${recipe.name}!`,
+            );
+            return;
+          }
+          if (recipe.ingredientId) {
+            const newIng = {
+              ...ingredientsRef.current,
+              [recipe.ingredientId]:
+                ingredientsRef.current[recipe.ingredientId] - 1,
+            };
+            ingredientsRef.current = newIng;
+            setIngredients(newIng);
+          }
           setStoveStates((prev) => {
             const next = new Map(prev);
             next.set(activeStoveKey, {
@@ -1053,6 +1399,7 @@ export default function App() {
       if (e.code !== "KeyI") return;
       e.preventDefault();
       if (!facingTarget) return;
+      if (gameState !== "playing") return;
 
       if (facingTarget.type === "stove") {
         const state = stoveStates.get(facingTarget.stoveKey);
@@ -1178,6 +1525,8 @@ export default function App() {
     showMsg,
     onStep,
     supersatiationBonus,
+    ingredients,
+    gameState,
   ]);
 
   // Minimap
@@ -1223,9 +1572,26 @@ export default function App() {
         cssColor: "#fd0",
         isAdventurer: false,
         isXp: true,
+        isIngredient: false,
+      })),
+      ...ingredientDrops.map((drop) => ({
+        x: drop.x,
+        z: drop.z,
+        name: drop.name,
+        cssColor: "#0df",
+        isAdventurer: false,
+        isXp: false,
+        isIngredient: true,
       })),
     ],
-    [initialMobs, mobStatuses, mobSatiations, adventurers, xpDrops],
+    [
+      initialMobs,
+      mobStatuses,
+      mobSatiations,
+      adventurers,
+      xpDrops,
+      ingredientDrops,
+    ],
   );
 
   const onMinimapMouseMove = useCallback(
@@ -1261,6 +1627,7 @@ export default function App() {
       camera.z,
       camera.yaw,
       minimapMobs,
+      passagesRef.current,
     );
   }, [solidData, camera, minimapMobs]);
 
@@ -1291,7 +1658,7 @@ export default function App() {
         >
           <span style={{ fontWeight: "bold", color: "#eee" }}>Tea Dungeon</span>
           <span style={{ color: "#666", fontSize: 12 }}>
-            seed: {DUNGEON_SEED}
+            seed: {dungeonSeed}
           </span>
           <span
             style={{ color: currentWave > 0 ? "#f88" : "#555", fontSize: 12 }}
@@ -1327,6 +1694,7 @@ export default function App() {
                 objectRegistry={objectRegistry}
                 mobiles={mobiles}
                 spriteAtlas={mobSpriteAtlas}
+                passageMask={passageMask ?? undefined}
                 style={{ width: "100%", height: "100%" }}
               />
             )}
@@ -1408,44 +1776,83 @@ export default function App() {
                 >
                   Select Recipe
                 </div>
-                {RECIPES.map((recipe, i) => (
-                  <div
-                    key={recipe.id}
-                    onClick={() => {
-                      setStoveStates((prev) => {
-                        const next = new Map(prev);
-                        next.set(activeStoveKey, {
-                          brewing: {
-                            recipe,
-                            stepsRemaining: recipe.timeToBrew,
-                            ready: false,
-                          },
+                {RECIPES.map((recipe, i) => {
+                  const locked =
+                    recipe.ingredientId &&
+                    (ingredients[recipe.ingredientId] ?? 0) < 1;
+                  const have = recipe.ingredientId
+                    ? (ingredients[recipe.ingredientId] ?? 0)
+                    : null;
+                  return (
+                    <div
+                      key={recipe.id}
+                      onClick={() => {
+                        if (locked) {
+                          showMsg(
+                            `You need ${recipe.ingredientName} to brew ${recipe.name}!`,
+                          );
+                          return;
+                        }
+                        if (recipe.ingredientId) {
+                          const newIng = {
+                            ...ingredientsRef.current,
+                            [recipe.ingredientId]:
+                              ingredientsRef.current[recipe.ingredientId] - 1,
+                          };
+                          ingredientsRef.current = newIng;
+                          setIngredients(newIng);
+                        }
+                        setStoveStates((prev) => {
+                          const next = new Map(prev);
+                          next.set(activeStoveKey, {
+                            brewing: {
+                              recipe,
+                              stepsRemaining: recipe.timeToBrew,
+                              ready: false,
+                            },
+                          });
+                          return next;
                         });
-                        return next;
-                      });
-                      setShowRecipeMenu(false);
-                      showMsg(
-                        `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
-                      );
-                    }}
-                    style={{
-                      padding: "6px 8px",
-                      cursor: "pointer",
-                      borderRadius: 3,
-                      marginBottom: 4,
-                      background: "rgba(255,255,255,0.05)",
-                      fontSize: 13,
-                    }}
-                  >
-                    <span style={{ color: "#fa0" }}>[{i + 1}]</span>{" "}
-                    {recipe.name}{" "}
-                    <span style={{ color: "#777" }}>
-                      ({recipe.timeToBrew} steps,{" "}
-                      {recipe.idealTemperatureRange[0]}–
-                      {recipe.idealTemperatureRange[1]}°)
-                    </span>
-                  </div>
-                ))}
+                        setShowRecipeMenu(false);
+                        showMsg(
+                          `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
+                        );
+                      }}
+                      style={{
+                        padding: "6px 8px",
+                        cursor: locked ? "not-allowed" : "pointer",
+                        borderRadius: 3,
+                        marginBottom: 4,
+                        background: locked
+                          ? "rgba(80,0,0,0.3)"
+                          : "rgba(255,255,255,0.05)",
+                        fontSize: 13,
+                        opacity: locked ? 0.6 : 1,
+                      }}
+                    >
+                      <span style={{ color: locked ? "#955" : "#fa0" }}>
+                        [{i + 1}]
+                      </span>{" "}
+                      {recipe.name}{" "}
+                      <span style={{ color: "#777" }}>
+                        ({recipe.timeToBrew} steps,{" "}
+                        {recipe.idealTemperatureRange[0]}–
+                        {recipe.idealTemperatureRange[1]}°)
+                      </span>
+                      {recipe.ingredientId && (
+                        <span
+                          style={{
+                            color: locked ? "#f55" : "#5d5",
+                            fontSize: 11,
+                            marginLeft: 6,
+                          }}
+                        >
+                          [{recipe.ingredientName}: {have}]
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
                 <div style={{ marginTop: 10, color: "#555", fontSize: 11 }}>
                   Press number to select · I / Esc to cancel
                 </div>
@@ -1532,8 +1939,11 @@ export default function App() {
                   >
                     {minimapTooltip.mob.name}
                   </div>
-                  {minimapTooltip.mob.isXp ? (
-                    <div style={{ color: "#fd0" }}>Walk here to collect</div>
+                  {minimapTooltip.mob.isXp ||
+                  minimapTooltip.mob.isIngredient ? (
+                    <div style={{ color: minimapTooltip.mob.cssColor }}>
+                      Walk here to collect
+                    </div>
                   ) : minimapTooltip.mob.isAdventurer ? (
                     <div>
                       HP:{" "}
@@ -1566,6 +1976,11 @@ export default function App() {
               setSatiationDropPerStep={setSatiationDropPerStep}
               supersatiationBonus={supersatiationBonus}
               setSupersatiationBonus={setSupersatiationBonus}
+              traversalFactor={traversalFactor}
+              setTraversalFactor={(v) => {
+                traversalFactorRef.current = v;
+                setTraversalFactor(v);
+              }}
               dungeonSeed={dungeonSeed}
               setDungeonSeed={setDungeonSeed}
               dungeonWidth={dungeonWidth}
@@ -1584,9 +1999,10 @@ export default function App() {
             <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
               <div>W / ↑ - move forward</div>
               <div>S / ↓ - move back</div>
-              <div>A - turn left</div>
-              <div>D - turn right</div>
+              <div>A / D - strafe</div>
+              <div>Q / E - turn</div>
               <div>I - interact</div>
+              <div>F - toggle passage</div>
               <div>. (period) - Wait a Turn</div>
             </div>
           </div>
@@ -1617,6 +2033,10 @@ export default function App() {
             HP: {playerHp}/{PLAYER_MAX_HP}
           </span>
           <span style={{ color: "#fa0" }}>XP: {playerXp}</span>
+          <span style={{ color: "#0df", fontSize: 11 }}>
+            Rations: {ingredients.rations} · Herbs: {ingredients.herbs} · Dust:{" "}
+            {ingredients.dust}
+          </span>
         </div>
       </div>
 
@@ -1640,6 +2060,106 @@ export default function App() {
         <HandDisplay label="Left Hand" tea={playerHands.left} />
         <HandDisplay label="Right Hand" tea={playerHands.right} />
       </div>
+
+      {/* Game Over / Win overlay */}
+      {gameState !== "playing" && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.82)",
+            zIndex: 100,
+            fontFamily: "monospace",
+          }}
+        >
+          <div
+            style={{
+              background: "#111",
+              border: `2px solid ${gameState === "won" ? "#5d5" : "#c44"}`,
+              borderRadius: 8,
+              padding: "40px 52px",
+              textAlign: "center",
+              maxWidth: 420,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 32,
+                fontWeight: "bold",
+                color: gameState === "won" ? "#5d5" : "#f44",
+                marginBottom: 16,
+              }}
+            >
+              {gameState === "won" ? "Victory!" : "Game Over"}
+            </div>
+            {gameState === "won" ? (
+              <div style={{ color: "#aaa", marginBottom: 24, lineHeight: 1.6 }}>
+                You survived {WIN_WAVES} waves of adventurers and kept the
+                dungeon cozy.
+                <br />
+                The monsters are very grateful.
+              </div>
+            ) : (
+              <div style={{ color: "#aaa", marginBottom: 24, lineHeight: 1.6 }}>
+                {gameOverReason}
+                <br />
+                <span style={{ fontSize: 12, color: "#666" }}>
+                  Survived {currentWave} wave{currentWave !== 1 ? "s" : ""} ·{" "}
+                  {turnCount} turns
+                </span>
+              </div>
+            )}
+            <button
+              onClick={() => {
+                // Reset by bumping dungeon seed, which triggers the reset effect
+                setDungeonSeed((s) => s);
+                const freshSatiations = initialMobs.map(() => 40);
+                setPlayerHands({ left: null, right: null });
+                setMobSatiations(freshSatiations);
+                setStoveStates(new Map());
+                setShowRecipeMenu(false);
+                setActiveStoveKey(null);
+                setMessage(null);
+                setAdventurers([]);
+                setCurrentWave(0);
+                setTurnCount(0);
+                setPlayerXp(0);
+                setXpDrops([]);
+                setPlayerHp(PLAYER_MAX_HP);
+                setIngredients({ rations: 0, herbs: 0, dust: 0 });
+                setIngredientDrops([...initialIngredientDrops]);
+                setGameState("playing");
+                setGameOverReason(null);
+                adventurersRef.current = [];
+                currentWaveRef.current = 0;
+                turnCountRef.current = 0;
+                playerXpRef.current = 0;
+                xpDropsRef.current = [];
+                playerHpRef.current = PLAYER_MAX_HP;
+                ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
+                ingredientDropsRef.current = [...initialIngredientDrops];
+                mobSatiationsRef.current = freshSatiations;
+                ruinedNotifiedRef.current = new Set();
+              }}
+              style={{
+                background: gameState === "won" ? "#2a5" : "#922",
+                color: "#fff",
+                border: "none",
+                borderRadius: 4,
+                padding: "10px 28px",
+                fontSize: 15,
+                cursor: "pointer",
+                fontFamily: "monospace",
+              }}
+            >
+              Play Again
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -38,6 +38,8 @@ export default function SettingsTabs({
   setSupersatiationBonus,
   turnsPerWave,
   setTurnsPerWave,
+  traversalFactor,
+  setTraversalFactor,
   dungeonSeed,
   setDungeonSeed,
   dungeonWidth,
@@ -118,6 +120,15 @@ export default function SettingsTabs({
             max={300}
             step={5}
             onChange={(v) => setTurnsPerWave(Math.round(v))}
+          />
+          <SliderRow
+            label="Passage speed"
+            value={traversalFactor}
+            min={0.25}
+            max={4}
+            step={0.25}
+            onChange={setTraversalFactor}
+            format={(v) => `${v}×`}
           />
         </>
       )}

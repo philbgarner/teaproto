@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Exclude Licensed Music from Repo
+public/music/MUS_*.ogg
