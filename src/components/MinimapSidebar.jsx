@@ -30,6 +30,9 @@ export function MinimapSidebar({
   setMinimapTooltip,
   onMinimapMouseMove,
   solidData,
+  temperatureData,
+  showTempTint,
+  setShowTempTint,
   dungeonWidth,
   dungeonHeight,
   camera,
@@ -48,8 +51,9 @@ export function MinimapSidebar({
       camera.yaw,
       minimapMobs,
       passagesRef.current,
+      showTempTint ? temperatureData : null,
     );
-  }, [solidData, camera, minimapMobs]);
+  }, [solidData, camera, minimapMobs, showTempTint, temperatureData]);
 
   return (
     <div
@@ -128,6 +132,15 @@ export function MinimapSidebar({
           </div>
         )}
       </div>
+      <label style={{ fontSize: 11, color: "#aaa", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={showTempTint}
+          onChange={(e) => setShowTempTint(e.target.checked)}
+          style={{ cursor: "pointer" }}
+        />
+        Temperature tint
+      </label>
       <SettingsTabs {...settingsProps} />
       <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
         <div>W / ↑ - move forward</div>

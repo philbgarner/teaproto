@@ -512,6 +512,11 @@ export default function App() {
   );
 
   const solidData = useMemo(() => dungeon.textures.solid.image.data, [dungeon]);
+  const temperatureData = useMemo(
+    () => dungeon.textures.temperature.image.data,
+    [dungeon],
+  );
+  const [showTempTint, setShowTempTint] = useState(false);
 
   const { spawnX, spawnZ } = useMemo(() => {
     const room = dungeon.rooms.get(dungeon.endRoomId);
@@ -1755,6 +1760,9 @@ export default function App() {
             setMinimapTooltip={setMinimapTooltip}
             onMinimapMouseMove={onMinimapMouseMove}
             solidData={solidData}
+            temperatureData={temperatureData}
+            showTempTint={showTempTint}
+            setShowTempTint={setShowTempTint}
             dungeonWidth={dungeonWidth}
             dungeonHeight={dungeonHeight}
             camera={camera}
