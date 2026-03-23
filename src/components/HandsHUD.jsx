@@ -47,9 +47,9 @@ export function HandsHUD({ hands }) {
     <div
       style={{
         position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 220,
+        bottom: "2.25rem",
+        left: 80,
+        right: 400,
         display: "flex",
         justifyContent: "space-between",
         padding: "8px 20px",

@@ -703,6 +703,20 @@ export default function App() {
     }, duration);
   }, []);
   const [tempDropPerStep, setTempDropPerStep] = useState(0.5);
+  const [heatingPerStep, setHeatingPerStep] = useState(2.0);
+  // Map<regionId, cumulativeRise> — only regions containing cozy objects heat up
+  const [roomTempRise, setRoomTempRise] = useState(() => new Map());
+  const regionIdData = useMemo(() => dungeon.fullRegionIds, [dungeon]);
+  const dynamicTempData = useMemo(() => {
+    const out = new Uint8Array(temperatureData.length);
+    for (let i = 0; i < temperatureData.length; i++) {
+      if (solidData[i] !== 0) continue;
+      const regionId = regionIdData[i];
+      const rise = Math.round(roomTempRise.get(regionId) ?? 0);
+      out[i] = Math.min(255, temperatureData[i] + rise);
+    }
+    return out;
+  }, [temperatureData, solidData, regionIdData, roomTempRise]);
   const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.5);
   const [supersatiationBonus, setSupersatiationBonus] = useState(50);
   const [turnsPerWave, setTurnsPerWave] = useState(TURNS_PER_WAVE);
@@ -1192,6 +1206,24 @@ export default function App() {
     setIngredientDrops([...newIngredientDrops]);
     setMobSatiations(newMobSatiations);
 
+    // --- Room heating from cozy objects (stoves) ---
+    const cozyByRegion = new Map();
+    for (const s of stovePlacements) {
+      if (s.type !== "stove") continue;
+      const idx = s.z * dungeonWidth + s.x;
+      const regionId = regionIdData[idx];
+      cozyByRegion.set(regionId, (cozyByRegion.get(regionId) ?? 0) + 1);
+    }
+    if (cozyByRegion.size > 0) {
+      setRoomTempRise((prev) => {
+        const next = new Map(prev);
+        for (const [regionId, count] of cozyByRegion) {
+          next.set(regionId, Math.min(128, (next.get(regionId) ?? 0) + count * heatingPerStep));
+        }
+        return next;
+      });
+    }
+
     if (stepMessage) showMsg(stepMessage);
     for (const { entityId, text } of pendingSpeechBubbles) {
       showSpeechBubble(entityId, text, 6000);
@@ -1199,8 +1231,11 @@ export default function App() {
   }, [
     gameState,
     tempDropPerStep,
+    heatingPerStep,
     satiationDropPerStep,
     solidData,
+    regionIdData,
+    dungeonWidth,
     initialMobs,
     showMsg,
     showSpeechBubble,
@@ -1760,7 +1795,7 @@ export default function App() {
             setMinimapTooltip={setMinimapTooltip}
             onMinimapMouseMove={onMinimapMouseMove}
             solidData={solidData}
-            temperatureData={temperatureData}
+            temperatureData={dynamicTempData}
             showTempTint={showTempTint}
             setShowTempTint={setShowTempTint}
             dungeonWidth={dungeonWidth}
@@ -1770,6 +1805,8 @@ export default function App() {
             settingsProps={{
               tempDropPerStep,
               setTempDropPerStep,
+              heatingPerStep,
+              setHeatingPerStep,
               satiationDropPerStep,
               turnsPerWave,
               setTurnsPerWave,
@@ -1806,6 +1843,12 @@ export default function App() {
           playerMaxHp={PLAYER_MAX_HP}
           playerXp={playerXp}
           ingredients={ingredients}
+          currentRoomTemp={(() => {
+            const gx = Math.floor(camera.x);
+            const gz = Math.floor(camera.z);
+            const regionId = regionIdData[gz * dungeonWidth + gx];
+            return Math.min(255, 127 + Math.round(roomTempRise.get(regionId) ?? 0));
+          })()}
         />
       </div>
 
@@ -1823,6 +1866,7 @@ export default function App() {
           const freshSatiations = initialMobs.map(() => 40);
           setPlayerHands({ left: null, right: null });
           setMobSatiations(freshSatiations);
+          setRoomTempRise(new Map());
           setStoveStates(new Map());
           setShowRecipeMenu(false);
           setActiveStoveKey(null);

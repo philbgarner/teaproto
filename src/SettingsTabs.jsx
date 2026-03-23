@@ -32,6 +32,8 @@ const SliderRow = ({ label, value, min, max, step, onChange, format }) => (
 export default function SettingsTabs({
   tempDropPerStep,
   setTempDropPerStep,
+  heatingPerStep,
+  setHeatingPerStep,
   satiationDropPerStep,
   setSatiationDropPerStep,
   supersatiationBonus,
@@ -94,6 +96,15 @@ export default function SettingsTabs({
             step={0.05}
             onChange={setTempDropPerStep}
             format={(v) => `${v.toFixed(2)}°/step`}
+          />
+          <SliderRow
+            label="Heating"
+            value={heatingPerStep}
+            min={0}
+            max={10}
+            step={0.25}
+            onChange={setHeatingPerStep}
+            format={(v) => `${v.toFixed(2)}/step`}
           />
           <SliderRow
             label="Satiation loss"

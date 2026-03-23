@@ -11,7 +11,15 @@
  *   ingredients: { rations: number, herbs: number, dust: number },
  * }} props
  */
-export function StatusBar({ camera, facing, playerHp, playerMaxHp, playerXp, ingredients }) {
+function tempBand(temp) {
+  if (temp < 52) return "Cold";
+  if (temp < 103) return "Cool";
+  if (temp < 154) return "Neutral";
+  if (temp < 205) return "Cozy";
+  return "Warm";
+}
+
+export function StatusBar({ camera, facing, playerXp, ingredients, currentRoomTemp }) {
   return (
     <div
       style={{
@@ -29,17 +37,13 @@ export function StatusBar({ camera, facing, playerHp, playerMaxHp, playerXp, ing
         ({Math.floor(camera.x)}, {Math.floor(camera.z)})
       </span>
       <span>Facing: {facing}</span>
-      <span
-        style={{
-          color: playerHp <= 5 ? "#f44" : playerHp <= 15 ? "#fa0" : "#4f4",
-        }}
-      >
-        HP: {playerHp}/{playerMaxHp}
-      </span>
       <span style={{ color: "#fa0" }}>XP: {playerXp}</span>
       <span style={{ color: "#0df", fontSize: 11 }}>
         Rations: {ingredients.rations} · Herbs: {ingredients.herbs} · Dust:{" "}
         {ingredients.dust}
+      </span>
+      <span style={{ fontSize: 11, color: "#aaa" }}>
+        Room Temp: {tempBand(currentRoomTemp)}
       </span>
     </div>
   );
