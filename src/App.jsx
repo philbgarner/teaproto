@@ -19,9 +19,16 @@ import {
   cancelPassageTraversal,
 } from "../mazetools/src/turn/passageTraversal";
 import { RECIPES } from "./tea";
-import { useMusic } from "./useMusic";
-
-import SettingsTabs from "./SettingsTabs";
+import { useMusic } from "./hooks/useMusic";
+import { useMessage } from "./hooks/useMessage";
+import { useMinimapData } from "./hooks/useMinimapData";
+import { GameHeader } from "./components/GameHeader";
+import { StatusBar } from "./components/StatusBar";
+import { HandsHUD } from "./components/HandsHUD";
+import { WaveCountdown } from "./components/WaveCountdown";
+import { RecipeMenu } from "./components/RecipeMenu";
+import { GameOverOverlay } from "./components/GameOverOverlay";
+import { MinimapSidebar } from "./components/MinimapSidebar";
 
 import "./App.css";
 
@@ -173,69 +180,6 @@ function greedyStepToward(ax, az, tx, tz, walkableFn, occupiedFn) {
     if (walkableFn(nx, nz) && !occupiedFn(nx, nz)) return { x: nx, z: nz };
   }
   return null;
-}
-
-function drawMinimap(
-  canvas,
-  solidData,
-  width,
-  height,
-  playerX,
-  playerZ,
-  yaw,
-  mobs,
-  passages,
-) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  const cw = canvas.width;
-  const ch = canvas.height;
-  const cellW = cw / width;
-  const cellH = ch / height;
-  ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, cw, ch);
-  for (let cz = 0; cz < height; cz++) {
-    for (let cx = 0; cx < width; cx++) {
-      const solid = solidData[cz * width + cx] > 0;
-      ctx.fillStyle = solid ? "#333" : "#888";
-      ctx.fillRect(cx * cellW, cz * cellH, cellW, cellH);
-    }
-  }
-  if (passages) {
-    for (const p of passages) {
-      ctx.fillStyle = p.enabled ? "#00ffff" : "#006666";
-      for (const cell of p.cells) {
-        ctx.fillRect(cell.x * cellW, cell.y * cellH, cellW, cellH);
-      }
-    }
-  }
-  if (mobs) {
-    for (const mob of mobs) {
-      ctx.fillStyle = mob.cssColor;
-      ctx.beginPath();
-      ctx.arc(
-        (mob.x + 0.5) * cellW,
-        (mob.z + 0.5) * cellH,
-        Math.max(cellW * 0.7, 3),
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
-    }
-  }
-  const px = playerX * cellW;
-  const pz = playerZ * cellH;
-  const arrowLen = Math.max(cellW * 2, 6);
-  ctx.fillStyle = "#f80";
-  ctx.beginPath();
-  ctx.arc(px, pz, Math.max(cellW * 0.6, 3), 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#ff0";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(px, pz);
-  ctx.lineTo(px - Math.sin(yaw) * arrowLen, pz - Math.cos(yaw) * arrowLen);
-  ctx.stroke();
 }
 
 // ---------------------------------------------------------------------------
@@ -411,43 +355,6 @@ function useEotBCamera(
   }
 
   return { camera, logicalRef, doMove };
-}
-
-// ---------------------------------------------------------------------------
-// HandDisplay
-// ---------------------------------------------------------------------------
-function HandDisplay({ label, tea }) {
-  if (!tea) {
-    return (
-      <div style={{ color: "#555" }}>
-        <span style={{ color: "#777" }}>{label}:</span> empty
-      </div>
-    );
-  }
-  const [lo, hi] = tea.recipe.idealTemperatureRange;
-  const tempColor = tea.ruined
-    ? "#f44"
-    : tea.temperature > hi
-      ? "#f80"
-      : "#4f4";
-  const tempLabel = tea.ruined
-    ? "(RUINED)"
-    : tea.temperature > hi
-      ? "(too hot)"
-      : "(ideal)";
-  return (
-    <div>
-      <span style={{ color: "#777" }}>{label}:</span>{" "}
-      <span style={{ color: tea.ruined ? "#f44" : "#fa0" }}>{tea.name}</span>{" "}
-      <span style={{ color: tempColor }}>
-        {tea.temperature}° {tempLabel}
-      </span>
-      <span style={{ color: "#555", fontSize: 11 }}>
-        {" "}
-        [{lo}–{hi}°]
-      </span>
-    </div>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -723,8 +630,7 @@ export default function App() {
   const [stoveStates, setStoveStates] = useState(() => new Map());
   const [showRecipeMenu, setShowRecipeMenu] = useState(false);
   const [activeStoveKey, setActiveStoveKey] = useState(null);
-  const [message, setMessage] = useState(null);
-  const messageTimerRef = useRef(null);
+  const { message, setMessage, showMsg } = useMessage();
   const ruinedNotifiedRef = useRef(new Set());
   const [tempDropPerStep, setTempDropPerStep] = useState(0.5);
   const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.5);
@@ -779,8 +685,8 @@ export default function App() {
   const traversalFactorRef = useRef(2.0);
   const traversalStartRef = useRef({ totalSteps: 0, factor: 2.0 });
 
-  const { play: playMainTheme } = useMusic("music/MUS_1_MainTheme_Cozy.ogg", {
-    volume: 0.3,
+  const { play: playMainTheme } = useMusic(`${import.meta.env.BASE_URL}music/MUS_1_MainTheme_Cozy.ogg`, {
+    volume: 0.6,
     loop: true,
   });
 
@@ -850,12 +756,6 @@ export default function App() {
     ],
     [initialMobs, mobStatuses, mobSatiations, adventurers],
   );
-
-  const showMsg = useCallback((text) => {
-    if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
-    setMessage(text);
-    messageTimerRef.current = setTimeout(() => setMessage(null), 5000);
-  }, []);
 
   const spawnAdventurersForWave = useCallback(
     (waveNum) => {
@@ -1530,8 +1430,6 @@ export default function App() {
   ]);
 
   // Minimap
-  const minimapRef = useRef(null);
-  const [minimapTooltip, setMinimapTooltip] = useState(null);
   const minimapMobs = useMemo(
     () => [
       ...initialMobs.map((m, i) => ({
@@ -1594,42 +1492,8 @@ export default function App() {
     ],
   );
 
-  const onMinimapMouseMove = useCallback(
-    (e) => {
-      const canvas = minimapRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const cellW = canvas.width / dungeonWidth;
-      const cellH = canvas.height / dungeonHeight;
-      const hitRadius = Math.max(cellW * 1.2, 5);
-      for (const mob of minimapMobs) {
-        const cx = (mob.x + 0.5) * cellW * (rect.width / canvas.width);
-        const cz = (mob.z + 0.5) * cellH * (rect.height / canvas.height);
-        if (Math.hypot(mx - cx, my - cz) <= hitRadius) {
-          setMinimapTooltip({ mob, canvasX: cx, canvasY: cz });
-          return;
-        }
-      }
-      setMinimapTooltip(null);
-    },
-    [minimapMobs],
-  );
-  useEffect(() => {
-    if (!minimapRef.current) return;
-    drawMinimap(
-      minimapRef.current,
-      solidData,
-      dungeonWidth,
-      dungeonHeight,
-      camera.x,
-      camera.z,
-      camera.yaw,
-      minimapMobs,
-      passagesRef.current,
-    );
-  }, [solidData, camera, minimapMobs]);
+  const { minimapRef, minimapTooltip, setMinimapTooltip, onMinimapMouseMove } =
+    useMinimapData(minimapMobs, dungeonWidth, dungeonHeight);
 
   return (
     <>
@@ -1644,28 +1508,7 @@ export default function App() {
           fontFamily: "monospace",
         }}
       >
-        {/* Header */}
-        <div
-          style={{
-            height: 40,
-            display: "flex",
-            alignItems: "center",
-            padding: "0 16px",
-            gap: 16,
-            borderBottom: "1px solid #333",
-            flexShrink: 0,
-          }}
-        >
-          <span style={{ fontWeight: "bold", color: "#eee" }}>Tea Dungeon</span>
-          <span style={{ color: "#666", fontSize: 12 }}>
-            seed: {dungeonSeed}
-          </span>
-          <span
-            style={{ color: currentWave > 0 ? "#f88" : "#555", fontSize: 12 }}
-          >
-            Wave {currentWave}
-          </span>
-        </div>
+        <GameHeader dungeonSeed={dungeonSeed} currentWave={currentWave} />
 
         {/* Main area */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
@@ -1699,33 +1542,14 @@ export default function App() {
               />
             )}
 
-            {/* Wave countdown overlay */}
-            {(() => {
-              const turnsLeft = turnsPerWave - (turnCount % turnsPerWave);
-              const show =
-                turnsLeft <= WAVE_COUNTDOWN_THRESHOLD &&
-                adventurers.filter((a) => a.alive).length === 0;
-              if (!show) return null;
-              return (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 14,
-                    right: 14,
-                    background: "rgba(160,20,20,0.82)",
-                    border: "1px solid #f88",
-                    padding: "6px 14px",
-                    borderRadius: 4,
-                    fontSize: 13,
-                    color: "#fcc",
-                    pointerEvents: "none",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  ⚠ Next wave in {turnsLeft} turn{turnsLeft !== 1 ? "s" : ""}
-                </div>
-              );
-            })()}
+            <WaveCountdown
+              turnsLeft={turnsPerWave - (turnCount % turnsPerWave)}
+              visible={
+                turnsPerWave - (turnCount % turnsPerWave) <=
+                  WAVE_COUNTDOWN_THRESHOLD &&
+                adventurers.filter((a) => a.alive).length === 0
+              }
+            />
 
             {/* Interaction prompt */}
             {promptText && !showRecipeMenu && (
@@ -1749,114 +1573,39 @@ export default function App() {
               </div>
             )}
 
-            {/* Recipe menu */}
             {showRecipeMenu && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  background: "rgba(0,0,0,0.93)",
-                  border: "1px solid #666",
-                  padding: 20,
-                  borderRadius: 6,
-                  minWidth: 280,
-                  color: "#eee",
-                  fontFamily: "monospace",
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: "bold",
-                    marginBottom: 12,
-                    color: "#fa0",
-                    fontSize: 15,
-                  }}
-                >
-                  Select Recipe
-                </div>
-                {RECIPES.map((recipe, i) => {
-                  const locked =
-                    recipe.ingredientId &&
-                    (ingredients[recipe.ingredientId] ?? 0) < 1;
-                  const have = recipe.ingredientId
-                    ? (ingredients[recipe.ingredientId] ?? 0)
-                    : null;
-                  return (
-                    <div
-                      key={recipe.id}
-                      onClick={() => {
-                        if (locked) {
-                          showMsg(
-                            `You need ${recipe.ingredientName} to brew ${recipe.name}!`,
-                          );
-                          return;
-                        }
-                        if (recipe.ingredientId) {
-                          const newIng = {
-                            ...ingredientsRef.current,
-                            [recipe.ingredientId]:
-                              ingredientsRef.current[recipe.ingredientId] - 1,
-                          };
-                          ingredientsRef.current = newIng;
-                          setIngredients(newIng);
-                        }
-                        setStoveStates((prev) => {
-                          const next = new Map(prev);
-                          next.set(activeStoveKey, {
-                            brewing: {
-                              recipe,
-                              stepsRemaining: recipe.timeToBrew,
-                              ready: false,
-                            },
-                          });
-                          return next;
-                        });
-                        setShowRecipeMenu(false);
-                        showMsg(
-                          `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
-                        );
-                      }}
-                      style={{
-                        padding: "6px 8px",
-                        cursor: locked ? "not-allowed" : "pointer",
-                        borderRadius: 3,
-                        marginBottom: 4,
-                        background: locked
-                          ? "rgba(80,0,0,0.3)"
-                          : "rgba(255,255,255,0.05)",
-                        fontSize: 13,
-                        opacity: locked ? 0.6 : 1,
-                      }}
-                    >
-                      <span style={{ color: locked ? "#955" : "#fa0" }}>
-                        [{i + 1}]
-                      </span>{" "}
-                      {recipe.name}{" "}
-                      <span style={{ color: "#777" }}>
-                        ({recipe.timeToBrew} steps,{" "}
-                        {recipe.idealTemperatureRange[0]}–
-                        {recipe.idealTemperatureRange[1]}°)
-                      </span>
-                      {recipe.ingredientId && (
-                        <span
-                          style={{
-                            color: locked ? "#f55" : "#5d5",
-                            fontSize: 11,
-                            marginLeft: 6,
-                          }}
-                        >
-                          [{recipe.ingredientName}: {have}]
-                        </span>
-                      )}
-                    </div>
+              <RecipeMenu
+                recipes={RECIPES}
+                ingredients={ingredients}
+                showMsg={showMsg}
+                onSelectRecipe={(recipe) => {
+                  if (recipe.ingredientId) {
+                    const newIng = {
+                      ...ingredientsRef.current,
+                      [recipe.ingredientId]:
+                        ingredientsRef.current[recipe.ingredientId] - 1,
+                    };
+                    ingredientsRef.current = newIng;
+                    setIngredients(newIng);
+                  }
+                  setStoveStates((prev) => {
+                    const next = new Map(prev);
+                    next.set(activeStoveKey, {
+                      brewing: {
+                        recipe,
+                        stepsRemaining: recipe.timeToBrew,
+                        ready: false,
+                      },
+                    });
+                    return next;
+                  });
+                  setShowRecipeMenu(false);
+                  showMsg(
+                    `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
                   );
-                })}
-                <div style={{ marginTop: 10, color: "#555", fontSize: 11 }}>
-                  Press number to select · I / Esc to cancel
-                </div>
-              </div>
+                }}
+                onCancel={() => setShowRecipeMenu(false)}
+              />
             )}
 
             {/* Message */}
@@ -1883,283 +1632,99 @@ export default function App() {
             )}
           </div>
 
-          {/* Minimap sidebar */}
-          <div
-            style={{
-              width: 220,
-              borderLeft: "1px solid #333",
-              padding: 12,
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontSize: 11, color: "#888" }}>Minimap</span>
-            <div style={{ position: "relative", display: "inline-block" }}>
-              <canvas
-                ref={minimapRef}
-                width={196}
-                height={196}
-                style={{
-                  imageRendering: "pixelated",
-                  border: "1px solid #444",
-                  display: "block",
-                }}
-                onMouseMove={onMinimapMouseMove}
-                onMouseLeave={() => setMinimapTooltip(null)}
-              />
-              {minimapTooltip && (
-                <div
-                  style={{
-                    position: "absolute",
-                    ...(minimapTooltip.canvasX > 98
-                      ? {
-                          right: 196 - minimapTooltip.canvasX + 8,
-                          left: "auto",
-                        }
-                      : { left: minimapTooltip.canvasX + 8 }),
-                    top: minimapTooltip.canvasY - 8,
-                    background: "rgba(0,0,0,0.88)",
-                    border: `1px solid ${minimapTooltip.mob.cssColor}`,
-                    borderRadius: 4,
-                    padding: "4px 8px",
-                    fontSize: 11,
-                    color: "#eee",
-                    pointerEvents: "none",
-                    whiteSpace: "nowrap",
-                    zIndex: 10,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: "bold",
-                      color: minimapTooltip.mob.cssColor,
-                    }}
-                  >
-                    {minimapTooltip.mob.name}
-                  </div>
-                  {minimapTooltip.mob.isXp ||
-                  minimapTooltip.mob.isIngredient ? (
-                    <div style={{ color: minimapTooltip.mob.cssColor }}>
-                      Walk here to collect
-                    </div>
-                  ) : minimapTooltip.mob.isAdventurer ? (
-                    <div>
-                      HP:{" "}
-                      <span style={{ color: minimapTooltip.mob.cssColor }}>
-                        {minimapTooltip.mob.hp}/{minimapTooltip.mob.maxHp}
-                      </span>
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        Status:{" "}
-                        <span style={{ color: minimapTooltip.mob.cssColor }}>
-                          {minimapTooltip.mob.status}
-                        </span>
-                      </div>
-                      <div>
-                        Satiation: {Math.round(minimapTooltip.mob.satiation)}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-            <SettingsTabs
-              tempDropPerStep={tempDropPerStep}
-              setTempDropPerStep={setTempDropPerStep}
-              satiationDropPerStep={satiationDropPerStep}
-              turnsPerWave={turnsPerWave}
-              setTurnsPerWave={setTurnsPerWave}
-              setSatiationDropPerStep={setSatiationDropPerStep}
-              supersatiationBonus={supersatiationBonus}
-              setSupersatiationBonus={setSupersatiationBonus}
-              traversalFactor={traversalFactor}
-              setTraversalFactor={(v) => {
+          <MinimapSidebar
+            minimapRef={minimapRef}
+            minimapMobs={minimapMobs}
+            minimapTooltip={minimapTooltip}
+            setMinimapTooltip={setMinimapTooltip}
+            onMinimapMouseMove={onMinimapMouseMove}
+            solidData={solidData}
+            dungeonWidth={dungeonWidth}
+            dungeonHeight={dungeonHeight}
+            camera={camera}
+            passagesRef={passagesRef}
+            settingsProps={{
+              tempDropPerStep,
+              setTempDropPerStep,
+              satiationDropPerStep,
+              turnsPerWave,
+              setTurnsPerWave,
+              setSatiationDropPerStep,
+              supersatiationBonus,
+              setSupersatiationBonus,
+              traversalFactor,
+              setTraversalFactor: (v) => {
                 traversalFactorRef.current = v;
                 setTraversalFactor(v);
-              }}
-              dungeonSeed={dungeonSeed}
-              setDungeonSeed={setDungeonSeed}
-              dungeonWidth={dungeonWidth}
-              setDungeonWidth={setDungeonWidth}
-              dungeonHeight={dungeonHeight}
-              setDungeonHeight={setDungeonHeight}
-              minLeafSize={minLeafSize}
-              setMinLeafSize={setMinLeafSize}
-              maxLeafSize={maxLeafSize}
-              setMaxLeafSize={setMaxLeafSize}
-              minRoomSize={minRoomSize}
-              setMinRoomSize={setMinRoomSize}
-              maxRoomSize={maxRoomSize}
-              setMaxRoomSize={setMaxRoomSize}
-            />
-            <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
-              <div>W / ↑ - move forward</div>
-              <div>S / ↓ - move back</div>
-              <div>A / D - strafe</div>
-              <div>Q / E - turn</div>
-              <div>I - interact</div>
-              <div>F - toggle passage</div>
-              <div>. (period) - Wait a Turn</div>
-            </div>
-          </div>
+              },
+              dungeonSeed,
+              setDungeonSeed,
+              dungeonWidth,
+              setDungeonWidth,
+              dungeonHeight,
+              setDungeonHeight,
+              minLeafSize,
+              setMinLeafSize,
+              maxLeafSize,
+              setMaxLeafSize,
+              minRoomSize,
+              setMinRoomSize,
+              maxRoomSize,
+              setMaxRoomSize,
+            }}
+          />
         </div>
 
-        {/* Status bar */}
-        <div
-          style={{
-            height: 36,
-            display: "flex",
-            alignItems: "center",
-            padding: "0 16px",
-            gap: 24,
-            borderTop: "1px solid #333",
-            fontSize: 13,
-            flexShrink: 0,
-          }}
-        >
-          <span>
-            ({Math.floor(camera.x)}, {Math.floor(camera.z)})
-          </span>
-          <span>Facing: {cardinalDir(camera.yaw)}</span>
-          <span
-            style={{
-              color: playerHp <= 5 ? "#f44" : playerHp <= 15 ? "#fa0" : "#4f4",
-            }}
-          >
-            HP: {playerHp}/{PLAYER_MAX_HP}
-          </span>
-          <span style={{ color: "#fa0" }}>XP: {playerXp}</span>
-          <span style={{ color: "#0df", fontSize: 11 }}>
-            Rations: {ingredients.rations} · Herbs: {ingredients.herbs} · Dust:{" "}
-            {ingredients.dust}
-          </span>
-        </div>
+        <StatusBar
+          camera={camera}
+          facing={cardinalDir(camera.yaw)}
+          playerHp={playerHp}
+          playerMaxHp={PLAYER_MAX_HP}
+          playerXp={playerXp}
+          ingredients={ingredients}
+        />
       </div>
 
-      {/* Hands HUD */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 220,
-          display: "flex",
-          justifyContent: "space-between",
-          padding: "8px 20px",
-          background: "rgba(0,0,0,0.88)",
-          borderTop: "1px solid #333",
-          fontFamily: "monospace",
-          fontSize: 13,
-          pointerEvents: "none",
+      <HandsHUD hands={playerHands} />
+
+      <GameOverOverlay
+        gameState={gameState}
+        gameOverReason={gameOverReason}
+        currentWave={currentWave}
+        turnCount={turnCount}
+        winWaves={WIN_WAVES}
+        onPlayAgain={() => {
+          // Reset by bumping dungeon seed, which triggers the reset effect
+          setDungeonSeed((s) => s);
+          const freshSatiations = initialMobs.map(() => 40);
+          setPlayerHands({ left: null, right: null });
+          setMobSatiations(freshSatiations);
+          setStoveStates(new Map());
+          setShowRecipeMenu(false);
+          setActiveStoveKey(null);
+          setMessage(null);
+          setAdventurers([]);
+          setCurrentWave(0);
+          setTurnCount(0);
+          setPlayerXp(0);
+          setXpDrops([]);
+          setPlayerHp(PLAYER_MAX_HP);
+          setIngredients({ rations: 0, herbs: 0, dust: 0 });
+          setIngredientDrops([...initialIngredientDrops]);
+          setGameState("playing");
+          setGameOverReason(null);
+          adventurersRef.current = [];
+          currentWaveRef.current = 0;
+          turnCountRef.current = 0;
+          playerXpRef.current = 0;
+          xpDropsRef.current = [];
+          playerHpRef.current = PLAYER_MAX_HP;
+          ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
+          ingredientDropsRef.current = [...initialIngredientDrops];
+          mobSatiationsRef.current = freshSatiations;
+          ruinedNotifiedRef.current = new Set();
         }}
-      >
-        <HandDisplay label="Left Hand" tea={playerHands.left} />
-        <HandDisplay label="Right Hand" tea={playerHands.right} />
-      </div>
-
-      {/* Game Over / Win overlay */}
-      {gameState !== "playing" && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(0,0,0,0.82)",
-            zIndex: 100,
-            fontFamily: "monospace",
-          }}
-        >
-          <div
-            style={{
-              background: "#111",
-              border: `2px solid ${gameState === "won" ? "#5d5" : "#c44"}`,
-              borderRadius: 8,
-              padding: "40px 52px",
-              textAlign: "center",
-              maxWidth: 420,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 32,
-                fontWeight: "bold",
-                color: gameState === "won" ? "#5d5" : "#f44",
-                marginBottom: 16,
-              }}
-            >
-              {gameState === "won" ? "Victory!" : "Game Over"}
-            </div>
-            {gameState === "won" ? (
-              <div style={{ color: "#aaa", marginBottom: 24, lineHeight: 1.6 }}>
-                You survived {WIN_WAVES} waves of adventurers and kept the
-                dungeon cozy.
-                <br />
-                The monsters are very grateful.
-              </div>
-            ) : (
-              <div style={{ color: "#aaa", marginBottom: 24, lineHeight: 1.6 }}>
-                {gameOverReason}
-                <br />
-                <span style={{ fontSize: 12, color: "#666" }}>
-                  Survived {currentWave} wave{currentWave !== 1 ? "s" : ""} ·{" "}
-                  {turnCount} turns
-                </span>
-              </div>
-            )}
-            <button
-              onClick={() => {
-                // Reset by bumping dungeon seed, which triggers the reset effect
-                setDungeonSeed((s) => s);
-                const freshSatiations = initialMobs.map(() => 40);
-                setPlayerHands({ left: null, right: null });
-                setMobSatiations(freshSatiations);
-                setStoveStates(new Map());
-                setShowRecipeMenu(false);
-                setActiveStoveKey(null);
-                setMessage(null);
-                setAdventurers([]);
-                setCurrentWave(0);
-                setTurnCount(0);
-                setPlayerXp(0);
-                setXpDrops([]);
-                setPlayerHp(PLAYER_MAX_HP);
-                setIngredients({ rations: 0, herbs: 0, dust: 0 });
-                setIngredientDrops([...initialIngredientDrops]);
-                setGameState("playing");
-                setGameOverReason(null);
-                adventurersRef.current = [];
-                currentWaveRef.current = 0;
-                turnCountRef.current = 0;
-                playerXpRef.current = 0;
-                xpDropsRef.current = [];
-                playerHpRef.current = PLAYER_MAX_HP;
-                ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
-                ingredientDropsRef.current = [...initialIngredientDrops];
-                mobSatiationsRef.current = freshSatiations;
-                ruinedNotifiedRef.current = new Set();
-              }}
-              style={{
-                background: gameState === "won" ? "#2a5" : "#922",
-                color: "#fff",
-                border: "none",
-                borderRadius: 4,
-                padding: "10px 28px",
-                fontSize: 15,
-                cursor: "pointer",
-                fontFamily: "monospace",
-              }}
-            >
-              Play Again
-            </button>
-          </div>
-        </div>
-      )}
+      />
     </>
   );
 }
