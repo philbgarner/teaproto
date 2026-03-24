@@ -1943,6 +1943,11 @@ export default function App() {
           showMsg(
             "Head back to the tea machine (stove) in the kitchen and press I to brew another tea!",
           );
+          setTimeout(() => {
+            showMsg(
+              "With empty hands you can pass through walls — explore the dungeon!",
+            );
+          }, 5500);
         }
 
         function applyMobSatiation(value) {
