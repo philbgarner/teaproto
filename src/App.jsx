@@ -641,7 +641,8 @@ export default function App() {
   // ---------------------------------------------------------------------------
   // Game state
   // ---------------------------------------------------------------------------
-  const [playerHands, setPlayerHands] = useState({ left: null, right: null });
+  const startingGreenTea = { id: crypto.randomUUID(), name: "Green Tea", recipe: RECIPES[0], temperature: 90, ruined: false };
+  const [playerHands, setPlayerHands] = useState({ left: startingGreenTea, right: null });
   const [mobSatiations, setMobSatiations] = useState(() =>
     initialMobs.map(() => 40),
   );
@@ -798,7 +799,7 @@ export default function App() {
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
     const freshSatiations = initialMobs.map(() => 40);
-    setPlayerHands({ left: null, right: null });
+    setPlayerHands({ left: { id: crypto.randomUUID(), name: "Green Tea", recipe: RECIPES[0], temperature: 90, ruined: false }, right: null });
     setMobSatiations(freshSatiations);
     setStoveStates(new Map());
     setShowRecipeMenu(false);
