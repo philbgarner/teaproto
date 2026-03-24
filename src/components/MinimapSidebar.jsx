@@ -150,6 +150,8 @@ export function MinimapSidebar({
         <div>A / D - strafe</div>
         <div>Q / E - turn</div>
         <div>I - interact</div>
+        <div>Z - drop left hand</div>
+        <div>X - drop right hand</div>
         <div>F - toggle passage</div>
         <div>. (period) - Wait a Turn</div>
       </div>

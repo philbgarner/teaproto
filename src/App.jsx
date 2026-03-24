@@ -1857,6 +1857,30 @@ export default function App() {
         return;
       }
 
+      if (e.code === "KeyZ") {
+        e.preventDefault();
+        if (gameState !== "playing") return;
+        if (playerHands.left) {
+          showMsg(`You discard your ${playerHands.left.name}.`);
+          setPlayerHands((prev) => ({ ...prev, left: null }));
+        } else {
+          showMsg("Your left hand is empty.");
+        }
+        return;
+      }
+
+      if (e.code === "KeyX") {
+        e.preventDefault();
+        if (gameState !== "playing") return;
+        if (playerHands.right) {
+          showMsg(`You discard your ${playerHands.right.name}.`);
+          setPlayerHands((prev) => ({ ...prev, right: null }));
+        } else {
+          showMsg("Your right hand is empty.");
+        }
+        return;
+      }
+
       if (e.code !== "KeyI") return;
       e.preventDefault();
       if (!facingTarget) return;
