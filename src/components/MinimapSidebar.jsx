@@ -37,6 +37,7 @@ export function MinimapSidebar({
   dungeonHeight,
   camera,
   passagesRef,
+  exploredMaskRef,
   settingsProps,
 }) {
   useEffect(() => {
@@ -52,6 +53,7 @@ export function MinimapSidebar({
       minimapMobs,
       passagesRef.current,
       showTempTint ? temperatureData : null,
+      exploredMaskRef?.current ?? null,
     );
   }, [solidData, camera, minimapMobs, showTempTint, temperatureData]);
 

@@ -147,6 +147,78 @@ function makeMobSpriteAtlas() {
 }
 
 // ---------------------------------------------------------------------------
+// Explored mask helpers
+// ---------------------------------------------------------------------------
+const LOS_RADIUS = 8;
+
+/**
+ * Builds the initial explored mask for a new dungeon.
+ * Pre-explores the kitchen (startRoomId), the first monster's room, and the
+ * corridor path connecting them.
+ */
+function buildInitialExploredMask(dungeon, width, height) {
+  const mask = new Uint8Array(width * height);
+  const { rooms, endRoomId, fullRegionIds } = dungeon;
+
+  function markRegion(regionId) {
+    for (let i = 0; i < fullRegionIds.length; i++) {
+      if (fullRegionIds[i] === regionId) mask[i] = 1;
+    }
+  }
+
+  // Kitchen = endRoomId
+  markRegion(endRoomId);
+
+  // First monster room = first room (not endRoomId) in insertion order
+  let firstMobRoomId = null;
+  for (const [roomId, room] of rooms) {
+    if (roomId !== endRoomId && room.type === "room") {
+      firstMobRoomId = roomId;
+      break;
+    }
+  }
+
+  if (firstMobRoomId !== null) {
+    markRegion(firstMobRoomId);
+
+    // Map each room ID to the corridor IDs that border it
+    const roomToCorridors = new Map();
+    for (const [id, room] of rooms) {
+      if (room.type !== "corridor") continue;
+      for (const connRoomId of room.connections) {
+        if (!roomToCorridors.has(connRoomId))
+          roomToCorridors.set(connRoomId, []);
+        roomToCorridors.get(connRoomId).push(id);
+      }
+    }
+
+    // BFS from endRoomId to firstMobRoomId; mark corridors on path
+    const visited = new Set([endRoomId]);
+    const queue = [[endRoomId, []]]; // [roomId, corridorPath]
+
+    outer: while (queue.length > 0) {
+      const [curRoom, corridorPath] = queue.shift();
+      for (const corridorId of roomToCorridors.get(curRoom) ?? []) {
+        const corridor = rooms.get(corridorId);
+        if (!corridor) continue;
+        for (const nextRoom of corridor.connections) {
+          if (nextRoom === curRoom || visited.has(nextRoom)) continue;
+          visited.add(nextRoom);
+          const newPath = [...corridorPath, corridorId];
+          if (nextRoom === firstMobRoomId) {
+            for (const cid of newPath) markRegion(cid);
+            break outer;
+          }
+          queue.push([nextRoom, newPath]);
+        }
+      }
+    }
+  }
+
+  return mask;
+}
+
+// ---------------------------------------------------------------------------
 // Minimap
 // ---------------------------------------------------------------------------
 const DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
@@ -182,7 +254,6 @@ function hasLineOfSight(ax, az, bx, bz, walkableFn) {
     }
   }
 }
-
 
 // ---------------------------------------------------------------------------
 // Camera hook — grid-locked movement with lerp animation
@@ -641,8 +712,17 @@ export default function App() {
   // ---------------------------------------------------------------------------
   // Game state
   // ---------------------------------------------------------------------------
-  const startingGreenTea = { id: crypto.randomUUID(), name: "Green Tea", recipe: RECIPES[0], temperature: 90, ruined: false };
-  const [playerHands, setPlayerHands] = useState({ left: startingGreenTea, right: null });
+  const startingGreenTea = {
+    id: crypto.randomUUID(),
+    name: "Green Tea",
+    recipe: RECIPES[0],
+    temperature: 90,
+    ruined: false,
+  };
+  const [playerHands, setPlayerHands] = useState({
+    left: startingGreenTea,
+    right: null,
+  });
   const [mobSatiations, setMobSatiations] = useState(() =>
     initialMobs.map(() => 40),
   );
@@ -766,6 +846,10 @@ export default function App() {
   const playerHandsRef = useRef({ left: null, right: null });
   playerHandsRef.current = playerHands;
 
+  // Explored mask — Uint8Array(W*H), 1 = cell has been seen by the player
+  const exploredMaskRef = useRef(null);
+  const firstTeaDeliveredRef = useRef(false);
+
   // Track which adventurers have already reacted to spotting the ghost (player)
   const adventurerSightingsRef = useRef(new Set());
 
@@ -799,7 +883,16 @@ export default function App() {
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
     const freshSatiations = initialMobs.map(() => 40);
-    setPlayerHands({ left: { id: crypto.randomUUID(), name: "Green Tea", recipe: RECIPES[0], temperature: 90, ruined: false }, right: null });
+    setPlayerHands({
+      left: {
+        id: crypto.randomUUID(),
+        name: "Green Tea",
+        recipe: RECIPES[0],
+        temperature: 90,
+        ruined: false,
+      },
+      right: null,
+    });
     setMobSatiations(freshSatiations);
     setStoveStates(new Map());
     setShowRecipeMenu(false);
@@ -826,6 +919,14 @@ export default function App() {
     mobSatiationsRef.current = freshSatiations;
     ruinedNotifiedRef.current = new Set();
     adventurerSightingsRef.current = new Set();
+    firstTeaDeliveredRef.current = false;
+
+    // Pre-explore exactly: kitchen (startRoomId) + one monster room + connecting corridor
+    exploredMaskRef.current = buildInitialExploredMask(
+      dungeon,
+      dungeonWidth,
+      dungeonHeight,
+    );
 
     // Regenerate hidden passages
     const rng = makeContentRng(dungeonSeed ^ 0xabcdef);
@@ -837,6 +938,9 @@ export default function App() {
     setPassageTraversal({ kind: "idle" });
 
     playMainTheme();
+    showMsg(
+      "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press I Key)",
+    );
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mobiles = useMemo(
@@ -1037,6 +1141,23 @@ export default function App() {
       return solidData[z * dungeonWidth + x] === 0;
     }
 
+    // Update explored mask: mark all cells visible from current player position
+    if (exploredMaskRef.current) {
+      const mask = exploredMaskRef.current;
+      for (let dz = -LOS_RADIUS; dz <= LOS_RADIUS; dz++) {
+        for (let dx = -LOS_RADIUS; dx <= LOS_RADIUS; dx++) {
+          if (dx * dx + dz * dz > LOS_RADIUS * LOS_RADIUS) continue;
+          const tx = pgx + dx;
+          const tz = pgz + dz;
+          if (tx < 0 || tz < 0 || tx >= dungeonWidth || tz >= dungeonHeight)
+            continue;
+          if (hasLineOfSight(pgx, pgz, tx, tz, isWalkable)) {
+            mask[tz * dungeonWidth + tx] = 1;
+          }
+        }
+      }
+    }
+
     // Build occupied set (other adventurers + mob positions + player)
     const occupied = new Set([
       `${pgx}_${pgz}`,
@@ -1116,7 +1237,9 @@ export default function App() {
         if (combatAstar && combatAstar.path.length > 1) {
           const step = combatAstar.path[1];
           occupied.add(`${step.x}_${step.y}`);
-          const debugPath = combatAstar.path.slice(2).map((p) => ({ x: p.x, z: p.y }));
+          const debugPath = combatAstar.path
+            .slice(2)
+            .map((p) => ({ x: p.x, z: p.y }));
           return { ...adv, x: step.x, z: step.y, debugPath };
         }
         occupied.add(`${adv.x}_${adv.z}`);
@@ -1156,7 +1279,9 @@ export default function App() {
       if (stoveAstar && stoveAstar.path.length > 1) {
         const step = stoveAstar.path[1];
         occupied.add(`${step.x}_${step.y}`);
-        const debugPath = stoveAstar.path.slice(2).map((p) => ({ x: p.x, z: p.y }));
+        const debugPath = stoveAstar.path
+          .slice(2)
+          .map((p) => ({ x: p.x, z: p.y }));
         return { ...adv, x: step.x, z: step.y, debugPath };
       }
       occupied.add(`${adv.x}_${adv.z}`);
@@ -1590,6 +1715,12 @@ export default function App() {
         }
         const [lo, hi] = tea.recipe.idealTemperatureRange;
         setPlayerHands((prev) => ({ ...prev, [hand]: null }));
+        if (!firstTeaDeliveredRef.current) {
+          firstTeaDeliveredRef.current = true;
+          showMsg(
+            "Head back to the tea machine (stove) in the kitchen and press I to brew another tea!",
+          );
+        }
 
         function applyMobSatiation(value) {
           const next = [...mobSatiationsRef.current];
@@ -1869,6 +2000,7 @@ export default function App() {
             dungeonHeight={dungeonHeight}
             camera={camera}
             passagesRef={passagesRef}
+            exploredMaskRef={exploredMaskRef}
             settingsProps={{
               tempDropPerStep,
               setTempDropPerStep,

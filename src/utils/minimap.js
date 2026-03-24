@@ -27,6 +27,9 @@ function tempTintColor(temp) {
  *
  * Renders floor/wall tiles, hidden passages (cyan when enabled, dark when
  * hidden), mob dots, and a player arrow indicator.
+ *
+ * @param {Uint8Array|null} exploredMask - Per-cell explored flag (1=explored).
+ *   When provided, only explored cells are rendered; unexplored cells stay dark.
  */
 export function drawMinimap(
   canvas,
@@ -39,6 +42,7 @@ export function drawMinimap(
   mobs,
   passages,
   temperatureData,
+  exploredMask,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -50,11 +54,24 @@ export function drawMinimap(
   ctx.fillRect(0, 0, cw, ch);
   for (let cz = 0; cz < height; cz++) {
     for (let cx = 0; cx < width; cx++) {
-      const solid = solidData[cz * width + cx] > 0;
+      const i = cz * width + cx;
+      const solid = solidData[i] > 0;
       if (solid) {
-        ctx.fillStyle = "#333";
+        // Wall is visible if it borders an explored floor cell
+        if (!exploredMask) {
+          ctx.fillStyle = "#333";
+        } else {
+          const visible =
+            (cx > 0 && !solidData[i - 1] && exploredMask[i - 1]) ||
+            (cx + 1 < width && !solidData[i + 1] && exploredMask[i + 1]) ||
+            (cz > 0 && !solidData[i - width] && exploredMask[i - width]) ||
+            (cz + 1 < height && !solidData[i + width] && exploredMask[i + width]);
+          ctx.fillStyle = visible ? "#333" : "#111";
+        }
+      } else if (exploredMask && !exploredMask[i]) {
+        ctx.fillStyle = "#111";
       } else if (temperatureData) {
-        ctx.fillStyle = tempTintColor(temperatureData[cz * width + cx]);
+        ctx.fillStyle = tempTintColor(temperatureData[i]);
       } else {
         ctx.fillStyle = "#888";
       }
@@ -70,9 +87,12 @@ export function drawMinimap(
     }
   }
   if (mobs) {
+    const isExplored = (x, z) =>
+      !exploredMask || exploredMask[z * width + x];
     // Draw adventurer debug paths first (behind dots)
     for (const mob of mobs) {
       if (!mob.isAdventurer || !mob.debugPath || mob.debugPath.length === 0) continue;
+      if (!isExplored(mob.x, mob.z)) continue;
       ctx.strokeStyle = mob.cssColor + "88";
       ctx.lineWidth = Math.max(cellW * 0.3, 1);
       ctx.setLineDash([cellW * 0.5, cellW * 0.5]);
@@ -85,6 +105,7 @@ export function drawMinimap(
       ctx.setLineDash([]);
     }
     for (const mob of mobs) {
+      if (!isExplored(mob.x, mob.z)) continue;
       ctx.fillStyle = mob.cssColor;
       ctx.beginPath();
       ctx.arc(
