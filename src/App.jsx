@@ -266,7 +266,7 @@ function useEotBCamera(
   height,
   startX,
   startZ,
-  { onStep, blocked, onBlockedMove } = {},
+  { onStep, blocked, onBlockedMove, canPhaseWalls } = {},
 ) {
   const logicalRef = useRef({ x: startX, z: startZ, yaw: 0 });
   const animRef = useRef({
@@ -290,6 +290,7 @@ function useEotBCamera(
   const onStepRef = useRef(onStep);
   const blockedRef = useRef(blocked);
   const onBlockedMoveRef = useRef(onBlockedMove);
+  const canPhaseWallsRef = useRef(canPhaseWalls ?? false);
 
   if (prevStartX !== startX || prevStartZ !== startZ) {
     setPrevStartX(startX);
@@ -323,6 +324,9 @@ function useEotBCamera(
   useEffect(() => {
     onBlockedMoveRef.current = onBlockedMove;
   }, [onBlockedMove]);
+  useEffect(() => {
+    canPhaseWallsRef.current = canPhaseWalls ?? false;
+  }, [canPhaseWalls]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -336,8 +340,9 @@ function useEotBCamera(
       const gz = Math.floor(z);
 
       function walkable(cx, cz) {
-        if (!solid) return false;
         if (cx < 0 || cz < 0 || cx >= width || cz >= height) return false;
+        if (canPhaseWallsRef.current) return true; // ghost phases through walls with empty hands
+        if (!solid) return false;
         return solid[cz * width + cx] === 0;
       }
 
@@ -463,6 +468,15 @@ const GHOST_DIALOG_WITH_TEA = [
   "I suppose a floating cup of tea is less alarming than a ghost. Only slightly.",
   "My tea is levitating. There's a ghost. I am fine. Everything is fine.",
 ];
+const ADVENTURER_SEEKING_DIALOG = [
+  "Enough plunder — now to find the heart of this place!",
+  "Right, that'll do. Time to hunt down whatever keeps this pit warm.",
+  "My pockets are full and my nerves are shot. The stove must be near!",
+  "Loot? Check. Creeping dread? Absolutely. Let's finish this.",
+  "Something cosy lurks deeper in. I can smell the tea from here.",
+  "That's enough loot. Now — where is that infernal warmth coming from?",
+];
+
 const GHOST_SIGHT_RADIUS = 8;
 
 const TURNS_PER_WAVE = 120;
@@ -695,6 +709,30 @@ export default function App() {
     return drops;
   }, [dungeon, dungeonSeed]);
 
+  const initialChests = useMemo(() => {
+    const rng = makeRng(dungeonSeed ^ 0x2AABCDEF);
+    const nonEndRooms = [...dungeon.rooms.values()].filter(r => r.id !== dungeon.endRoomId);
+    const chests = [];
+    const usedRooms = new Set();
+    const CHEST_COUNT = 4;
+    for (let i = 0; i < CHEST_COUNT && nonEndRooms.length > usedRooms.size; i++) {
+      let attempts = 0;
+      while (attempts++ < 50) {
+        const roomIdx = Math.floor(rng() * nonEndRooms.length);
+        const room = nonEndRooms[roomIdx];
+        if (usedRooms.has(room.id)) continue;
+        usedRooms.add(room.id);
+        const cx = room.rect.x + Math.floor(room.rect.w / 2);
+        const cz = room.rect.y + Math.floor(room.rect.h / 2);
+        const idx = cz * dungeonWidth + cx;
+        if (solidData[idx] !== 0) continue;
+        chests.push({ id: `chest_${i}`, x: cx, z: cz, value: 10 });
+        break;
+      }
+    }
+    return chests;
+  }, [dungeon, solidData, dungeonSeed, dungeonWidth]);
+
   const mobSpriteAtlas = useMemo(() => makeMobSpriteAtlas(), []);
 
   // Tile atlas + texture
@@ -811,7 +849,13 @@ export default function App() {
   }, [temperatureData, solidData, regionIdData, roomTempRise]);
   const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.5);
   const [supersatiationBonus, setSupersatiationBonus] = useState(50);
+  const [adventurerDreadRate, setAdventurerDreadRate] = useState(1.0);
+  const [adventurerLootPerChest, setAdventurerLootPerChest] = useState(10);
   const [turnsPerWave, setTurnsPerWave] = useState(TURNS_PER_WAVE);
+
+  // Chests state
+  const [chests, setChests] = useState([]);
+  const chestsRef = useRef([]);
 
   // Wave / combat state
   const [adventurers, setAdventurers] = useState([]);
@@ -845,6 +889,13 @@ export default function App() {
   // Sync ref for playerHands so onStep can read current value without a dep
   const playerHandsRef = useRef({ left: null, right: null });
   playerHandsRef.current = playerHands;
+
+  const adventurerDreadRateRef = useRef(1.0);
+  adventurerDreadRateRef.current = adventurerDreadRate;
+  const adventurerLootPerChestRef = useRef(10);
+  adventurerLootPerChestRef.current = adventurerLootPerChest;
+  const roomTempRiseRef = useRef(new Map());
+  roomTempRiseRef.current = roomTempRise;
 
   // Explored mask — Uint8Array(W*H), 1 = cell has been seen by the player
   const exploredMaskRef = useRef(null);
@@ -906,6 +957,8 @@ export default function App() {
     setPlayerHp(PLAYER_MAX_HP);
     setIngredients({ rations: 0, herbs: 0, dust: 0 });
     setIngredientDrops([...initialIngredientDrops]);
+    setChests([...initialChests]);
+    chestsRef.current = [...initialChests];
     setGameState("playing");
     setGameOverReason(null);
     adventurersRef.current = [];
@@ -942,6 +995,11 @@ export default function App() {
       "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press I Key)",
     );
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setChests([...initialChests]);
+    chestsRef.current = [...initialChests];
+  }, [initialChests]);
 
   const mobiles = useMemo(
     () => [
@@ -1015,6 +1073,8 @@ export default function App() {
           spawnZ = Math.max(1, Math.min(dungeonHeight - 2, room.z - i));
         }
         occupied.add(`${spawnX}_${spawnZ}`);
+        const lootRng = makeRng(waveNum * 31337 + i * 7919 + 1);
+        const dreadRng = makeRng(waveNum * 31337 + i * 7919 + 2);
         spawned.push({
           id: `adv_w${waveNum}_${i}`,
           name: tmpl.name,
@@ -1028,6 +1088,11 @@ export default function App() {
           xp: tmpl.xp + (waveNum - 1) * 5,
           template: tmpl.type,
           colorRgb: tmpl.colorRgb,
+          state: 'exploring',
+          loot: 0,
+          dread: 0,
+          lootThreshold: 20 + Math.floor(lootRng() * 31),
+          dreadThreshold: 15 + Math.floor(dreadRng() * 26),
         });
       }
       return spawned;
@@ -1088,6 +1153,7 @@ export default function App() {
     let newPlayerHp = playerHpRef.current;
     let newIngredients = { ...ingredientsRef.current };
     let newIngredientDrops = [...ingredientDropsRef.current];
+    let newChests = [...chestsRef.current];
     let stepMessage = null;
     const pendingSpeechBubbles = []; // { entityId, text } collected during processing
 
@@ -1158,14 +1224,15 @@ export default function App() {
       }
     }
 
-    // Build occupied set (other adventurers + mob positions + player)
-    const occupied = new Set([
+    // Phase 1 — compute intended moves (adventurers are transparent to each other)
+    const mobPlayerOccupied = new Set([
       `${pgx}_${pgz}`,
       ...initialMobs.map((m) => `${m.x}_${m.z}`),
     ]);
 
-    newAdventurers = newAdventurers.map((adv) => {
-      if (!adv.alive) return adv;
+    const intendedMoves = newAdventurers.map((advInit) => {
+      let adv = advInit;
+      if (!adv.alive) return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
 
       // Ghost sighting: adventurer spots the ghost (player) for the first time
       if (!adventurerSightingsRef.current.has(adv.id)) {
@@ -1187,7 +1254,7 @@ export default function App() {
       }
 
       // Factions: adventurers are hostile to monsters, neutral to player.
-      // Priority: fight any conscious monster in line of sight; otherwise seek nearest stove.
+      // Priority: fight any conscious monster in line of sight; otherwise use state machine.
 
       // Find nearest visible (line-of-sight) conscious monster
       let combatTarget = null;
@@ -1218,10 +1285,9 @@ export default function App() {
           if (newMobSatiations[combatTarget.idx] <= 0) {
             stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
           }
-          return { ...adv, debugPath: [] };
+          return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: true };
         }
         // Move toward monster
-        occupied.delete(`${adv.x}_${adv.z}`);
         const combatAstar = aStar8(
           { width: dungeonWidth, height: dungeonHeight },
           (x, y) => isWalkable(x, y),
@@ -1229,24 +1295,123 @@ export default function App() {
           { x: combatTarget.x, y: combatTarget.z },
           {
             isBlocked: (x, y) =>
-              occupied.has(`${x}_${y}`) &&
+              mobPlayerOccupied.has(`${x}_${y}`) &&
               !(x === combatTarget.x && y === combatTarget.z),
             fourDir: true,
           },
         );
         if (combatAstar && combatAstar.path.length > 1) {
           const step = combatAstar.path[1];
-          occupied.add(`${step.x}_${step.y}`);
           const debugPath = combatAstar.path
             .slice(2)
             .map((p) => ({ x: p.x, z: p.y }));
-          return { ...adv, x: step.x, z: step.y, debugPath };
+          return { adv, intendedX: step.x, intendedZ: step.y, debugPath, isAttack: false };
         }
-        occupied.add(`${adv.x}_${adv.z}`);
-        return { ...adv, debugPath: [] };
+        return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
       }
 
-      // No combat target: pathfind to nearest stove
+      // No combat target: use state machine
+      const advState = adv.state ?? 'exploring';
+
+      if (advState === 'exploring') {
+        // Compute current room temperature
+        const regionId = regionIdData[adv.z * dungeonWidth + adv.x];
+        const baseTemp = temperatureData[adv.z * dungeonWidth + adv.x] ?? 127;
+        const rise = roomTempRiseRef.current.get(regionId) ?? 0;
+        const roomTemp = Math.min(255, baseTemp + Math.round(rise));
+
+        // Update dread
+        let newDread = adv.dread ?? 0;
+        if (roomTemp <= 127) {
+          newDread = newDread + adventurerDreadRateRef.current;
+        } else {
+          newDread = Math.max(0, newDread - adventurerDreadRateRef.current * 0.5);
+        }
+
+        // Check chest pickup
+        let newLoot = adv.loot ?? 0;
+        const chestIdx = newChests.findIndex(c => c.x === adv.x && c.z === adv.z);
+        if (chestIdx !== -1) {
+          newLoot += adventurerLootPerChestRef.current;
+          newChests.splice(chestIdx, 1);
+        }
+
+        // Check state transition
+        let newAdvState = 'exploring';
+        if (newDread >= (adv.dreadThreshold ?? 15) && newLoot >= (adv.lootThreshold ?? 20)) {
+          newAdvState = 'seeking';
+          pendingSpeechBubbles.push({
+            entityId: adv.id,
+            text: ADVENTURER_SEEKING_DIALOG[Math.floor(Math.random() * ADVENTURER_SEEKING_DIALOG.length)],
+          });
+        }
+
+        if (newAdvState === 'exploring') {
+          // Pathfind to nearest chest
+          let chestTarget = null;
+          let chestDist = Infinity;
+          for (const chest of newChests) {
+            const d = Math.hypot(adv.x - chest.x, adv.z - chest.z);
+            if (d < chestDist) {
+              chestDist = d;
+              chestTarget = { x: chest.x, z: chest.z };
+            }
+          }
+
+          if (chestTarget) {
+            const chestAstar = aStar8(
+              { width: dungeonWidth, height: dungeonHeight },
+              (x, y) => isWalkable(x, y),
+              { x: adv.x, y: adv.z },
+              { x: chestTarget.x, y: chestTarget.z },
+              {
+                isBlocked: (x, y) => mobPlayerOccupied.has(`${x}_${y}`),
+                fourDir: true,
+              },
+            );
+            if (chestAstar && chestAstar.path.length > 1) {
+              const step = chestAstar.path[1];
+              const debugPath = chestAstar.path.slice(2).map((p) => ({ x: p.x, z: p.y }));
+              adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState };
+              return { adv, intendedX: step.x, intendedZ: step.y, debugPath, isAttack: false };
+            }
+            adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState };
+            return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
+          }
+
+          // No chests: wander to a deterministic non-end room
+          const nonEndRoomsArray = [...dungeon.rooms.entries()].filter(([id]) => id !== dungeon.endRoomId);
+          if (nonEndRoomsArray.length > 0) {
+            const roomPickIdx = (adv.id.charCodeAt(4) ?? 0) % nonEndRoomsArray.length;
+            const [, wanderRoom] = nonEndRoomsArray[roomPickIdx];
+            const wx = wanderRoom.rect.x + Math.floor(wanderRoom.rect.w / 2);
+            const wz = wanderRoom.rect.y + Math.floor(wanderRoom.rect.h / 2);
+            const wanderAstar = aStar8(
+              { width: dungeonWidth, height: dungeonHeight },
+              (x, y) => isWalkable(x, y),
+              { x: adv.x, y: adv.z },
+              { x: wx, y: wz },
+              {
+                isBlocked: (x, y) => mobPlayerOccupied.has(`${x}_${y}`),
+                fourDir: true,
+              },
+            );
+            if (wanderAstar && wanderAstar.path.length > 1) {
+              const step = wanderAstar.path[1];
+              const debugPath = wanderAstar.path.slice(2).map((p) => ({ x: p.x, z: p.y }));
+              adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState };
+              return { adv, intendedX: step.x, intendedZ: step.y, debugPath, isAttack: false };
+            }
+          }
+          adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState };
+          return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
+        }
+
+        // State just switched to seeking — fall through to seeking logic below
+        adv = { ...adv, dread: newDread, loot: newLoot, state: 'seeking' };
+      }
+
+      // seeking state: pathfind to nearest stove
       let stoveTarget = null;
       let stoveDist = Infinity;
       for (const stove of stovePlacements) {
@@ -1257,34 +1422,83 @@ export default function App() {
         }
       }
 
-      showMsg(
-        "[DEBUG] " +
-          (stoveTarget
-            ? `Has Stove Target (${stoveTarget.x}, ${stoveTarget.z})`
-            : "NO TARGET"),
-      );
-      if (!stoveTarget) return adv;
+      if (!stoveTarget) return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
 
-      occupied.delete(`${adv.x}_${adv.z}`);
       const stoveAstar = aStar8(
         { width: dungeonWidth, height: dungeonHeight },
         (x, y) => isWalkable(x, y),
         { x: adv.x, y: adv.z },
         { x: stoveTarget.x, y: stoveTarget.z },
         {
-          isBlocked: (x, y) => occupied.has(`${x}_${y}`),
+          isBlocked: (x, y) => mobPlayerOccupied.has(`${x}_${y}`),
           fourDir: true,
         },
       );
       if (stoveAstar && stoveAstar.path.length > 1) {
         const step = stoveAstar.path[1];
-        occupied.add(`${step.x}_${step.y}`);
         const debugPath = stoveAstar.path
           .slice(2)
           .map((p) => ({ x: p.x, z: p.y }));
-        return { ...adv, x: step.x, z: step.y, debugPath };
+        return { adv, intendedX: step.x, intendedZ: step.y, debugPath, isAttack: false };
       }
-      occupied.add(`${adv.x}_${adv.z}`);
+      return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
+    });
+
+    // Phase 2 — detect swap pairs
+    const swapSet = new Set(); // indices of adventurers in a direct swap
+    for (let i = 0; i < intendedMoves.length; i++) {
+      const mi = intendedMoves[i];
+      if (!mi.adv.alive || mi.isAttack) continue;
+      if (mi.intendedX === mi.adv.x && mi.intendedZ === mi.adv.z) continue;
+      for (let j = i + 1; j < intendedMoves.length; j++) {
+        const mj = intendedMoves[j];
+        if (!mj.adv.alive || mj.isAttack) continue;
+        if (
+          mi.intendedX === mj.adv.x && mi.intendedZ === mj.adv.z &&
+          mj.intendedX === mi.adv.x && mj.intendedZ === mi.adv.z
+        ) {
+          swapSet.add(i);
+          swapSet.add(j);
+        }
+      }
+    }
+
+    // Phase 3 — resolve final positions
+    const committed = new Set(mobPlayerOccupied);
+    // Pre-commit swap destinations (guaranteed to execute)
+    for (const idx of swapSet) {
+      committed.add(`${intendedMoves[idx].intendedX}_${intendedMoves[idx].intendedZ}`);
+    }
+    // Pre-commit positions of stationary adventurers (attacking, dead, or no path)
+    for (let i = 0; i < intendedMoves.length; i++) {
+      if (swapSet.has(i)) continue;
+      const { adv, intendedX, intendedZ, isAttack } = intendedMoves[i];
+      if (!adv.alive || isAttack || (intendedX === adv.x && intendedZ === adv.z)) {
+        committed.add(`${adv.x}_${adv.z}`);
+      }
+    }
+
+    newAdventurers = intendedMoves.map((move, i) => {
+      const { adv, intendedX, intendedZ, debugPath, isAttack } = move;
+      if (!adv.alive) return adv;
+
+      // Stationary (attack or no path)
+      if (isAttack || (intendedX === adv.x && intendedZ === adv.z)) {
+        return { ...adv, debugPath: [] };
+      }
+
+      // Swap pair — guaranteed move
+      if (swapSet.has(i)) {
+        return { ...adv, x: intendedX, z: intendedZ, debugPath };
+      }
+
+      // Non-swap mover — greedy claim
+      const targetKey = `${intendedX}_${intendedZ}`;
+      if (!committed.has(targetKey)) {
+        committed.add(targetKey);
+        return { ...adv, x: intendedX, z: intendedZ, debugPath };
+      }
+      // Blocked — stay
       return { ...adv, debugPath: [] };
     });
 
@@ -1312,11 +1526,14 @@ export default function App() {
           const newHp = adv.hp - damage;
           if (newHp <= 0) {
             newAdventurers[j] = { ...adv, alive: false, hp: 0 };
+            const dreadFactor = (adv.dreadThreshold ?? 0) > 0 ? Math.min(1, (adv.dread ?? 0) / adv.dreadThreshold) : 0;
+            const lootFactor = (adv.lootThreshold ?? 0) > 0 ? Math.min(1, (adv.loot ?? 0) / adv.lootThreshold) : 0;
+            const xpReward = Math.round(adv.xp * (1 + dreadFactor + lootFactor));
             newXpDrops.push({
               id: `xp_${Date.now()}_${j}`,
               x: adv.x,
               z: adv.z,
-              amount: adv.xp,
+              amount: xpReward,
             });
             // Drop ingredient based on adventurer type
             const tmpl = ADVENTURER_TYPES.find((t) => t.type === adv.template);
@@ -1329,7 +1546,7 @@ export default function App() {
                 dropKey: `ing_${Date.now()}_${j}`,
               });
             }
-            stepMessage = `${mob.name} slew the ${adv.name}! (+${adv.xp} XP, ${tmpl?.drop?.name ?? "?"} dropped)`;
+            stepMessage = `${mob.name} slew the ${adv.name}! (+${xpReward} XP, ${tmpl?.drop?.name ?? "?"} dropped)`;
           } else {
             newAdventurers[j] = { ...adv, hp: newHp };
           }
@@ -1370,6 +1587,7 @@ export default function App() {
     playerHpRef.current = newPlayerHp;
     ingredientsRef.current = newIngredients;
     ingredientDropsRef.current = newIngredientDrops;
+    chestsRef.current = newChests;
     mobSatiationsRef.current = newMobSatiations;
 
     setTurnCount(newTurnCount);
@@ -1380,6 +1598,7 @@ export default function App() {
     setPlayerHp(newPlayerHp);
     setIngredients(newIngredients);
     setIngredientDrops([...newIngredientDrops]);
+    setChests([...newChests]);
     setMobSatiations(newMobSatiations);
 
     // --- Room heating from cozy objects (stoves) + temperature flow between rooms ---
@@ -1423,10 +1642,13 @@ export default function App() {
     tempDropPerStep,
     heatingPerStep,
     satiationDropPerStep,
+    adventurerDreadRate,
     solidData,
     regionIdData,
     regionAdjacency,
     dungeonWidth,
+    temperatureData,
+    dungeon,
     initialMobs,
     showMsg,
     showSpeechBubble,
@@ -1478,6 +1700,7 @@ export default function App() {
       onStep,
       blocked: showRecipeMenu || gameState !== "playing",
       onBlockedMove,
+      canPhaseWalls: !playerHands.left && !playerHands.right,
     },
   );
 
@@ -1834,6 +2057,16 @@ export default function App() {
         isXp: false,
         isIngredient: true,
       })),
+      ...chests.map(c => ({
+        x: c.x,
+        z: c.z,
+        name: `Chest (${c.value} loot)`,
+        cssColor: '#b8860b',
+        isAdventurer: false,
+        isXp: false,
+        isIngredient: false,
+        isChest: true,
+      })),
     ],
     [
       initialMobs,
@@ -1842,6 +2075,7 @@ export default function App() {
       adventurers,
       xpDrops,
       ingredientDrops,
+      chests,
     ],
   );
 
@@ -2031,6 +2265,10 @@ export default function App() {
               setMinRoomSize,
               maxRoomSize,
               setMaxRoomSize,
+              adventurerDreadRate,
+              setAdventurerDreadRate,
+              adventurerLootPerChest,
+              setAdventurerLootPerChest,
             }}
           />
         </div>
@@ -2081,6 +2319,8 @@ export default function App() {
           setPlayerHp(PLAYER_MAX_HP);
           setIngredients({ rations: 0, herbs: 0, dust: 0 });
           setIngredientDrops([...initialIngredientDrops]);
+          setChests([...initialChests]);
+          chestsRef.current = [...initialChests];
           setGameState("playing");
           setGameOverReason(null);
           adventurersRef.current = [];

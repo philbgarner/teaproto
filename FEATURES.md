@@ -61,6 +61,8 @@ Both screens display wave count and turn count, and offer a **Play Again** butto
 
 Movement is grid-locked with a 150 ms lerp animation. The player fires `onStep` on every movement and on wait.
 
+**Ghost wall phasing**: When both hands are empty, the player can move through solid walls freely (you are a ghost, after all). Carrying any tea disables phasing — you can't drag a cup through stone.
+
 ---
 
 ## Tea System
@@ -169,14 +171,40 @@ Adventurers spawn at the rooms farthest from the end room.
 
 Player and mobs are in separate factions but treat each other as friendly. Adventurers are neutral to the player (will not attack) and hostile to mobs.
 
-### AI Behaviour
+### AI Behaviour — State Machine
 
-Each turn the adventurer:
+Each adventurer has two states: **exploring** (default on spawn) and **seeking** (rush to the stove).
+
+On spawn, each adventurer is assigned random thresholds (seeded per wave + index):
+- **Loot threshold**: 20–50
+- **Dread threshold**: 15–40
+
+**Every turn**, regardless of state, combat takes priority:
 
 1. **Checks for monsters in line of sight.** If any conscious mob is visible:
    - If adjacent: attacks that mob (damage = max(1, attack − mob.defense)).
    - Otherwise: moves toward the nearest visible mob.
-2. **Seeks the nearest stove** when no monster is in line of sight.
+
+**`exploring` state** (when no combat target):
+
+2. Compute current room temperature (base + heating rise). If temp ≤ 127 (neutral or cooler), dread increases by `adventurerDreadRate`. If temp > 127 (warm), dread decreases by half that rate (floor 0).
+3. If standing on a chest, loot it: chest disappears, `loot += lootPerChest`.
+4. If `dread ≥ dreadThreshold` **and** `loot ≥ lootThreshold`: emit a speech bubble ("Enough plunder — now to find the heart of this place!" etc.) and switch to **`seeking`** state.
+5. Otherwise: pathfind to the nearest chest. If no chests remain, wander toward a deterministic room target.
+
+**`seeking` state** (when no combat target):
+
+6. Pathfind to the nearest stove tile. Walking onto a stove triggers game over.
+
+### XP Scaling
+
+XP awarded when an adventurer is killed scales by how much dread and loot they accumulated:
+
+```
+xpReward = round(adv.xp × (1 + dreadFactor + lootFactor))
+```
+
+where `dreadFactor = min(1, dread / dreadThreshold)` and `lootFactor = min(1, loot / lootThreshold)`. An adventurer killed before they've explored much awards base XP; one killed while seeking the heart awards up to 3× base.
 
 ### Ghost Sighting Dialog
 
@@ -185,6 +213,17 @@ The player is a ghost. The first time each adventurer gains line-of-sight to the
 Walking onto a stove tile triggers game over.
 
 Attack damage = max(1, adventurer.attack − defender.defense).
+
+---
+
+## Chests
+
+Four chests are placed at dungeon generation time (seeded), one per non-end room chosen at random. Each chest sits at the centre of its room.
+
+- **Minimap colour**: Dark gold (`#b8860b`)
+- Adventurers in `exploring` state pathfind toward the nearest remaining chest.
+- Looting a chest (walking onto it) increases the adventurer's loot meter by `lootPerChest` and removes the chest from the dungeon.
+- Players cannot loot chests directly — chests are for adventurers only.
 
 ---
 
@@ -267,10 +306,13 @@ All sliders are in the **Difficulty** tab of the settings sidebar.
 | Setting | Default | Range | Effect |
 |---------|---------|-------|--------|
 | Cooling | 0.5°/step | 0–3, step 0.05 | Tea temperature lost per turn |
+| Heating | 1/step | 0–10, step 0.25 | Temperature rise per stove per turn |
 | Satiation loss | 0.5/step | 0–1, step 0.01 | Mob satiation lost per turn |
 | Preference bonus | 50% | 0–100%, step 1 | Extra satiation when serving preferred tea |
 | Turns per wave | 120 | 10–300, step 5 | Turns between adventurer waves |
 | Passage speed | 2× | 0.25–4×, step 0.25 | Traversal speed multiplier for hidden passages |
+| Adventurer dread rate | 1.0/step | 0–5, step 0.1 | Dread gained per step in a neutral/cool room |
+| Loot per chest | 10 | 1–50, step 1 | Loot value of each chest looted by an adventurer |
 
 ---
 
@@ -296,5 +338,6 @@ All sliders are in the **Difficulty** tab of the settings sidebar.
 | Adventurer — Mage | Blue (#44e) |
 | XP drop | Yellow (#fd0) |
 | Ingredient drop | Cyan (#0df) |
+| Chest | Dark gold (#b8860b) |
 | Passage (enabled) | Cyan (#0ff) |
 | Passage (disabled) | Dark cyan (#066) |

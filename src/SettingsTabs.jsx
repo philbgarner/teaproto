@@ -42,6 +42,10 @@ export default function SettingsTabs({
   setTurnsPerWave,
   traversalFactor,
   setTraversalFactor,
+  adventurerDreadRate,
+  setAdventurerDreadRate,
+  adventurerLootPerChest,
+  setAdventurerLootPerChest,
   dungeonSeed,
   setDungeonSeed,
   dungeonWidth,
@@ -140,6 +144,23 @@ export default function SettingsTabs({
             step={0.25}
             onChange={setTraversalFactor}
             format={(v) => `${v}×`}
+          />
+          <SliderRow
+            label="Adventurer dread rate"
+            value={adventurerDreadRate}
+            min={0}
+            max={5}
+            step={0.1}
+            onChange={setAdventurerDreadRate}
+            format={(v) => `${v.toFixed(1)}/step`}
+          />
+          <SliderRow
+            label="Loot per chest"
+            value={adventurerLootPerChest}
+            min={1}
+            max={50}
+            step={1}
+            onChange={(v) => setAdventurerLootPerChest(Math.round(v))}
           />
         </>
       )}
