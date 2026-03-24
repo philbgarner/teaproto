@@ -70,6 +70,20 @@ export function drawMinimap(
     }
   }
   if (mobs) {
+    // Draw adventurer debug paths first (behind dots)
+    for (const mob of mobs) {
+      if (!mob.isAdventurer || !mob.debugPath || mob.debugPath.length === 0) continue;
+      ctx.strokeStyle = mob.cssColor + "88";
+      ctx.lineWidth = Math.max(cellW * 0.3, 1);
+      ctx.setLineDash([cellW * 0.5, cellW * 0.5]);
+      ctx.beginPath();
+      ctx.moveTo((mob.x + 0.5) * cellW, (mob.z + 0.5) * cellH);
+      for (const step of mob.debugPath) {
+        ctx.lineTo((step.x + 0.5) * cellW, (step.z + 0.5) * cellH);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     for (const mob of mobs) {
       ctx.fillStyle = mob.cssColor;
       ctx.beginPath();

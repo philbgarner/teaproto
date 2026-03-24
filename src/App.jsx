@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { aStar8 } from "../mazetools/src/astar";
 import * as THREE from "three";
 import { generateBspDungeon } from "../mazetools/src/bsp";
 import {
@@ -158,46 +159,30 @@ function cardinalDir(yaw) {
 // Bresenham line-of-sight: returns true if ax,az can see bx,bz with no walls in between.
 // Checks all intermediate cells (not endpoints) for walkability.
 function hasLineOfSight(ax, az, bx, bz, walkableFn) {
-  let x0 = ax, z0 = az;
-  const x1 = bx, z1 = bz;
-  const dx = Math.abs(x1 - x0), dz = Math.abs(z1 - z0);
-  const sx = x0 < x1 ? 1 : -1, sz = z0 < z1 ? 1 : -1;
+  let x0 = ax,
+    z0 = az;
+  const x1 = bx,
+    z1 = bz;
+  const dx = Math.abs(x1 - x0),
+    dz = Math.abs(z1 - z0);
+  const sx = x0 < x1 ? 1 : -1,
+    sz = z0 < z1 ? 1 : -1;
   let err = dx - dz;
   while (true) {
     if (x0 === x1 && z0 === z1) return true;
     if (!walkableFn(x0, z0)) return false;
     const e2 = 2 * err;
-    if (e2 > -dz) { err -= dz; x0 += sx; }
-    if (e2 < dx) { err += dx; z0 += sz; }
+    if (e2 > -dz) {
+      err -= dz;
+      x0 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      z0 += sz;
+    }
   }
 }
 
-function greedyStepToward(ax, az, tx, tz, walkableFn, occupiedFn) {
-  const dx = tx - ax;
-  const dz = tz - az;
-  if (dx === 0 && dz === 0) return null;
-  const moves =
-    Math.abs(dx) >= Math.abs(dz)
-      ? [
-          [Math.sign(dx), 0],
-          [0, Math.sign(dz)],
-          [0, -Math.sign(dz)],
-          [-Math.sign(dx), 0],
-        ]
-      : [
-          [0, Math.sign(dz)],
-          [Math.sign(dx), 0],
-          [-Math.sign(dx), 0],
-          [0, -Math.sign(dz)],
-        ];
-  for (const [ddx, ddz] of moves) {
-    if (ddx === 0 && ddz === 0) continue;
-    const nx = ax + ddx;
-    const nz = az + ddz;
-    if (walkableFn(nx, nz) && !occupiedFn(nx, nz)) return { x: nx, z: nz };
-  }
-  return null;
-}
 
 // ---------------------------------------------------------------------------
 // Camera hook — grid-locked movement with lerp animation
@@ -802,10 +787,13 @@ export default function App() {
   const traversalFactorRef = useRef(2.0);
   const traversalStartRef = useRef({ totalSteps: 0, factor: 2.0 });
 
-  const { play: playMainTheme } = useMusic(`${import.meta.env.BASE_URL}music/MUS_1_MainTheme_Cozy.ogg`, {
-    volume: 0.6,
-    loop: true,
-  });
+  const { play: playMainTheme } = useMusic(
+    `${import.meta.env.BASE_URL}music/MUS_1_MainTheme_Cozy.ogg`,
+    {
+      volume: 0.6,
+      loop: true,
+    },
+  );
 
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
@@ -883,11 +871,15 @@ export default function App() {
         const idx = parseInt(entityId.slice(4), 10);
         const mob = initialMobs[idx];
         if (!mob) return [];
-        x = mob.x; z = mob.z; speakerName = mob.name;
+        x = mob.x;
+        z = mob.z;
+        speakerName = mob.name;
       } else {
         const adv = adventurers.find((a) => a.id === entityId && a.alive);
         if (!adv) return [];
-        x = adv.x; z = adv.z; speakerName = adv.name;
+        x = adv.x;
+        z = adv.z;
+        speakerName = adv.name;
       }
       return [{ id: entityId, x, z, text: bubble.text, speakerName }];
     });
@@ -1056,9 +1048,14 @@ export default function App() {
       // Ghost sighting: adventurer spots the ghost (player) for the first time
       if (!adventurerSightingsRef.current.has(adv.id)) {
         const playerDist = Math.hypot(adv.x - pgx, adv.z - pgz);
-        if (playerDist <= GHOST_SIGHT_RADIUS && hasLineOfSight(adv.x, adv.z, pgx, pgz, isWalkable)) {
+        if (
+          playerDist <= GHOST_SIGHT_RADIUS &&
+          hasLineOfSight(adv.x, adv.z, pgx, pgz, isWalkable)
+        ) {
           adventurerSightingsRef.current.add(adv.id);
-          const hasTeaInHand = !!(playerHandsRef.current.left || playerHandsRef.current.right);
+          const hasTeaInHand = !!(
+            playerHandsRef.current.left || playerHandsRef.current.right
+          );
           const pool = hasTeaInHand ? GHOST_DIALOG_WITH_TEA : GHOST_DIALOG;
           pendingSpeechBubbles.push({
             entityId: adv.id,
@@ -1077,7 +1074,10 @@ export default function App() {
         if (newMobSatiations[i] <= 0) continue; // unconscious
         const mob = initialMobs[i];
         const d = Math.hypot(adv.x - mob.x, adv.z - mob.z);
-        if (d < combatDist && hasLineOfSight(adv.x, adv.z, mob.x, mob.z, isWalkable)) {
+        if (
+          d < combatDist &&
+          hasLineOfSight(adv.x, adv.z, mob.x, mob.z, isWalkable)
+        ) {
           combatDist = d;
           combatTarget = { x: mob.x, z: mob.z, type: "mob", idx: i };
         }
@@ -1096,20 +1096,30 @@ export default function App() {
           if (newMobSatiations[combatTarget.idx] <= 0) {
             stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
           }
-          return adv;
+          return { ...adv, debugPath: [] };
         }
         // Move toward monster
         occupied.delete(`${adv.x}_${adv.z}`);
-        const pos = greedyStepToward(
-          adv.x, adv.z, combatTarget.x, combatTarget.z,
-          isWalkable, (x, z) => occupied.has(`${x}_${z}`),
+        const combatAstar = aStar8(
+          { width: dungeonWidth, height: dungeonHeight },
+          (x, y) => isWalkable(x, y),
+          { x: adv.x, y: adv.z },
+          { x: combatTarget.x, y: combatTarget.z },
+          {
+            isBlocked: (x, y) =>
+              occupied.has(`${x}_${y}`) &&
+              !(x === combatTarget.x && y === combatTarget.z),
+            fourDir: true,
+          },
         );
-        if (pos) {
-          occupied.add(`${pos.x}_${pos.z}`);
-          return { ...adv, x: pos.x, z: pos.z };
+        if (combatAstar && combatAstar.path.length > 1) {
+          const step = combatAstar.path[1];
+          occupied.add(`${step.x}_${step.y}`);
+          const debugPath = combatAstar.path.slice(2).map((p) => ({ x: p.x, z: p.y }));
+          return { ...adv, x: step.x, z: step.y, debugPath };
         }
         occupied.add(`${adv.x}_${adv.z}`);
-        return adv;
+        return { ...adv, debugPath: [] };
       }
 
       // No combat target: pathfind to nearest stove
@@ -1123,19 +1133,33 @@ export default function App() {
         }
       }
 
+      showMsg(
+        "[DEBUG] " +
+          (stoveTarget
+            ? `Has Stove Target (${stoveTarget.x}, ${stoveTarget.z})`
+            : "NO TARGET"),
+      );
       if (!stoveTarget) return adv;
 
       occupied.delete(`${adv.x}_${adv.z}`);
-      const pos = greedyStepToward(
-        adv.x, adv.z, stoveTarget.x, stoveTarget.z,
-        isWalkable, (x, z) => occupied.has(`${x}_${z}`),
+      const stoveAstar = aStar8(
+        { width: dungeonWidth, height: dungeonHeight },
+        (x, y) => isWalkable(x, y),
+        { x: adv.x, y: adv.z },
+        { x: stoveTarget.x, y: stoveTarget.z },
+        {
+          isBlocked: (x, y) => occupied.has(`${x}_${y}`),
+          fourDir: true,
+        },
       );
-      if (pos) {
-        occupied.add(`${pos.x}_${pos.z}`);
-        return { ...adv, x: pos.x, z: pos.z };
+      if (stoveAstar && stoveAstar.path.length > 1) {
+        const step = stoveAstar.path[1];
+        occupied.add(`${step.x}_${step.y}`);
+        const debugPath = stoveAstar.path.slice(2).map((p) => ({ x: p.x, z: p.y }));
+        return { ...adv, x: step.x, z: step.y, debugPath };
       }
       occupied.add(`${adv.x}_${adv.z}`);
-      return adv;
+      return { ...adv, debugPath: [] };
     });
 
     // --- Adventurers pick up loot they've walked onto ---
@@ -1245,7 +1269,10 @@ export default function App() {
 
       // Apply heating from cozy objects
       for (const [regionId, count] of cozyByRegion) {
-        next.set(regionId, Math.min(128, (next.get(regionId) ?? 0) + count * heatingPerStep));
+        next.set(
+          regionId,
+          Math.min(128, (next.get(regionId) ?? 0) + count * heatingPerStep),
+        );
       }
 
       // Flow temperature between adjacent region pairs (each pair processed once)
@@ -1654,6 +1681,7 @@ export default function App() {
                 : "#44e",
           isAdventurer: true,
           isXp: false,
+          debugPath: a.debugPath ?? [],
         })),
       ...xpDrops.map((drop) => ({
         x: drop.x,
@@ -1885,7 +1913,10 @@ export default function App() {
             const gx = Math.floor(camera.x);
             const gz = Math.floor(camera.z);
             const regionId = regionIdData[gz * dungeonWidth + gx];
-            return Math.min(255, 127 + Math.round(roomTempRise.get(regionId) ?? 0));
+            return Math.min(
+              255,
+              127 + Math.round(roomTempRise.get(regionId) ?? 0),
+            );
           })()}
         />
       </div>
