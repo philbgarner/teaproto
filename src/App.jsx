@@ -108,6 +108,61 @@ function makeStoveProto() {
 }
 
 // ---------------------------------------------------------------------------
+// Door 3-D object — thin slab spanning full cell width and ceiling height
+// ---------------------------------------------------------------------------
+function makeDoorProto() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  // Wood background
+  ctx.fillStyle = "#6b4226";
+  ctx.fillRect(0, 0, 64, 128);
+  // Wood grain
+  ctx.strokeStyle = "#5a3520";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 8; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * 9, 0);
+    ctx.lineTo(i * 9 + 3, 128);
+    ctx.stroke();
+  }
+  // Outer frame
+  ctx.strokeStyle = "#3d2412";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(2, 2, 60, 124);
+  // Upper panel
+  ctx.strokeStyle = "#3d2412";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(8, 10, 48, 46);
+  // Lower panel
+  ctx.strokeRect(8, 66, 48, 54);
+  // Door handle
+  ctx.strokeStyle = "#050505";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(32, 56, 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  const geo = new THREE.BoxGeometry(
+    TILE_SIZE * 0.9,
+    CEILING_H * 0.98,
+    TILE_SIZE * 0.04,
+  );
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    side: THREE.DoubleSide,
+  });
+  return new THREE.Mesh(geo, mat);
+}
+
+// ---------------------------------------------------------------------------
 // Mob + Adventurer sprite atlas (2 columns: col 0 = mob, col 1 = adventurer)
 // ---------------------------------------------------------------------------
 function makeMobSpriteAtlas() {
@@ -629,16 +684,92 @@ export default function App() {
     return objects;
   }, [dungeon]);
 
+  // Door placements — one door per corridor/room threshold, with walls on either side
+  const doorPlacements = useMemo(() => {
+    const W = dungeon.width;
+    const H = dungeon.height;
+    const solidArr = dungeon.textures.solid.image.data;
+    const regionArr = dungeon.textures.regionId.image.data;
+
+    function isCorridor(x, z) {
+      if (x < 0 || z < 0 || x >= W || z >= H) return false;
+      return solidArr[z * W + x] === 0 && regionArr[z * W + x] === 0;
+    }
+    function isRoom(x, z) {
+      if (x < 0 || z < 0 || x >= W || z >= H) return false;
+      return solidArr[z * W + x] === 0 && regionArr[z * W + x] !== 0;
+    }
+
+    // Find all threshold cells: corridor cells directly adjacent to a room cell
+    const groups = new Map();
+    const DIRS4 = [
+      [0, -1],
+      [0, 1],
+      [-1, 0],
+      [1, 0],
+    ];
+    for (let z = 0; z < H; z++) {
+      for (let x = 0; x < W; x++) {
+        if (!isCorridor(x, z)) continue;
+        for (const [dx, dz] of DIRS4) {
+          if (isRoom(x + dx, z + dz)) {
+            // Group key: direction + the fixed coordinate (row or column index)
+            const key = `${dx}_${dz}_${dx === 0 ? z : x}`;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push({ x, z, dx, dz });
+            break;
+          }
+        }
+      }
+    }
+
+    const placements = [];
+    for (const cells of groups.values()) {
+      if (cells.length === 0) continue;
+      const { dx, dz } = cells[0];
+      // Sort perpendicular to the corridor direction
+      cells.sort((a, b) => (dx === 0 ? a.x - b.x : a.z - b.z));
+      const midIdx = Math.floor(cells.length / 2);
+      for (let i = 0; i < cells.length; i++) {
+        const { x, z } = cells[i];
+        if (i === midIdx) {
+          // Door at the face between this corridor cell and the room
+          placements.push({
+            x,
+            z,
+            type: "door",
+            offsetX: dx * 0.5,
+            offsetZ: dz * 0.5,
+            offsetY: CEILING_H / 2,
+            yaw: dx === 0 ? 0 : Math.PI / 2,
+          });
+        } else {
+          // Wall off non-door threshold cells to narrow the opening
+          solidArr[z * W + x] = 255;
+        }
+      }
+    }
+    dungeon.textures.solid.needsUpdate = true;
+    return placements;
+  }, [dungeon]);
+
   // Object registry and world placements
   const stoveProto = useMemo(() => makeStoveProto(), []);
+  const doorProto = useMemo(() => makeDoorProto(), []);
   const objectRegistry = useMemo(
-    () => ({ stove: () => stoveProto.clone(true) }),
-    [stoveProto],
+    () => ({
+      stove: () => stoveProto.clone(true),
+      door: () => doorProto.clone(true),
+    }),
+    [stoveProto, doorProto],
   );
   const objects = useMemo(() => {
     const halfH = (TILE_SIZE * 0.7) / 2;
-    return stovePlacements.map((s) => ({ ...s, offsetY: halfH }));
-  }, [stovePlacements]);
+    return [
+      ...stovePlacements.map((s) => ({ ...s, offsetY: halfH })),
+      ...doorPlacements,
+    ];
+  }, [stovePlacements, doorPlacements]);
 
   // Passive mobs — one per non-end room (up to 3)
   const initialMobs = useMemo(() => {
@@ -1507,7 +1638,13 @@ export default function App() {
               };
             }
           }
-          adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState, noLootTurns: newNoLootTurns };
+          adv = {
+            ...adv,
+            dread: newDread,
+            loot: newLoot,
+            state: newAdvState,
+            noLootTurns: newNoLootTurns,
+          };
           return {
             adv,
             intendedX: adv.x,
