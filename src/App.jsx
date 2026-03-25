@@ -570,6 +570,7 @@ export default function App() {
         maxLeafSize,
         minRoomSize,
         maxRoomSize,
+        corridorWidth: 2,
       }),
     [
       dungeonSeed,
@@ -711,12 +712,18 @@ export default function App() {
   }, [dungeon, dungeonSeed]);
 
   const initialChests = useMemo(() => {
-    const rng = makeRng(dungeonSeed ^ 0x2AABCDEF);
-    const nonEndRooms = [...dungeon.rooms.values()].filter(r => r.id !== dungeon.endRoomId);
+    const rng = makeRng(dungeonSeed ^ 0x2aabcdef);
+    const nonEndRooms = [...dungeon.rooms.values()].filter(
+      (r) => r.id !== dungeon.endRoomId,
+    );
     const chests = [];
     const usedRooms = new Set();
     const CHEST_COUNT = 4;
-    for (let i = 0; i < CHEST_COUNT && nonEndRooms.length > usedRooms.size; i++) {
+    for (
+      let i = 0;
+      i < CHEST_COUNT && nonEndRooms.length > usedRooms.size;
+      i++
+    ) {
       let attempts = 0;
       while (attempts++ < 50) {
         const roomIdx = Math.floor(rng() * nonEndRooms.length);
@@ -863,6 +870,7 @@ export default function App() {
   const [adventurers, setAdventurers] = useState([]);
   const [currentWave, setCurrentWave] = useState(0);
   const [turnCount, setTurnCount] = useState(0);
+  const [waveCountdown, setWaveCountdown] = useState(TURNS_PER_WAVE);
   const [playerXp, setPlayerXp] = useState(0);
   const [xpDrops, setXpDrops] = useState([]);
   const [playerHp, setPlayerHp] = useState(PLAYER_MAX_HP);
@@ -883,6 +891,7 @@ export default function App() {
   const adventurersRef = useRef([]);
   const currentWaveRef = useRef(0);
   const turnCountRef = useRef(0);
+  const waveCountdownRef = useRef(TURNS_PER_WAVE);
   const playerXpRef = useRef(0);
   const xpDropsRef = useRef([]);
   const playerHpRef = useRef(PLAYER_MAX_HP);
@@ -954,6 +963,7 @@ export default function App() {
     setAdventurers([]);
     setCurrentWave(0);
     setTurnCount(0);
+    setWaveCountdown(turnsPerWave);
     setPlayerXp(0);
     setXpDrops([]);
     setPlayerHp(PLAYER_MAX_HP);
@@ -966,6 +976,7 @@ export default function App() {
     adventurersRef.current = [];
     currentWaveRef.current = 0;
     turnCountRef.current = 0;
+    waveCountdownRef.current = turnsPerWave;
     playerXpRef.current = 0;
     xpDropsRef.current = [];
     playerHpRef.current = PLAYER_MAX_HP;
@@ -1090,11 +1101,12 @@ export default function App() {
           xp: tmpl.xp + (waveNum - 1) * 5,
           template: tmpl.type,
           colorRgb: tmpl.colorRgb,
-          state: 'exploring',
+          state: "exploring",
           loot: 0,
           dread: 0,
           lootThreshold: 20 + Math.floor(lootRng() * 31),
           dreadThreshold: 15 + Math.floor(dreadRng() * 26),
+          noLootTurns: 0,
         });
       }
       return spawned;
@@ -1160,13 +1172,21 @@ export default function App() {
     const pendingSpeechBubbles = []; // { entityId, text } collected during processing
 
     // --- Wave spawning ---
-    if (newTurnCount % turnsPerWave === 0) {
-      newWave = Math.floor(newTurnCount / turnsPerWave);
+    // The countdown to the next wave only ticks when all enemies are dead.
+    const allEnemiesDead = newAdventurers.every((a) => !a.alive);
+    let newWaveCountdown = waveCountdownRef.current;
+    if (allEnemiesDead) {
+      newWaveCountdown -= 1;
+    }
+    if (newWaveCountdown <= 0) {
+      newWaveCountdown = turnsPerWave;
+      newWave = currentWaveRef.current + 1;
       currentWaveRef.current = newWave;
       const spawned = spawnAdventurersForWave(newWave);
       newAdventurers = [...newAdventurers.filter((a) => a.alive), ...spawned];
       stepMessage = `Wave ${newWave}! ${spawned.length} adventurer${spawned.length !== 1 ? "s" : ""} have entered the dungeon!`;
     }
+    waveCountdownRef.current = newWaveCountdown;
 
     // --- XP pickup (before moving to avoid collecting just-dropped XP) ---
     const { x: px, z: pz } = logicalRef.current;
@@ -1234,7 +1254,14 @@ export default function App() {
 
     const intendedMoves = newAdventurers.map((advInit) => {
       let adv = advInit;
-      if (!adv.alive) return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
+      if (!adv.alive)
+        return {
+          adv,
+          intendedX: adv.x,
+          intendedZ: adv.z,
+          debugPath: [],
+          isAttack: false,
+        };
 
       // Ghost sighting: adventurer spots the ghost (player) for the first time
       if (!adventurerSightingsRef.current.has(adv.id)) {
@@ -1287,7 +1314,13 @@ export default function App() {
           if (newMobSatiations[combatTarget.idx] <= 0) {
             stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
           }
-          return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: true };
+          return {
+            adv,
+            intendedX: adv.x,
+            intendedZ: adv.z,
+            debugPath: [],
+            isAttack: true,
+          };
         }
         // Move toward monster
         const combatAstar = aStar8(
@@ -1307,15 +1340,27 @@ export default function App() {
           const debugPath = combatAstar.path
             .slice(2)
             .map((p) => ({ x: p.x, z: p.y }));
-          return { adv, intendedX: step.x, intendedZ: step.y, debugPath, isAttack: false };
+          return {
+            adv,
+            intendedX: step.x,
+            intendedZ: step.y,
+            debugPath,
+            isAttack: false,
+          };
         }
-        return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
+        return {
+          adv,
+          intendedX: adv.x,
+          intendedZ: adv.z,
+          debugPath: [],
+          isAttack: false,
+        };
       }
 
       // No combat target: use state machine
-      const advState = adv.state ?? 'exploring';
+      const advState = adv.state ?? "exploring";
 
-      if (advState === 'exploring') {
+      if (advState === "exploring") {
         // Compute current room temperature
         const regionId = regionIdData[adv.z * dungeonWidth + adv.x];
         const baseTemp = temperatureData[adv.z * dungeonWidth + adv.x] ?? 127;
@@ -1327,28 +1372,40 @@ export default function App() {
         if (roomTemp <= 127) {
           newDread = newDread + adventurerDreadRateRef.current;
         } else {
-          newDread = Math.max(0, newDread - adventurerDreadRateRef.current * 0.5);
+          newDread = Math.max(
+            0,
+            newDread - adventurerDreadRateRef.current * 0.5,
+          );
         }
 
         // Check chest pickup
         let newLoot = adv.loot ?? 0;
-        const chestIdx = newChests.findIndex(c => c.x === adv.x && c.z === adv.z);
+        const chestIdx = newChests.findIndex(
+          (c) => c.x === adv.x && c.z === adv.z,
+        );
         if (chestIdx !== -1) {
           newLoot += adventurerLootPerChestRef.current;
           newChests.splice(chestIdx, 1);
         }
 
         // Check state transition
-        let newAdvState = 'exploring';
-        if (newDread >= (adv.dreadThreshold ?? 15) && newLoot >= (adv.lootThreshold ?? 20)) {
-          newAdvState = 'seeking';
+        const NO_LOOT_TURNS_LIMIT = 10;
+        let newAdvState = "exploring";
+        if (
+          (newDread >= (adv.dreadThreshold ?? 15) &&
+            newLoot >= (adv.lootThreshold ?? 20)) ||
+          (adv.noLootTurns ?? 0) >= NO_LOOT_TURNS_LIMIT
+        ) {
+          newAdvState = "seeking";
           pendingSpeechBubbles.push({
             entityId: adv.id,
-            text: ADVENTURER_SEEKING_DIALOG[Math.floor(Math.random() * ADVENTURER_SEEKING_DIALOG.length)],
+            text: ADVENTURER_SEEKING_DIALOG[
+              Math.floor(Math.random() * ADVENTURER_SEEKING_DIALOG.length)
+            ],
           });
         }
 
-        if (newAdvState === 'exploring') {
+        if (newAdvState === "exploring") {
           // Pathfind to nearest chest
           let chestTarget = null;
           let chestDist = Infinity;
@@ -1373,18 +1430,49 @@ export default function App() {
             );
             if (chestAstar && chestAstar.path.length > 1) {
               const step = chestAstar.path[1];
-              const debugPath = chestAstar.path.slice(2).map((p) => ({ x: p.x, z: p.y }));
-              adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState };
-              return { adv, intendedX: step.x, intendedZ: step.y, debugPath, isAttack: false };
+              const debugPath = chestAstar.path
+                .slice(2)
+                .map((p) => ({ x: p.x, z: p.y }));
+              adv = {
+                ...adv,
+                dread: newDread,
+                loot: newLoot,
+                state: newAdvState,
+                noLootTurns: 0,
+              };
+              return {
+                adv,
+                intendedX: step.x,
+                intendedZ: step.y,
+                debugPath,
+                isAttack: false,
+              };
             }
-            adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState };
-            return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
+            // Chest exists but is unreachable — count the stuck turn
+            adv = {
+              ...adv,
+              dread: newDread,
+              loot: newLoot,
+              state: newAdvState,
+              noLootTurns: (adv.noLootTurns ?? 0) + 1,
+            };
+            return {
+              adv,
+              intendedX: adv.x,
+              intendedZ: adv.z,
+              debugPath: [],
+              isAttack: false,
+            };
           }
 
-          // No chests: wander to a deterministic non-end room
-          const nonEndRoomsArray = [...dungeon.rooms.entries()].filter(([id]) => id !== dungeon.endRoomId);
+          // No chests at all — count the stuck turn and wander
+          const newNoLootTurns = (adv.noLootTurns ?? 0) + 1;
+          const nonEndRoomsArray = [...dungeon.rooms.entries()].filter(
+            ([id]) => id !== dungeon.endRoomId,
+          );
           if (nonEndRoomsArray.length > 0) {
-            const roomPickIdx = (adv.id.charCodeAt(4) ?? 0) % nonEndRoomsArray.length;
+            const roomPickIdx =
+              (adv.id.charCodeAt(4) ?? 0) % nonEndRoomsArray.length;
             const [, wanderRoom] = nonEndRoomsArray[roomPickIdx];
             const wx = wanderRoom.rect.x + Math.floor(wanderRoom.rect.w / 2);
             const wz = wanderRoom.rect.y + Math.floor(wanderRoom.rect.h / 2);
@@ -1400,17 +1488,37 @@ export default function App() {
             );
             if (wanderAstar && wanderAstar.path.length > 1) {
               const step = wanderAstar.path[1];
-              const debugPath = wanderAstar.path.slice(2).map((p) => ({ x: p.x, z: p.y }));
-              adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState };
-              return { adv, intendedX: step.x, intendedZ: step.y, debugPath, isAttack: false };
+              const debugPath = wanderAstar.path
+                .slice(2)
+                .map((p) => ({ x: p.x, z: p.y }));
+              adv = {
+                ...adv,
+                dread: newDread,
+                loot: newLoot,
+                state: newAdvState,
+                noLootTurns: newNoLootTurns,
+              };
+              return {
+                adv,
+                intendedX: step.x,
+                intendedZ: step.y,
+                debugPath,
+                isAttack: false,
+              };
             }
           }
-          adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState };
-          return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
+          adv = { ...adv, dread: newDread, loot: newLoot, state: newAdvState, noLootTurns: newNoLootTurns };
+          return {
+            adv,
+            intendedX: adv.x,
+            intendedZ: adv.z,
+            debugPath: [],
+            isAttack: false,
+          };
         }
 
         // State just switched to seeking — fall through to seeking logic below
-        adv = { ...adv, dread: newDread, loot: newLoot, state: 'seeking' };
+        adv = { ...adv, dread: newDread, loot: newLoot, state: "seeking" };
       }
 
       // seeking state: pathfind to nearest stove
@@ -1424,7 +1532,14 @@ export default function App() {
         }
       }
 
-      if (!stoveTarget) return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
+      if (!stoveTarget)
+        return {
+          adv,
+          intendedX: adv.x,
+          intendedZ: adv.z,
+          debugPath: [],
+          isAttack: false,
+        };
 
       const stoveAstar = aStar8(
         { width: dungeonWidth, height: dungeonHeight },
@@ -1441,9 +1556,21 @@ export default function App() {
         const debugPath = stoveAstar.path
           .slice(2)
           .map((p) => ({ x: p.x, z: p.y }));
-        return { adv, intendedX: step.x, intendedZ: step.y, debugPath, isAttack: false };
+        return {
+          adv,
+          intendedX: step.x,
+          intendedZ: step.y,
+          debugPath,
+          isAttack: false,
+        };
       }
-      return { adv, intendedX: adv.x, intendedZ: adv.z, debugPath: [], isAttack: false };
+      return {
+        adv,
+        intendedX: adv.x,
+        intendedZ: adv.z,
+        debugPath: [],
+        isAttack: false,
+      };
     });
 
     // Phase 2 — detect swap pairs
@@ -1456,8 +1583,10 @@ export default function App() {
         const mj = intendedMoves[j];
         if (!mj.adv.alive || mj.isAttack) continue;
         if (
-          mi.intendedX === mj.adv.x && mi.intendedZ === mj.adv.z &&
-          mj.intendedX === mi.adv.x && mj.intendedZ === mi.adv.z
+          mi.intendedX === mj.adv.x &&
+          mi.intendedZ === mj.adv.z &&
+          mj.intendedX === mi.adv.x &&
+          mj.intendedZ === mi.adv.z
         ) {
           swapSet.add(i);
           swapSet.add(j);
@@ -1469,13 +1598,19 @@ export default function App() {
     const committed = new Set(mobPlayerOccupied);
     // Pre-commit swap destinations (guaranteed to execute)
     for (const idx of swapSet) {
-      committed.add(`${intendedMoves[idx].intendedX}_${intendedMoves[idx].intendedZ}`);
+      committed.add(
+        `${intendedMoves[idx].intendedX}_${intendedMoves[idx].intendedZ}`,
+      );
     }
     // Pre-commit positions of stationary adventurers (attacking, dead, or no path)
     for (let i = 0; i < intendedMoves.length; i++) {
       if (swapSet.has(i)) continue;
       const { adv, intendedX, intendedZ, isAttack } = intendedMoves[i];
-      if (!adv.alive || isAttack || (intendedX === adv.x && intendedZ === adv.z)) {
+      if (
+        !adv.alive ||
+        isAttack ||
+        (intendedX === adv.x && intendedZ === adv.z)
+      ) {
         committed.add(`${adv.x}_${adv.z}`);
       }
     }
@@ -1528,9 +1663,17 @@ export default function App() {
           const newHp = adv.hp - damage;
           if (newHp <= 0) {
             newAdventurers[j] = { ...adv, alive: false, hp: 0 };
-            const dreadFactor = (adv.dreadThreshold ?? 0) > 0 ? Math.min(1, (adv.dread ?? 0) / adv.dreadThreshold) : 0;
-            const lootFactor = (adv.lootThreshold ?? 0) > 0 ? Math.min(1, (adv.loot ?? 0) / adv.lootThreshold) : 0;
-            const xpReward = Math.round(adv.xp * (1 + dreadFactor + lootFactor));
+            const dreadFactor =
+              (adv.dreadThreshold ?? 0) > 0
+                ? Math.min(1, (adv.dread ?? 0) / adv.dreadThreshold)
+                : 0;
+            const lootFactor =
+              (adv.lootThreshold ?? 0) > 0
+                ? Math.min(1, (adv.loot ?? 0) / adv.lootThreshold)
+                : 0;
+            const xpReward = Math.round(
+              adv.xp * (1 + dreadFactor + lootFactor),
+            );
             newXpDrops.push({
               id: `xp_${Date.now()}_${j}`,
               x: adv.x,
@@ -1593,6 +1736,7 @@ export default function App() {
     mobSatiationsRef.current = newMobSatiations;
 
     setTurnCount(newTurnCount);
+    setWaveCountdown(newWaveCountdown);
     setCurrentWave(newWave);
     setAdventurers([...newAdventurers]);
     setPlayerXp(newPlayerXp);
@@ -1868,7 +2012,9 @@ export default function App() {
           if (!firstTeaDeliveredRef.current) {
             firstTeaDeliveredRef.current = true;
             setTimeout(() => {
-              showMsg("With empty hands you can pass through walls — explore the dungeon!");
+              showMsg(
+                "With empty hands you can pass through walls — explore the dungeon!",
+              );
             }, 1500);
           }
         } else {
@@ -1886,7 +2032,9 @@ export default function App() {
           if (!firstTeaDeliveredRef.current) {
             firstTeaDeliveredRef.current = true;
             setTimeout(() => {
-              showMsg("With empty hands you can pass through walls — explore the dungeon!");
+              showMsg(
+                "With empty hands you can pass through walls — explore the dungeon!",
+              );
             }, 1500);
           }
         } else {
@@ -2100,11 +2248,11 @@ export default function App() {
         isXp: false,
         isIngredient: true,
       })),
-      ...chests.map(c => ({
+      ...chests.map((c) => ({
         x: c.x,
         z: c.z,
         name: `Chest (${c.value} loot)`,
-        cssColor: '#b8860b',
+        cssColor: "#b8860b",
         isAdventurer: false,
         isXp: false,
         isIngredient: false,
@@ -2142,7 +2290,9 @@ export default function App() {
           dungeonSeed={dungeonSeed}
           currentWave={currentWave}
           onSettingsClick={() => setShowSettings(true)}
-          onRandomizeSeed={() => setDungeonSeed(Math.floor(Math.random() * 0xffffff))}
+          onRandomizeSeed={() =>
+            setDungeonSeed(Math.floor(Math.random() * 0xffffff))
+          }
         />
 
         {/* Main area */}
@@ -2179,10 +2329,9 @@ export default function App() {
             )}
 
             <WaveCountdown
-              turnsLeft={turnsPerWave - (turnCount % turnsPerWave)}
+              turnsLeft={waveCountdown}
               visible={
-                turnsPerWave - (turnCount % turnsPerWave) <=
-                  WAVE_COUNTDOWN_THRESHOLD &&
+                waveCountdown <= WAVE_COUNTDOWN_THRESHOLD &&
                 adventurers.filter((a) => a.alive).length === 0
               }
             />
@@ -2367,6 +2516,7 @@ export default function App() {
           setAdventurers([]);
           setCurrentWave(0);
           setTurnCount(0);
+          setWaveCountdown(turnsPerWave);
           setPlayerXp(0);
           setXpDrops([]);
           setPlayerHp(PLAYER_MAX_HP);
@@ -2379,6 +2529,7 @@ export default function App() {
           adventurersRef.current = [];
           currentWaveRef.current = 0;
           turnCountRef.current = 0;
+          waveCountdownRef.current = turnsPerWave;
           playerXpRef.current = 0;
           xpDropsRef.current = [];
           playerHpRef.current = PLAYER_MAX_HP;
