@@ -1863,6 +1863,12 @@ export default function App() {
         if (playerHands.left) {
           showMsg(`You discard your ${playerHands.left.name}.`);
           setPlayerHands((prev) => ({ ...prev, left: null }));
+          if (!firstTeaDeliveredRef.current) {
+            firstTeaDeliveredRef.current = true;
+            setTimeout(() => {
+              showMsg("With empty hands you can pass through walls — explore the dungeon!");
+            }, 1500);
+          }
         } else {
           showMsg("Your left hand is empty.");
         }
@@ -1875,6 +1881,12 @@ export default function App() {
         if (playerHands.right) {
           showMsg(`You discard your ${playerHands.right.name}.`);
           setPlayerHands((prev) => ({ ...prev, right: null }));
+          if (!firstTeaDeliveredRef.current) {
+            firstTeaDeliveredRef.current = true;
+            setTimeout(() => {
+              showMsg("With empty hands you can pass through walls — explore the dungeon!");
+            }, 1500);
+          }
         } else {
           showMsg("Your right hand is empty.");
         }
