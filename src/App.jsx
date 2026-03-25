@@ -30,6 +30,7 @@ import { WaveCountdown } from "./components/WaveCountdown";
 import { RecipeMenu } from "./components/RecipeMenu";
 import { GameOverOverlay } from "./components/GameOverOverlay";
 import { MinimapSidebar } from "./components/MinimapSidebar";
+import { DifficultyModal } from "./components/DifficultyModal";
 
 import "./App.css";
 
@@ -852,6 +853,7 @@ export default function App() {
   const [adventurerDreadRate, setAdventurerDreadRate] = useState(1.0);
   const [adventurerLootPerChest, setAdventurerLootPerChest] = useState(10);
   const [turnsPerWave, setTurnsPerWave] = useState(TURNS_PER_WAVE);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Chests state
   const [chests, setChests] = useState([]);
@@ -2136,7 +2138,12 @@ export default function App() {
           fontFamily: "monospace",
         }}
       >
-        <GameHeader dungeonSeed={dungeonSeed} currentWave={currentWave} />
+        <GameHeader
+          dungeonSeed={dungeonSeed}
+          currentWave={currentWave}
+          onSettingsClick={() => setShowSettings(true)}
+          onRandomizeSeed={() => setDungeonSeed(Math.floor(Math.random() * 0xffffff))}
+        />
 
         {/* Main area */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
@@ -2276,43 +2283,48 @@ export default function App() {
             camera={camera}
             passagesRef={passagesRef}
             exploredMaskRef={exploredMaskRef}
-            settingsProps={{
-              tempDropPerStep,
-              setTempDropPerStep,
-              heatingPerStep,
-              setHeatingPerStep,
-              satiationDropPerStep,
-              turnsPerWave,
-              setTurnsPerWave,
-              setSatiationDropPerStep,
-              supersatiationBonus,
-              setSupersatiationBonus,
-              traversalFactor,
-              setTraversalFactor: (v) => {
-                traversalFactorRef.current = v;
-                setTraversalFactor(v);
-              },
-              dungeonSeed,
-              setDungeonSeed,
-              dungeonWidth,
-              setDungeonWidth,
-              dungeonHeight,
-              setDungeonHeight,
-              minLeafSize,
-              setMinLeafSize,
-              maxLeafSize,
-              setMaxLeafSize,
-              minRoomSize,
-              setMinRoomSize,
-              maxRoomSize,
-              setMaxRoomSize,
-              adventurerDreadRate,
-              setAdventurerDreadRate,
-              adventurerLootPerChest,
-              setAdventurerLootPerChest,
-            }}
           />
         </div>
+
+        <DifficultyModal
+          visible={showSettings}
+          onClose={() => setShowSettings(false)}
+          settingsProps={{
+            tempDropPerStep,
+            setTempDropPerStep,
+            heatingPerStep,
+            setHeatingPerStep,
+            satiationDropPerStep,
+            turnsPerWave,
+            setTurnsPerWave,
+            setSatiationDropPerStep,
+            supersatiationBonus,
+            setSupersatiationBonus,
+            traversalFactor,
+            setTraversalFactor: (v) => {
+              traversalFactorRef.current = v;
+              setTraversalFactor(v);
+            },
+            dungeonSeed,
+            setDungeonSeed,
+            dungeonWidth,
+            setDungeonWidth,
+            dungeonHeight,
+            setDungeonHeight,
+            minLeafSize,
+            setMinLeafSize,
+            maxLeafSize,
+            setMaxLeafSize,
+            minRoomSize,
+            setMinRoomSize,
+            maxRoomSize,
+            setMaxRoomSize,
+            adventurerDreadRate,
+            setAdventurerDreadRate,
+            adventurerLootPerChest,
+            setAdventurerLootPerChest,
+          }}
+        />
 
         <StatusBar
           camera={camera}

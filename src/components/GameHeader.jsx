@@ -1,9 +1,9 @@
 /**
  * Top header bar showing the game title, dungeon seed, and current wave number.
  *
- * @param {{ dungeonSeed: number, currentWave: number }} props
+ * @param {{ dungeonSeed: number, currentWave: number, onSettingsClick: () => void }} props
  */
-export function GameHeader({ dungeonSeed, currentWave }) {
+export function GameHeader({ dungeonSeed, currentWave, onSettingsClick, onRandomizeSeed }) {
   return (
     <div
       style={{
@@ -18,11 +18,39 @@ export function GameHeader({ dungeonSeed, currentWave }) {
     >
       <span style={{ fontWeight: "bold", color: "#eee" }}>Tea Dungeon</span>
       <span style={{ color: "#666", fontSize: 12 }}>seed: {dungeonSeed}</span>
+      <button
+        onClick={onRandomizeSeed}
+        style={{
+          background: "transparent",
+          border: "1px solid #444",
+          color: "#888",
+          fontSize: 12,
+          padding: "2px 6px",
+          cursor: "pointer",
+          fontFamily: "monospace",
+        }}
+      >
+        rng
+      </button>
       <span
         style={{ color: currentWave > 0 ? "#f88" : "#555", fontSize: 12 }}
       >
         Wave {currentWave}
       </span>
+      <button
+        onClick={onSettingsClick}
+        style={{
+          background: "transparent",
+          border: "1px solid #444",
+          color: "#888",
+          fontSize: 12,
+          padding: "2px 8px",
+          cursor: "pointer",
+          fontFamily: "monospace",
+        }}
+      >
+        settings
+      </button>
     </div>
   );
 }

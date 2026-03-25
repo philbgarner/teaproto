@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import SettingsTabs from "../SettingsTabs";
 import { drawMinimap } from "../utils/minimap";
 
 /**
@@ -20,7 +19,6 @@ import { drawMinimap } from "../utils/minimap";
  *   dungeonHeight: number,
  *   camera: { x: number, z: number, yaw: number },
  *   passagesRef: React.RefObject<object[]>,
- *   settingsProps: object,
  * }} props
  */
 export function MinimapSidebar({
@@ -38,7 +36,6 @@ export function MinimapSidebar({
   camera,
   passagesRef,
   exploredMaskRef,
-  settingsProps,
 }) {
   useEffect(() => {
     if (!minimapRef.current) return;
@@ -143,7 +140,6 @@ export function MinimapSidebar({
         />
         Temperature tint
       </label>
-      <SettingsTabs {...settingsProps} />
       <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
         <div>W / ↑ - move forward</div>
         <div>S / ↓ - move back</div>
