@@ -953,7 +953,25 @@ export default function App() {
 
   // Precompute unique adjacent region pairs for temperature flow.
   // Scan every cell and check right/down neighbors; a pair is added only once (a < b).
+  // Pairs where a door sits at the threshold are excluded — doors block temperature flow.
   const regionAdjacency = useMemo(() => {
+    // Build set of cell boundaries blocked by doors.
+    // A door at (door.x, door.z) with offset (offsetX, offsetZ) sits between that cell
+    // and the adjacent room cell at (door.x + dx, door.z + dz) where dx/dz = offset * 2.
+    const blockedBoundaries = new Set();
+    for (const door of doorPlacements) {
+      const dx = Math.round(door.offsetX * 2);
+      const dz = Math.round(door.offsetZ * 2);
+      const x1 = door.x, z1 = door.z;
+      const x2 = door.x + dx, z2 = door.z + dz;
+      // Canonical key: lower cell first (by z, then x)
+      if (z1 < z2 || (z1 === z2 && x1 < x2)) {
+        blockedBoundaries.add(`${x1},${z1},${x2},${z2}`);
+      } else {
+        blockedBoundaries.add(`${x2},${z2},${x1},${z1}`);
+      }
+    }
+
     const pairs = new Set();
     const W = dungeonWidth;
     const H = dungeonHeight;
@@ -965,17 +983,21 @@ export default function App() {
         // right neighbor
         if (x + 1 < W && solidData[i + 1] === 0) {
           const b = regionIdData[i + 1];
-          if (a !== b) pairs.add(a < b ? `${a},${b}` : `${b},${a}`);
+          if (a !== b && !blockedBoundaries.has(`${x},${z},${x + 1},${z}`)) {
+            pairs.add(a < b ? `${a},${b}` : `${b},${a}`);
+          }
         }
         // down neighbor
         if (z + 1 < H && solidData[i + W] === 0) {
           const b = regionIdData[i + W];
-          if (a !== b) pairs.add(a < b ? `${a},${b}` : `${b},${a}`);
+          if (a !== b && !blockedBoundaries.has(`${x},${z},${x},${z + 1}`)) {
+            pairs.add(a < b ? `${a},${b}` : `${b},${a}`);
+          }
         }
       }
     }
     return Array.from(pairs).map((s) => s.split(",").map(Number));
-  }, [dungeon, solidData, regionIdData, dungeonWidth, dungeonHeight]);
+  }, [dungeon, solidData, regionIdData, dungeonWidth, dungeonHeight, doorPlacements]);
   const dynamicTempData = useMemo(() => {
     const out = new Uint8Array(temperatureData.length);
     for (let i = 0; i < temperatureData.length; i++) {
@@ -1042,6 +1064,7 @@ export default function App() {
   // Explored mask — Uint8Array(W*H), 1 = cell has been seen by the player
   const exploredMaskRef = useRef(null);
   const firstTeaDeliveredRef = useRef(false);
+  const firstWarmRoomTeaRef = useRef(false);
 
   // Track which adventurers have already reacted to spotting the ghost (player)
   const adventurerSightingsRef = useRef(new Set());
@@ -1117,6 +1140,7 @@ export default function App() {
     ruinedNotifiedRef.current = new Set();
     adventurerSightingsRef.current = new Set();
     firstTeaDeliveredRef.current = false;
+    firstWarmRoomTeaRef.current = false;
 
     // Pre-explore exactly: kitchen (startRoomId) + one monster room + connecting corridor
     exploredMaskRef.current = buildInitialExploredMask(
@@ -1249,19 +1273,40 @@ export default function App() {
   const onStep = useCallback(() => {
     if (gameState !== "playing") return;
     // --- Tea cooling ---
-    setPlayerHands((prev) => {
-      let changed = false;
-      const next = { left: prev.left, right: prev.right };
-      for (const hand of ["left", "right"]) {
-        const tea = next[hand];
-        if (!tea || tea.ruined) continue;
-        const newTemp = tea.temperature - tempDropPerStep;
-        const ruined = newTemp < tea.recipe.idealTemperatureRange[0];
-        next[hand] = { ...tea, temperature: newTemp, ruined };
-        changed = true;
+    // Check if player is in a warm or cozy room (roomTemp > 127)
+    {
+      const { x: cx, z: cz } = logicalRef.current;
+      const cgx = Math.floor(cx);
+      const cgz = Math.floor(cz);
+      const playerRegionId = regionIdData[cgz * dungeonWidth + cgx];
+      const playerBaseTemp = temperatureData[cgz * dungeonWidth + cgx] ?? 127;
+      const playerRoomRise = roomTempRiseRef.current.get(playerRegionId) ?? 0;
+      const playerRoomTemp = Math.min(255, playerBaseTemp + Math.round(playerRoomRise));
+      const inWarmRoom = playerRoomTemp > 127;
+
+      const hands = playerHandsRef.current;
+      const carryingTea = hands.left || hands.right;
+      if (inWarmRoom && carryingTea && !firstWarmRoomTeaRef.current) {
+        firstWarmRoomTeaRef.current = true;
+        showMsg("The warmth of this room keeps your tea from cooling too much — it won't drop below mid-range here!");
       }
-      return changed ? next : prev;
-    });
+
+      setPlayerHands((prev) => {
+        let changed = false;
+        const next = { left: prev.left, right: prev.right };
+        for (const hand of ["left", "right"]) {
+          const tea = next[hand];
+          if (!tea || tea.ruined) continue;
+          const [lo, hi] = tea.recipe.idealTemperatureRange;
+          const rawTemp = tea.temperature - tempDropPerStep;
+          const newTemp = inWarmRoom ? Math.max(rawTemp, (lo + hi) / 2) : rawTemp;
+          const ruined = newTemp < lo;
+          next[hand] = { ...tea, temperature: newTemp, ruined };
+          changed = true;
+        }
+        return changed ? next : prev;
+      });
+    }
 
     // --- Stove brewing countdown ---
     setStoveStates((prev) => {
@@ -1885,7 +1930,6 @@ export default function App() {
     setMobSatiations(newMobSatiations);
 
     // --- Room heating from cozy objects (stoves) + temperature flow between rooms ---
-    // TODO: Introduce temperature blocks with doors that restrict flow between regions (later).
     const cozyByRegion = new Map();
     for (const s of stovePlacements) {
       if (s.type !== "stove") continue;

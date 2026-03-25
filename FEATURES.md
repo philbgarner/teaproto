@@ -71,6 +71,8 @@ Movement is grid-locked with a 150 ms lerp animation. The player fires `onStep` 
 
 Tea loses `tempDropPerStep` degrees each turn. When temperature falls below the recipe's lower ideal bound the tea is marked **ruined**. A notification fires once per cup.
 
+**Warm room protection**: In a warm or cozy room (room temperature > 127), tea will not cool below the midpoint of its ideal temperature range. For example, Black Tea (85–100°) will not drop below 92.5° in such rooms. The first time the player carries tea into a warm or cozy room, a message explains this. Room temperature rises from stove heating and flows between adjacent rooms.
+
 ### Recipes
 
 | Recipe | Brew Time | Ideal Temp | Ingredient Required |
