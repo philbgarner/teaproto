@@ -9,7 +9,7 @@ const tabStyle = (active) => ({
   color: active ? "#eee" : "#666",
   fontSize: 11,
   cursor: "pointer",
-  fontFamily: "monospace",
+  fontFamily: "'Metamorphous', serif",
 });
 
 const SliderRow = ({ label, value, min, max, step, onChange, format }) => (
@@ -186,7 +186,7 @@ export default function SettingsTabs({
                   color: "#ccc",
                   fontSize: 11,
                   padding: "2px 4px",
-                  fontFamily: "monospace",
+                  fontFamily: "'Metamorphous', serif",
                   minWidth: 0,
                 }}
               />
@@ -199,7 +199,7 @@ export default function SettingsTabs({
                   fontSize: 11,
                   padding: "2px 6px",
                   cursor: "pointer",
-                  fontFamily: "monospace",
+                  fontFamily: "'Metamorphous', serif",
                   flexShrink: 0,
                 }}
               >

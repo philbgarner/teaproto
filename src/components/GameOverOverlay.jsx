@@ -35,7 +35,7 @@ export function GameOverOverlay({
         justifyContent: "center",
         background: "rgba(0,0,0,0.82)",
         zIndex: 100,
-        fontFamily: "monospace",
+        fontFamily: "'Metamorphous', serif",
       }}
     >
       <div
@@ -85,7 +85,7 @@ export function GameOverOverlay({
             padding: "10px 28px",
             fontSize: 15,
             cursor: "pointer",
-            fontFamily: "monospace",
+            fontFamily: "'Metamorphous', serif",
           }}
         >
           Play Again

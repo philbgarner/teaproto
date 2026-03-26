@@ -27,7 +27,7 @@ export function GameHeader({ dungeonSeed, currentWave, onSettingsClick, onRandom
           fontSize: 12,
           padding: "2px 6px",
           cursor: "pointer",
-          fontFamily: "monospace",
+          fontFamily: "'Metamorphous', serif",
         }}
       >
         rng
@@ -46,7 +46,7 @@ export function GameHeader({ dungeonSeed, currentWave, onSettingsClick, onRandom
           fontSize: 12,
           padding: "2px 8px",
           cursor: "pointer",
-          fontFamily: "monospace",
+          fontFamily: "'Metamorphous', serif",
         }}
       >
         settings

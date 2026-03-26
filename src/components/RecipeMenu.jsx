@@ -28,7 +28,7 @@ export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, sho
         borderRadius: 6,
         minWidth: 280,
         color: "#eee",
-        fontFamily: "monospace",
+        fontFamily: "'Metamorphous', serif",
       }}
     >
       <div

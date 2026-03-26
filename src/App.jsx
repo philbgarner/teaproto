@@ -2611,7 +2611,7 @@ export default function App() {
           height: "100vh",
           background: "#000",
           color: "#ccc",
-          fontFamily: "monospace",
+          fontFamily: "'Metamorphous', serif",
         }}
       >
         <GameHeader

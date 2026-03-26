@@ -103,7 +103,7 @@ const btnStyle = {
   fontSize: 11,
   padding: "3px 6px",
   cursor: "pointer",
-  fontFamily: "monospace",
+  fontFamily: "'Metamorphous', serif",
   width: "100%",
 };
 
@@ -220,7 +220,7 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
                     fontSize: 11,
                     padding: "3px 6px",
                     cursor: "pointer",
-                    fontFamily: "monospace",
+                    fontFamily: "'Metamorphous', serif",
                     textAlign: "left",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -238,7 +238,7 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
                     fontSize: 11,
                     cursor: "pointer",
                     padding: "0 2px",
-                    fontFamily: "monospace",
+                    fontFamily: "'Metamorphous', serif",
                     flexShrink: 0,
                   }}
                 >
@@ -261,7 +261,7 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
                 color: "#ccc",
                 fontSize: 11,
                 padding: "3px 6px",
-                fontFamily: "monospace",
+                fontFamily: "'Metamorphous', serif",
                 width: "100%",
                 boxSizing: "border-box",
               }}
@@ -292,7 +292,7 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
                   border: "1px solid #444",
                   color: "#aaa",
                   fontSize: 10,
-                  fontFamily: "monospace",
+                  fontFamily: "'Metamorphous', serif",
                   height: 80,
                   resize: "vertical",
                   width: "100%",
@@ -317,7 +317,7 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
                     border: "1px solid #444",
                     color: "#aaa",
                     fontSize: 10,
-                    fontFamily: "monospace",
+                    fontFamily: "'Metamorphous', serif",
                     height: 80,
                     resize: "vertical",
                     width: "100%",

@@ -55,7 +55,7 @@ export function HandsHUD({ hands }) {
         padding: "8px 20px",
         background: "rgba(0,0,0,0.88)",
         borderTop: "1px solid #333",
-        fontFamily: "monospace",
+        fontFamily: "'Metamorphous', serif",
         fontSize: 13,
         pointerEvents: "none",
       }}
