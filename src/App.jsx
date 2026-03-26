@@ -937,6 +937,10 @@ export default function App() {
   const [mobSatiations, setMobSatiations] = useState(() =>
     initialMobs.map(() => 40),
   );
+  const [mobPositions, setMobPositions] = useState(() =>
+    initialMobs.map((m) => ({ x: m.x, z: m.z })),
+  );
+  const mobPositionsRef = useRef(mobPositions);
   const mobStatuses = useMemo(
     () =>
       mobSatiations.map((s) =>
@@ -1171,6 +1175,9 @@ export default function App() {
     ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
+    const freshPositions = initialMobs.map((m) => ({ x: m.x, z: m.z }));
+    setMobPositions(freshPositions);
+    mobPositionsRef.current = freshPositions;
     ruinedNotifiedRef.current = new Set();
     adventurerSightingsRef.current = new Set();
     firstTeaDeliveredRef.current = false;
@@ -1206,8 +1213,8 @@ export default function App() {
   const mobiles = useMemo(
     () => [
       ...initialMobs.map((m, i) => ({
-        x: m.x,
-        z: m.z,
+        x: mobPositions[i].x,
+        z: mobPositions[i].z,
         type: "mob",
         tileId: 0,
         color:
@@ -1225,7 +1232,7 @@ export default function App() {
           color: a.colorRgb,
         })),
     ],
-    [initialMobs, mobStatuses, mobSatiations, adventurers],
+    [initialMobs, mobPositions, mobStatuses, mobSatiations, adventurers],
   );
 
   // Resolve speech bubbles: look up current entity positions so bubbles follow movers
@@ -1236,8 +1243,8 @@ export default function App() {
         const idx = parseInt(entityId.slice(4), 10);
         const mob = initialMobs[idx];
         if (!mob) return [];
-        x = mob.x;
-        z = mob.z;
+        x = mobPositions[idx].x;
+        z = mobPositions[idx].z;
         speakerName = mob.name;
       } else {
         const adv = adventurers.find((a) => a.id === entityId && a.alive);
@@ -1248,7 +1255,7 @@ export default function App() {
       }
       return [{ id: entityId, x, z, text: bubble.text, speakerName }];
     });
-  }, [speechBubbles, initialMobs, adventurers]);
+  }, [speechBubbles, initialMobs, mobPositions, adventurers]);
 
   const spawnAdventurersForWave = useCallback(
     (waveNum) => {
@@ -1371,6 +1378,7 @@ export default function App() {
     let newMobSatiations = mobSatiationsRef.current.map((s) =>
       Math.max(0, s - satiationDropPerStep),
     );
+    let newMobPositions = mobPositionsRef.current.map((p) => ({ ...p }));
     let newWave = currentWaveRef.current;
     let newPlayerXp = playerXpRef.current;
     let newXpDrops = [...xpDropsRef.current];
@@ -1442,7 +1450,7 @@ export default function App() {
     // Closed doors block LOS. A door is open if any creature occupies its cell.
     const stepOccupied = new Set([
       `${pgx}_${pgz}`,
-      ...initialMobs.map((m) => `${m.x}_${m.z}`),
+      ...newMobPositions.map((p) => `${p.x}_${p.z}`),
       ...newAdventurers.filter((a) => a.alive).map((a) => `${a.x}_${a.z}`),
     ]);
     const closedDoorCells = new Set(
@@ -1474,7 +1482,7 @@ export default function App() {
 
     // Phase 1 — compute intended moves (adventurers are transparent to each other)
     const mobPlayerOccupied = new Set([
-      ...initialMobs.map((m) => `${m.x}_${m.z}`),
+      ...newMobPositions.map((p) => `${p.x}_${p.z}`),
     ]);
 
     const intendedMoves = newAdventurers.map((advInit) => {
@@ -1516,14 +1524,14 @@ export default function App() {
       let combatDist = Infinity;
       for (let i = 0; i < initialMobs.length; i++) {
         if (newMobSatiations[i] <= 0) continue; // unconscious
-        const mob = initialMobs[i];
-        const d = Math.hypot(adv.x - mob.x, adv.z - mob.z);
+        const mobPos = newMobPositions[i];
+        const d = Math.hypot(adv.x - mobPos.x, adv.z - mobPos.z);
         if (
           d < combatDist &&
-          hasLineOfSight(adv.x, adv.z, mob.x, mob.z, isWalkableForLos)
+          hasLineOfSight(adv.x, adv.z, mobPos.x, mobPos.z, isWalkableForLos)
         ) {
           combatDist = d;
-          combatTarget = { x: mob.x, z: mob.z, type: "mob", idx: i };
+          combatTarget = { x: mobPos.x, z: mobPos.z, type: "mob", idx: i };
         }
       }
 
@@ -1911,14 +1919,60 @@ export default function App() {
       }
     }
 
+    // --- Conscious mob AI: move toward nearest adventurer in line of sight ---
+    for (let i = 0; i < initialMobs.length; i++) {
+      if (newMobSatiations[i] <= 0) continue; // unconscious
+      const pos = newMobPositions[i];
+
+      // Find nearest visible adventurer within LOS_RADIUS
+      let chaseTarget = null;
+      let chaseDist = Infinity;
+      for (const adv of newAdventurers) {
+        if (!adv.alive) continue;
+        const d = Math.hypot(pos.x - adv.x, pos.z - adv.z);
+        if (
+          d < chaseDist &&
+          d <= LOS_RADIUS &&
+          hasLineOfSight(pos.x, pos.z, adv.x, adv.z, isWalkableForLos)
+        ) {
+          chaseDist = d;
+          chaseTarget = adv;
+        }
+      }
+
+      if (!chaseTarget) continue;
+      // Already adjacent — counterattack section handles damage
+      if (Math.abs(pos.x - chaseTarget.x) + Math.abs(pos.z - chaseTarget.z) === 1) continue;
+
+      // Pathfind one step toward the adventurer
+      const mobAstar = aStar8(
+        { width: dungeonWidth, height: dungeonHeight },
+        (x, y) => isWalkableForLos(x, y),
+        { x: pos.x, y: pos.z },
+        { x: chaseTarget.x, y: chaseTarget.z },
+        { fourDir: true },
+      );
+      if (mobAstar && mobAstar.path.length > 1) {
+        const step = mobAstar.path[1];
+        // Don't step onto another mob's cell
+        const blockedByMob = newMobPositions.some(
+          (p, j) => j !== i && p.x === step.x && p.z === step.y,
+        );
+        if (!blockedByMob) {
+          newMobPositions[i] = { x: step.x, z: step.y };
+        }
+      }
+    }
+
     // --- Conscious mob counterattack ---
     for (let i = 0; i < initialMobs.length; i++) {
       if (newMobSatiations[i] <= 0) continue; // unconscious
       const mob = initialMobs[i];
+      const mobPos = newMobPositions[i];
       for (let j = 0; j < newAdventurers.length; j++) {
         const adv = newAdventurers[j];
         if (!adv.alive) continue;
-        if (Math.abs(adv.x - mob.x) + Math.abs(adv.z - mob.z) === 1) {
+        if (Math.abs(adv.x - mobPos.x) + Math.abs(adv.z - mobPos.z) === 1) {
           const damage = Math.max(1, mob.attack - adv.defense);
           const newHp = adv.hp - damage;
           if (newHp <= 0) {
@@ -1994,6 +2048,7 @@ export default function App() {
     ingredientDropsRef.current = newIngredientDrops;
     chestsRef.current = newChests;
     mobSatiationsRef.current = newMobSatiations;
+    mobPositionsRef.current = newMobPositions;
 
     setTurnCount(newTurnCount);
     setWaveCountdown(newWaveCountdown);
@@ -2006,6 +2061,7 @@ export default function App() {
     setIngredientDrops([...newIngredientDrops]);
     setChests([...newChests]);
     setMobSatiations(newMobSatiations);
+    setMobPositions([...newMobPositions]);
 
     // --- Room heating from cozy objects (stoves) + temperature flow between rooms ---
     const cozyByRegion = new Map();
@@ -2114,12 +2170,12 @@ export default function App() {
   const doorOccupiedKeys = useMemo(() => {
     const keys = new Set();
     keys.add(`${Math.floor(camera.x)}_${Math.floor(camera.z)}`);
-    for (const mob of initialMobs) keys.add(`${mob.x}_${mob.z}`);
+    for (const pos of mobPositions) keys.add(`${pos.x}_${pos.z}`);
     for (const adv of adventurers) {
       if (adv.alive) keys.add(`${adv.x}_${adv.z}`);
     }
     return keys;
-  }, [camera.x, camera.z, initialMobs, adventurers]);
+  }, [camera.x, camera.z, mobPositions, adventurers]);
 
   // Passage traversal step-loop
   useEffect(() => {
@@ -2191,11 +2247,11 @@ export default function App() {
         stoveKey: `${stovePlacements[si].x}_${stovePlacements[si].z}`,
       };
     }
-    const mi = initialMobs.findIndex((m) => m.x === tx && m.z === tz);
+    const mi = mobPositions.findIndex((p) => p.x === tx && p.z === tz);
     if (mi !== -1) return { type: "mob", mobIdx: mi };
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [camera, stovePlacements, initialMobs]);
+  }, [camera, stovePlacements, mobPositions]);
 
   // Interaction prompt text
   const promptText = useMemo(() => {
@@ -2470,8 +2526,8 @@ export default function App() {
   const minimapMobs = useMemo(
     () => [
       ...initialMobs.map((m, i) => ({
-        x: m.x,
-        z: m.z,
+        x: mobPositions[i].x,
+        z: mobPositions[i].z,
         name: m.name,
         status: mobSatiations[i] <= 0 ? "unconscious" : mobStatuses[i],
         satiation: mobSatiations[i],
@@ -2532,6 +2588,7 @@ export default function App() {
     ],
     [
       initialMobs,
+      mobPositions,
       mobStatuses,
       mobSatiations,
       adventurers,
@@ -2810,6 +2867,9 @@ export default function App() {
           ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
           ingredientDropsRef.current = [...initialIngredientDrops];
           mobSatiationsRef.current = freshSatiations;
+          const freshPositions = initialMobs.map((m) => ({ x: m.x, z: m.z }));
+          setMobPositions(freshPositions);
+          mobPositionsRef.current = freshPositions;
           ruinedNotifiedRef.current = new Set();
         }}
       />
