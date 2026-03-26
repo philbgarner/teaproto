@@ -60,6 +60,8 @@ export default function SettingsTabs({
   setMinRoomSize,
   maxRoomSize,
   setMaxRoomSize,
+  maxDoors,
+  setMaxDoors,
 }) {
   const [activeTab, setActiveTab] = useState("difficulty");
   const [seedInput, setSeedInput] = useState(String(dungeonSeed));
@@ -244,6 +246,14 @@ export default function SettingsTabs({
             max={15}
             step={1}
             onChange={(v) => setMaxRoomSize(Math.round(v))}
+          />
+          <SliderRow
+            label="Max doors"
+            value={maxDoors}
+            min={0}
+            max={20}
+            step={1}
+            onChange={(v) => setMaxDoors(Math.round(v))}
           />
         </>
       )}

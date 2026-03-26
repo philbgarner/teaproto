@@ -689,6 +689,8 @@ export default function App() {
     return objects;
   }, [dungeon]);
 
+  const [maxDoors, setMaxDoors] = useState(3);
+
   // Door placements — one door per corridor/room threshold, with walls on either side
   const doorPlacements = useMemo(() => {
     const W = dungeon.width;
@@ -728,41 +730,62 @@ export default function App() {
       }
     }
 
-    const placements = [];
+    // Collect all candidate door positions without mutating solidArr yet
+    const candidates = [];
     for (const cells of groups.values()) {
       if (cells.length === 0) continue;
       const { dx, dz } = cells[0];
-      // Sort perpendicular to the corridor direction
       cells.sort((a, b) => (dx === 0 ? a.x - b.x : a.z - b.z));
       const midIdx = Math.floor(cells.length / 2);
-      for (let i = 0; i < cells.length; i++) {
-        const { x, z } = cells[i];
-        if (i === midIdx) {
-          // Door centred on the corridor tile; pivot group placed at hinge edge.
-          // The door mesh is offset +0.45 along local X inside the group, so
-          // the group origin (hinge) must be shifted -0.45 in world space to
-          // keep the visual centre on the tile.  After a Y rotation of PI/2 the
-          // local X axis maps to world -Z, so the shift flips to +0.45 in Z.
-          const doorYaw = dx === 0 ? 0 : Math.PI / 2;
-          placements.push({
-            x,
-            z,
-            type: "door",
-            offsetX: dx === 0 ? -0.45 : 0,
-            offsetZ: dx !== 0 ? 0.45 : 0,
-            offsetY: CEILING_H / 2,
-            yaw: doorYaw,
-            meta: { blockDx: dx, blockDz: dz },
-          });
-        } else {
-          // Wall off non-door threshold cells to narrow the opening
-          solidArr[z * W + x] = 255;
-        }
-      }
+      const { x, z } = cells[midIdx];
+      const doorYaw = dx === 0 ? 0 : Math.PI / 2;
+      candidates.push({
+        cells,
+        midIdx,
+        placement: {
+          x,
+          z,
+          type: "door",
+          offsetX: dx === 0 ? -0.45 : 0,
+          offsetZ: dx !== 0 ? 0.45 : 0,
+          offsetY: CEILING_H / 2,
+          yaw: doorYaw,
+          meta: { blockDx: dx, blockDz: dz },
+        },
+      });
     }
+
+    // Sort deterministically by position, then cap at maxDoors
+    candidates.sort(
+      (a, b) =>
+        a.placement.z - b.placement.z || a.placement.x - b.placement.x,
+    );
+    const selected = new Set(
+      candidates.slice(0, maxDoors).map((_, i) => i),
+    );
+
+    const placements = [];
+    candidates.forEach((c, i) => {
+      if (selected.has(i)) {
+        // Door centred on the corridor tile; pivot group placed at hinge edge.
+        // The door mesh is offset +0.45 along local X inside the group, so
+        // the group origin (hinge) must be shifted -0.45 in world space to
+        // keep the visual centre on the tile.  After a Y rotation of PI/2 the
+        // local X axis maps to world -Z, so the shift flips to +0.45 in Z.
+        c.cells.forEach((cell, j) => {
+          if (j !== c.midIdx) {
+            // Wall off non-door threshold cells to narrow the opening
+            solidArr[cell.z * W + cell.x] = 255;
+          }
+        });
+        placements.push(c.placement);
+      }
+      // else: leave corridor open with no door
+    });
+
     dungeon.textures.solid.needsUpdate = true;
     return placements;
-  }, [dungeon]);
+  }, [dungeon, maxDoors]);
 
   // Object registry and world placements
   const stoveProto = useMemo(() => makeStoveProto(), []);
@@ -1451,7 +1474,6 @@ export default function App() {
 
     // Phase 1 — compute intended moves (adventurers are transparent to each other)
     const mobPlayerOccupied = new Set([
-      `${pgx}_${pgz}`,
       ...initialMobs.map((m) => `${m.x}_${m.z}`),
     ]);
 
@@ -2722,6 +2744,8 @@ export default function App() {
             setAdventurerDreadRate,
             adventurerLootPerChest,
             setAdventurerLootPerChest,
+            maxDoors,
+            setMaxDoors,
           }}
         />
 

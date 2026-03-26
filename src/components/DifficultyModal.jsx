@@ -18,6 +18,7 @@ const SETTINGS_KEYS = [
   "maxLeafSize",
   "minRoomSize",
   "maxRoomSize",
+  "maxDoors",
 ];
 
 const SETTERS = {
@@ -36,6 +37,7 @@ const SETTERS = {
   maxLeafSize: "setMaxLeafSize",
   minRoomSize: "setMinRoomSize",
   maxRoomSize: "setMaxRoomSize",
+  maxDoors: "setMaxDoors",
 };
 
 const DEFAULT_PRESETS = [
