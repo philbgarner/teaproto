@@ -26,7 +26,7 @@ export function WaveCountdown({ turnsLeft, visible }) {
         whiteSpace: "nowrap",
       }}
     >
-      ⚠ Next wave in {turnsLeft} turn{turnsLeft !== 1 ? "s" : ""}
+      ⚠ More enemies in {turnsLeft} turn{turnsLeft !== 1 ? "s" : ""}
     </div>
   );
 }

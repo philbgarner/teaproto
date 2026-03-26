@@ -159,7 +159,12 @@ function makeDoorProto() {
     map: tex,
     side: THREE.DoubleSide,
   });
-  return new THREE.Mesh(geo, mat);
+  const mesh = new THREE.Mesh(geo, mat);
+  // Offset mesh so hinge edge sits at group origin (group = pivot point)
+  mesh.position.set(TILE_SIZE * 0.45, 0, 0);
+  const group = new THREE.Group();
+  group.add(mesh);
+  return group;
 }
 
 // ---------------------------------------------------------------------------
@@ -733,15 +738,21 @@ export default function App() {
       for (let i = 0; i < cells.length; i++) {
         const { x, z } = cells[i];
         if (i === midIdx) {
-          // Door at the face between this corridor cell and the room
+          // Door centred on the corridor tile; pivot group placed at hinge edge.
+          // The door mesh is offset +0.45 along local X inside the group, so
+          // the group origin (hinge) must be shifted -0.45 in world space to
+          // keep the visual centre on the tile.  After a Y rotation of PI/2 the
+          // local X axis maps to world -Z, so the shift flips to +0.45 in Z.
+          const doorYaw = dx === 0 ? 0 : Math.PI / 2;
           placements.push({
             x,
             z,
             type: "door",
-            offsetX: dx * 0.5,
-            offsetZ: dz * 0.5,
+            offsetX: dx === 0 ? -0.45 : 0,
+            offsetZ: dx !== 0 ? 0.45 : 0,
             offsetY: CEILING_H / 2,
-            yaw: dx === 0 ? 0 : Math.PI / 2,
+            yaw: doorYaw,
+            meta: { blockDx: dx, blockDz: dz },
           });
         } else {
           // Wall off non-door threshold cells to narrow the opening
@@ -956,12 +967,12 @@ export default function App() {
   // Pairs where a door sits at the threshold are excluded — doors block temperature flow.
   const regionAdjacency = useMemo(() => {
     // Build set of cell boundaries blocked by doors.
-    // A door at (door.x, door.z) with offset (offsetX, offsetZ) sits between that cell
-    // and the adjacent room cell at (door.x + dx, door.z + dz) where dx/dz = offset * 2.
+    // A door at (door.x, door.z) separates that cell from the adjacent room cell
+    // in the direction stored in meta.blockDx / meta.blockDz.
     const blockedBoundaries = new Set();
     for (const door of doorPlacements) {
-      const dx = Math.round(door.offsetX * 2);
-      const dz = Math.round(door.offsetZ * 2);
+      const dx = door.meta?.blockDx ?? 0;
+      const dz = door.meta?.blockDz ?? 0;
       const x1 = door.x, z1 = door.z;
       const x2 = door.x + dx, z2 = door.z + dz;
       // Canonical key: lower cell first (by z, then x)
@@ -2031,6 +2042,17 @@ export default function App() {
     },
   );
 
+  // Cells currently occupied by the player or any creature — used to open doors
+  const doorOccupiedKeys = useMemo(() => {
+    const keys = new Set();
+    keys.add(`${Math.floor(camera.x)}_${Math.floor(camera.z)}`);
+    for (const mob of initialMobs) keys.add(`${mob.x}_${mob.z}`);
+    for (const adv of adventurers) {
+      if (adv.alive) keys.add(`${adv.x}_${adv.z}`);
+    }
+    return keys;
+  }, [camera.x, camera.z, initialMobs, adventurers]);
+
   // Passage traversal step-loop
   useEffect(() => {
     if (passageTraversal.kind !== "active") return;
@@ -2501,6 +2523,7 @@ export default function App() {
                 tileSize={TILE_SIZE}
                 objects={objects}
                 objectRegistry={objectRegistry}
+                objectOccupiedKeys={doorOccupiedKeys}
                 mobiles={mobiles}
                 spriteAtlas={mobSpriteAtlas}
                 passageMask={passageMask ?? undefined}
