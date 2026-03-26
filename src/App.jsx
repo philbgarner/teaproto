@@ -1416,6 +1416,22 @@ export default function App() {
       return solidData[z * dungeonWidth + x] === 0;
     }
 
+    // Closed doors block LOS. A door is open if any creature occupies its cell.
+    const stepOccupied = new Set([
+      `${pgx}_${pgz}`,
+      ...initialMobs.map((m) => `${m.x}_${m.z}`),
+      ...newAdventurers.filter((a) => a.alive).map((a) => `${a.x}_${a.z}`),
+    ]);
+    const closedDoorCells = new Set(
+      doorPlacements
+        .filter((d) => d.type === "door" && !stepOccupied.has(`${d.x}_${d.z}`))
+        .map((d) => `${d.x}_${d.z}`),
+    );
+    function isWalkableForLos(x, z) {
+      if (!isWalkable(x, z)) return false;
+      return !closedDoorCells.has(`${x}_${z}`);
+    }
+
     // Update explored mask: mark all cells visible from current player position
     if (exploredMaskRef.current) {
       const mask = exploredMaskRef.current;
@@ -1426,7 +1442,7 @@ export default function App() {
           const tz = pgz + dz;
           if (tx < 0 || tz < 0 || tx >= dungeonWidth || tz >= dungeonHeight)
             continue;
-          if (hasLineOfSight(pgx, pgz, tx, tz, isWalkable)) {
+          if (hasLineOfSight(pgx, pgz, tx, tz, isWalkableForLos)) {
             mask[tz * dungeonWidth + tx] = 1;
           }
         }
@@ -1448,6 +1464,7 @@ export default function App() {
           intendedZ: adv.z,
           debugPath: [],
           isAttack: false,
+          inCombat: false,
         };
 
       // Ghost sighting: adventurer spots the ghost (player) for the first time
@@ -1455,7 +1472,7 @@ export default function App() {
         const playerDist = Math.hypot(adv.x - pgx, adv.z - pgz);
         if (
           playerDist <= GHOST_SIGHT_RADIUS &&
-          hasLineOfSight(adv.x, adv.z, pgx, pgz, isWalkable)
+          hasLineOfSight(adv.x, adv.z, pgx, pgz, isWalkableForLos)
         ) {
           adventurerSightingsRef.current.add(adv.id);
           const hasTeaInHand = !!(
@@ -1481,7 +1498,7 @@ export default function App() {
         const d = Math.hypot(adv.x - mob.x, adv.z - mob.z);
         if (
           d < combatDist &&
-          hasLineOfSight(adv.x, adv.z, mob.x, mob.z, isWalkable)
+          hasLineOfSight(adv.x, adv.z, mob.x, mob.z, isWalkableForLos)
         ) {
           combatDist = d;
           combatTarget = { x: mob.x, z: mob.z, type: "mob", idx: i };
@@ -1507,6 +1524,7 @@ export default function App() {
             intendedZ: adv.z,
             debugPath: [],
             isAttack: true,
+            inCombat: true,
           };
         }
         // Move toward monster
@@ -1533,6 +1551,7 @@ export default function App() {
             intendedZ: step.y,
             debugPath,
             isAttack: false,
+            inCombat: true,
           };
         }
         return {
@@ -1541,6 +1560,7 @@ export default function App() {
           intendedZ: adv.z,
           debugPath: [],
           isAttack: false,
+          inCombat: true,
         };
       }
 
@@ -1633,6 +1653,7 @@ export default function App() {
                 intendedZ: step.y,
                 debugPath,
                 isAttack: false,
+                inCombat: false,
               };
             }
             // Chest exists but is unreachable — count the stuck turn
@@ -1649,6 +1670,7 @@ export default function App() {
               intendedZ: adv.z,
               debugPath: [],
               isAttack: false,
+              inCombat: false,
             };
           }
 
@@ -1691,6 +1713,7 @@ export default function App() {
                 intendedZ: step.y,
                 debugPath,
                 isAttack: false,
+                inCombat: false,
               };
             }
           }
@@ -1707,6 +1730,7 @@ export default function App() {
             intendedZ: adv.z,
             debugPath: [],
             isAttack: false,
+            inCombat: false,
           };
         }
 
@@ -1732,6 +1756,7 @@ export default function App() {
           intendedZ: adv.z,
           debugPath: [],
           isAttack: false,
+          inCombat: false,
         };
 
       const stoveAstar = aStar8(
@@ -1755,6 +1780,7 @@ export default function App() {
           intendedZ: step.y,
           debugPath,
           isAttack: false,
+          inCombat: false,
         };
       }
       return {
@@ -1763,74 +1789,93 @@ export default function App() {
         intendedZ: adv.z,
         debugPath: [],
         isAttack: false,
+        inCombat: false,
       };
     });
 
-    // Phase 2 — detect swap pairs
-    const swapSet = new Set(); // indices of adventurers in a direct swap
-    for (let i = 0; i < intendedMoves.length; i++) {
-      const mi = intendedMoves[i];
-      if (!mi.adv.alive || mi.isAttack) continue;
-      if (mi.intendedX === mi.adv.x && mi.intendedZ === mi.adv.z) continue;
-      for (let j = i + 1; j < intendedMoves.length; j++) {
-        const mj = intendedMoves[j];
-        if (!mj.adv.alive || mj.isAttack) continue;
-        if (
-          mi.intendedX === mj.adv.x &&
-          mi.intendedZ === mj.adv.z &&
-          mj.intendedX === mi.adv.x &&
-          mj.intendedZ === mi.adv.z
-        ) {
-          swapSet.add(i);
-          swapSet.add(j);
+    const anyInCombat = intendedMoves.some((m) => m.inCombat);
+
+    if (anyInCombat) {
+      // Phase 2 — detect swap pairs
+      const swapSet = new Set(); // indices of adventurers in a direct swap
+      for (let i = 0; i < intendedMoves.length; i++) {
+        const mi = intendedMoves[i];
+        if (!mi.adv.alive || mi.isAttack) continue;
+        if (mi.intendedX === mi.adv.x && mi.intendedZ === mi.adv.z) continue;
+        for (let j = i + 1; j < intendedMoves.length; j++) {
+          const mj = intendedMoves[j];
+          if (!mj.adv.alive || mj.isAttack) continue;
+          if (
+            mi.intendedX === mj.adv.x &&
+            mi.intendedZ === mj.adv.z &&
+            mj.intendedX === mi.adv.x &&
+            mj.intendedZ === mi.adv.z
+          ) {
+            swapSet.add(i);
+            swapSet.add(j);
+          }
         }
       }
-    }
 
-    // Phase 3 — resolve final positions
-    const committed = new Set(mobPlayerOccupied);
-    // Pre-commit swap destinations (guaranteed to execute)
-    for (const idx of swapSet) {
-      committed.add(
-        `${intendedMoves[idx].intendedX}_${intendedMoves[idx].intendedZ}`,
-      );
-    }
-    // Pre-commit positions of stationary adventurers (attacking, dead, or no path)
-    for (let i = 0; i < intendedMoves.length; i++) {
-      if (swapSet.has(i)) continue;
-      const { adv, intendedX, intendedZ, isAttack } = intendedMoves[i];
-      if (
-        !adv.alive ||
-        isAttack ||
-        (intendedX === adv.x && intendedZ === adv.z)
-      ) {
-        committed.add(`${adv.x}_${adv.z}`);
+      // Phase 3 — resolve final positions with collision
+      const committed = new Set(mobPlayerOccupied);
+      // Pre-commit swap destinations (guaranteed to execute)
+      for (const idx of swapSet) {
+        committed.add(
+          `${intendedMoves[idx].intendedX}_${intendedMoves[idx].intendedZ}`,
+        );
       }
-    }
+      // Pre-commit positions of stationary adventurers (attacking, dead, or no path)
+      for (let i = 0; i < intendedMoves.length; i++) {
+        if (swapSet.has(i)) continue;
+        const { adv, intendedX, intendedZ, isAttack } = intendedMoves[i];
+        if (
+          !adv.alive ||
+          isAttack ||
+          (intendedX === adv.x && intendedZ === adv.z)
+        ) {
+          committed.add(`${adv.x}_${adv.z}`);
+        }
+      }
 
-    newAdventurers = intendedMoves.map((move, i) => {
-      const { adv, intendedX, intendedZ, debugPath, isAttack } = move;
-      if (!adv.alive) return adv;
+      newAdventurers = intendedMoves.map((move, i) => {
+        const { adv, intendedX, intendedZ, debugPath, isAttack } = move;
+        if (!adv.alive) return adv;
 
-      // Stationary (attack or no path)
-      if (isAttack || (intendedX === adv.x && intendedZ === adv.z)) {
+        // Stationary (attack or no path)
+        if (isAttack || (intendedX === adv.x && intendedZ === adv.z)) {
+          return { ...adv, debugPath: [] };
+        }
+
+        // Swap pair — guaranteed move
+        if (swapSet.has(i)) {
+          return { ...adv, x: intendedX, z: intendedZ, debugPath };
+        }
+
+        // Non-swap mover — greedy claim
+        const targetKey = `${intendedX}_${intendedZ}`;
+        if (!committed.has(targetKey)) {
+          committed.add(targetKey);
+          return { ...adv, x: intendedX, z: intendedZ, debugPath };
+        }
+        // Blocked — stay
         return { ...adv, debugPath: [] };
-      }
-
-      // Swap pair — guaranteed move
-      if (swapSet.has(i)) {
+      });
+    } else {
+      // No monsters in LOS — adventurers pass through each other freely.
+      // Only player and mob positions are respected as hard blocks.
+      newAdventurers = intendedMoves.map((move) => {
+        const { adv, intendedX, intendedZ, debugPath, isAttack } = move;
+        if (!adv.alive) return adv;
+        if (isAttack || (intendedX === adv.x && intendedZ === adv.z)) {
+          return { ...adv, debugPath: [] };
+        }
+        if (mobPlayerOccupied.has(`${intendedX}_${intendedZ}`)) {
+          return { ...adv, debugPath: [] };
+        }
         return { ...adv, x: intendedX, z: intendedZ, debugPath };
-      }
-
-      // Non-swap mover — greedy claim
-      const targetKey = `${intendedX}_${intendedZ}`;
-      if (!committed.has(targetKey)) {
-        committed.add(targetKey);
-        return { ...adv, x: intendedX, z: intendedZ, debugPath };
-      }
-      // Blocked — stay
-      return { ...adv, debugPath: [] };
-    });
+      });
+    }
 
     // --- Adventurers pick up loot they've walked onto ---
     for (const adv of newAdventurers) {
@@ -1992,6 +2037,7 @@ export default function App() {
     showSpeechBubble,
     spawnAdventurersForWave,
     stovePlacements,
+    doorPlacements,
   ]);
 
   // Show message when tea becomes ruined
