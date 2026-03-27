@@ -17,6 +17,7 @@ export interface ModalPanelProps {
   maxHeight?: string;
   width?: string;
   top?: string;
+  opacity?: number;
 }
 
 export default function ModalPanel({
@@ -30,6 +31,7 @@ export default function ModalPanel({
   width,
   top,
   bottom,
+  opacity,
 }: ModalPanelProps) {
   useEffect(() => {
     if (!visible && onClose) {
@@ -42,7 +44,7 @@ export default function ModalPanel({
   const wUnit = w.replace(/[\d.]/g, "");
 
   return visible ? (
-    <div className={styles.modalPanelBackdrop}>
+    <div className={styles.modalPanelBackdrop} style={{ opacity, transition: "opacity 0.15s" }}>
       <BorderPanel
         background="#191919"
         width={w}

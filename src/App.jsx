@@ -37,15 +37,47 @@ import "./App.css";
 // ---------------------------------------------------------------------------
 // Tile atlas
 // ---------------------------------------------------------------------------
-const TILE_PX = 16;
+const TILE_PX = 64;
 const TILE_SIZE = 3;
 const CEILING_H = 3;
-const SRC_FLOOR = { x: 136, y: 328 };
-const SRC_CEILING = { x: 136, y: 400 };
-const SRC_WALL = { x: 208, y: 304 };
+const SRC_FLOOR = { x: 0, y: 0 };
+const SRC_CEILING = { x: 0, y: 64 };
+const SRC_WALL = { x: 0, y: 128 };
+const SRC_DOOR = { x: 0, y: 192 };
+const DEFAULT_TINT_COLORS = ["#fffef9", "#efdbb3", "#e3c5cf", "#8e8bb6"];
 const TILE_FLOOR = 0;
 const TILE_CEILING = 1;
 const TILE_WALL = 2;
+
+function loadTileTexture(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = TILE_PX;
+      canvas.height = TILE_PX;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(
+        img,
+        src.x,
+        src.y,
+        TILE_PX,
+        TILE_PX,
+        0,
+        0,
+        TILE_PX,
+        TILE_PX,
+      );
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      resolve(tex);
+    };
+    img.onerror = reject;
+    img.src = `${import.meta.env.BASE_URL}examples/eotb/tileset.png`;
+  });
+}
 
 function loadRepackedAtlasTexture(sources) {
   return new Promise((resolve, reject) => {
@@ -110,53 +142,139 @@ function makeStoveProto() {
 // ---------------------------------------------------------------------------
 // Door 3-D object — thin slab spanning full cell width and ceiling height
 // ---------------------------------------------------------------------------
-function makeDoorProto() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 64;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d");
-  // Wood background
-  ctx.fillStyle = "#6b4226";
-  ctx.fillRect(0, 0, 64, 128);
-  // Wood grain
-  ctx.strokeStyle = "#5a3520";
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 8; i++) {
-    ctx.beginPath();
-    ctx.moveTo(i * 9, 0);
-    ctx.lineTo(i * 9 + 3, 128);
-    ctx.stroke();
+const DOOR_VERT = /* glsl */ `
+varying vec2  vUv;
+varying float vFogDist;
+varying vec2  vWorldPos;
+
+void main() {
+  vUv = uv;
+  vec4 worldPos = modelMatrix * vec4(position, 1.0);
+  vWorldPos = worldPos.xz;
+  vec4 eyePos = viewMatrix * worldPos;
+  vFogDist = length(eyePos.xyz);
+  gl_Position = projectionMatrix * eyePos;
+}
+`;
+
+const DOOR_FRAG = /* glsl */ `
+uniform sampler2D uMap;
+uniform vec3  uFogColor;
+uniform float uFogNear;
+uniform float uFogFar;
+uniform float uTime;
+uniform vec3  uTint0;
+uniform vec3  uTint1;
+uniform vec3  uTint2;
+uniform vec3  uTint3;
+
+varying vec2  vUv;
+varying float vFogDist;
+varying vec2  vWorldPos;
+
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+void main() {
+  vec4 color = texture2D(uMap, vUv);
+  if (color.a < 0.01) discard;
+
+  float raw = sin(uTime * 7.0)  * 0.45
+            + sin(uTime * 13.7) * 0.35
+            + sin(uTime * 3.1)  * 0.20;
+  float flicker = (floor(raw * 1.5 + 0.5)) / 6.0;
+
+  float dist = clamp((vFogDist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
+  float flickeredDist = clamp(dist + flicker * 0.03, 0.0, 1.0);
+  float curved = pow(flickeredDist, 0.75);
+  float band = floor(curved * 5.0);
+
+  float timeSlot = floor(uTime * 1.5);
+  vec2 cell = floor(vWorldPos * 0.5);
+  float spatialNoise = hash(cell + vec2(timeSlot * 7.3, timeSlot * 3.1));
+  float turb = (floor(spatialNoise * 3.0) / 3.0) * 0.18;
+
+  float brightness;
+  vec3  tint;
+  if (band < 1.0) {
+    brightness = 1.00 - turb; tint = uTint0;
+  } else if (band < 2.0) {
+    brightness = 0.55; tint = uTint1;
+  } else if (band < 3.0) {
+    brightness = 0.22; tint = uTint2;
+  } else if (band < 4.0) {
+    brightness = 0.10; tint = uTint3;
+  } else {
+    brightness = 0.00; tint = vec3(1.0);
   }
-  // Outer frame
-  ctx.strokeStyle = "#3d2412";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(2, 2, 60, 124);
-  // Upper panel
-  ctx.strokeStyle = "#3d2412";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(8, 10, 48, 46);
-  // Lower panel
-  ctx.strokeRect(8, 66, 48, 54);
-  // Door handle
-  ctx.strokeStyle = "#050505";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(32, 56, 4, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.strokeStyle = "#333";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.magFilter = THREE.NearestFilter;
-  tex.minFilter = THREE.NearestFilter;
-  tex.generateMipmaps = false;
+
+  vec3 lit = color.rgb * tint * brightness;
+  gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
+}
+`;
+
+function makeDoorProto(tex) {
+  if (!tex) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 64;
+    canvas.height = 128;
+    const ctx = canvas.getContext("2d");
+    // Wood background
+    ctx.fillStyle = "#6b4226";
+    ctx.fillRect(0, 0, 64, 128);
+    // Wood grain
+    ctx.strokeStyle = "#5a3520";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * 9, 0);
+      ctx.lineTo(i * 9 + 3, 128);
+      ctx.stroke();
+    }
+    // Outer frame
+    ctx.strokeStyle = "#3d2412";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(2, 2, 60, 124);
+    // Upper panel
+    ctx.strokeStyle = "#3d2412";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(8, 10, 48, 46);
+    // Lower panel
+    ctx.strokeRect(8, 66, 48, 54);
+    // Door handle
+    ctx.strokeStyle = "#050505";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(32, 56, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+  }
   const geo = new THREE.BoxGeometry(
     TILE_SIZE * 0.9,
     CEILING_H * 0.98,
     TILE_SIZE * 0.04,
   );
-  const mat = new THREE.MeshStandardMaterial({
-    map: tex,
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uMap: { value: tex },
+      uFogColor: { value: new THREE.Color(0, 0, 0) },
+      uFogNear: { value: 4 },
+      uFogFar: { value: 28 },
+      uTime: { value: 0 },
+      uTint0: { value: new THREE.Color(1.0, 0.9, 0.68) },
+      uTint1: { value: new THREE.Color(1.0, 0.94, 0.76) },
+      uTint2: { value: new THREE.Color(0.6, 0.55, 0.8) },
+      uTint3: { value: new THREE.Color(0.3, 0.25, 0.6) },
+    },
+    vertexShader: DOOR_VERT,
+    fragmentShader: DOOR_FRAG,
     side: THREE.DoubleSide,
   });
   const mesh = new THREE.Mesh(geo, mat);
@@ -757,12 +875,9 @@ export default function App() {
 
     // Sort deterministically by position, then cap at maxDoors
     candidates.sort(
-      (a, b) =>
-        a.placement.z - b.placement.z || a.placement.x - b.placement.x,
+      (a, b) => a.placement.z - b.placement.z || a.placement.x - b.placement.x,
     );
-    const selected = new Set(
-      candidates.slice(0, maxDoors).map((_, i) => i),
-    );
+    const selected = new Set(candidates.slice(0, maxDoors).map((_, i) => i));
 
     const placements = [];
     candidates.forEach((c, i) => {
@@ -787,9 +902,22 @@ export default function App() {
     return placements;
   }, [dungeon, maxDoors]);
 
+  // Torchlight tint band colours
+  const [tintColors, setTintColors] = useState(() => {
+    try {
+      const stored = localStorage.getItem("tintColors");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return DEFAULT_TINT_COLORS;
+  });
+
   // Object registry and world placements
   const stoveProto = useMemo(() => makeStoveProto(), []);
-  const doorProto = useMemo(() => makeDoorProto(), []);
+  const [doorTex, setDoorTex] = useState(null);
+  useEffect(() => {
+    loadTileTexture(SRC_DOOR).then(setDoorTex);
+  }, []);
+  const doorProto = useMemo(() => makeDoorProto(doorTex), [doorTex]);
   const objectRegistry = useMemo(
     () => ({
       stove: () => stoveProto.clone(true),
@@ -1000,8 +1128,10 @@ export default function App() {
     for (const door of doorPlacements) {
       const dx = door.meta?.blockDx ?? 0;
       const dz = door.meta?.blockDz ?? 0;
-      const x1 = door.x, z1 = door.z;
-      const x2 = door.x + dx, z2 = door.z + dz;
+      const x1 = door.x,
+        z1 = door.z;
+      const x2 = door.x + dx,
+        z2 = door.z + dz;
       // Canonical key: lower cell first (by z, then x)
       if (z1 < z2 || (z1 === z2 && x1 < x2)) {
         blockedBoundaries.add(`${x1},${z1},${x2},${z2}`);
@@ -1035,7 +1165,14 @@ export default function App() {
       }
     }
     return Array.from(pairs).map((s) => s.split(",").map(Number));
-  }, [dungeon, solidData, regionIdData, dungeonWidth, dungeonHeight, doorPlacements]);
+  }, [
+    dungeon,
+    solidData,
+    regionIdData,
+    dungeonWidth,
+    dungeonHeight,
+    doorPlacements,
+  ]);
   const dynamicTempData = useMemo(() => {
     const out = new Uint8Array(temperatureData.length);
     for (let i = 0; i < temperatureData.length; i++) {
@@ -1322,14 +1459,19 @@ export default function App() {
       const playerRegionId = regionIdData[cgz * dungeonWidth + cgx];
       const playerBaseTemp = temperatureData[cgz * dungeonWidth + cgx] ?? 127;
       const playerRoomRise = roomTempRiseRef.current.get(playerRegionId) ?? 0;
-      const playerRoomTemp = Math.min(255, playerBaseTemp + Math.round(playerRoomRise));
+      const playerRoomTemp = Math.min(
+        255,
+        playerBaseTemp + Math.round(playerRoomRise),
+      );
       const inWarmRoom = playerRoomTemp > 127;
 
       const hands = playerHandsRef.current;
       const carryingTea = hands.left || hands.right;
       if (inWarmRoom && carryingTea && !firstWarmRoomTeaRef.current) {
         firstWarmRoomTeaRef.current = true;
-        showMsg("The warmth of this room keeps your tea from cooling too much — it won't drop below mid-range here!");
+        showMsg(
+          "The warmth of this room keeps your tea from cooling too much — it won't drop below mid-range here!",
+        );
       }
 
       setPlayerHands((prev) => {
@@ -1340,7 +1482,9 @@ export default function App() {
           if (!tea || tea.ruined) continue;
           const [lo, hi] = tea.recipe.idealTemperatureRange;
           const rawTemp = tea.temperature - tempDropPerStep;
-          const newTemp = inWarmRoom ? Math.max(rawTemp, (lo + hi) / 2) : rawTemp;
+          const newTemp = inWarmRoom
+            ? Math.max(rawTemp, (lo + hi) / 2)
+            : rawTemp;
           const ruined = newTemp < lo;
           next[hand] = { ...tea, temperature: newTemp, ruined };
           changed = true;
@@ -1942,7 +2086,11 @@ export default function App() {
 
       if (!chaseTarget) continue;
       // Already adjacent — counterattack section handles damage
-      if (Math.abs(pos.x - chaseTarget.x) + Math.abs(pos.z - chaseTarget.z) === 1) continue;
+      if (
+        Math.abs(pos.x - chaseTarget.x) + Math.abs(pos.z - chaseTarget.z) ===
+        1
+      )
+        continue;
 
       // Pathfind one step toward the adventurer
       const mobAstar = aStar8(
@@ -2653,6 +2801,7 @@ export default function App() {
                 spriteAtlas={mobSpriteAtlas}
                 passageMask={passageMask ?? undefined}
                 speechBubbles={activeSpeechBubbles}
+                tintColors={tintColors}
                 style={{ width: "100%", height: "100%" }}
               />
             )}
@@ -2803,6 +2952,8 @@ export default function App() {
             setAdventurerLootPerChest,
             maxDoors,
             setMaxDoors,
+            tintColors,
+            setTintColors,
           }}
         />
 

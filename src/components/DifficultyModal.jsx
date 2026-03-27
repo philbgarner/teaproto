@@ -114,6 +114,7 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
   const [showImport, setShowImport] = useState(false);
+  const [pickerActive, setPickerActive] = useState(false);
 
   const getCurrentSettings = () => {
     const s = {};
@@ -172,6 +173,7 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
       maxHeight="80vh"
       width="70vw"
       top="2rem"
+      opacity={pickerActive ? 0.6 : 1}
     >
       <div
         style={{
@@ -339,7 +341,11 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
 
         {/* Right: Sliders */}
         <div style={{ flex: 1, overflowY: "auto" }}>
-          <SettingsTabs {...settingsProps} />
+          <SettingsTabs
+            {...settingsProps}
+            onPickerFocus={() => setPickerActive(true)}
+            onPickerBlur={() => setPickerActive(false)}
+          />
         </div>
       </div>
     </ModalPanel>
