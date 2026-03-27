@@ -23,6 +23,8 @@ import { RECIPES } from "./tea";
 import { useMusic } from "./hooks/useMusic";
 import { useMessage } from "./hooks/useMessage";
 import { useMinimapData } from "./hooks/useMinimapData";
+import { useKeybindings } from "./hooks/useKeybindings";
+import hotkeys from "hotkeys-js";
 import { GameHeader } from "./components/GameHeader";
 import { StatusBar } from "./components/StatusBar";
 import { HandsHUD } from "./components/HandsHUD";
@@ -75,7 +77,7 @@ function loadTileTexture(src) {
       resolve(tex);
     };
     img.onerror = reject;
-    img.src = `${import.meta.env.BASE_URL}examples/eotb/tileset.png`;
+    img.src = `${import.meta.env.BASE_URL}textures/tileset.png`;
   });
 }
 
@@ -107,7 +109,7 @@ function loadRepackedAtlasTexture(sources) {
       resolve(tex);
     };
     img.onerror = reject;
-    img.src = `${import.meta.env.BASE_URL}examples/eotb/tileset.png`;
+    img.src = `${import.meta.env.BASE_URL}textures/tileset.png`;
   });
 }
 
@@ -445,7 +447,7 @@ function useEotBCamera(
   height,
   startX,
   startZ,
-  { onStep, blocked, onBlockedMove, canPhaseWalls } = {},
+  { onStep, blocked, onBlockedMove, canPhaseWalls, keybindings } = {},
 ) {
   const logicalRef = useRef({ x: startX, z: startZ, yaw: 0 });
   const animRef = useRef({
@@ -508,71 +510,113 @@ function useEotBCamera(
   }, [canPhaseWalls]);
 
   useEffect(() => {
-    const onKeyDown = (e) => {
-      if (blockedRef.current) return;
-      if (animRef.current.animating) return;
+    function walkable(cx, cz) {
+      if (cx < 0 || cz < 0 || cx >= width || cz >= height) return false;
+      if (canPhaseWallsRef.current) return true; // ghost phases through walls with empty hands
+      if (!solidRef.current) return false;
+      return solidRef.current[cz * width + cx] === 0;
+    }
+
+    function beginAnim(toX, toZ, toYaw, isMove) {
+      const { x: fx, z: fz, yaw: fyaw } = logicalRef.current;
+      animRef.current = {
+        fromX: fx,
+        fromZ: fz,
+        fromYaw: fyaw,
+        toX,
+        toZ,
+        toYaw,
+        startTime: performance.now(),
+        animating: true,
+      };
+      logicalRef.current = { x: toX, z: toZ, yaw: toYaw };
+      if (isMove) onStepRef.current?.();
+    }
+
+    function guard() {
+      return blockedRef.current || animRef.current.animating;
+    }
+
+    const moveForwardHandler = (e) => {
+      if (guard()) return;
+      e.preventDefault();
       const { x, z, yaw } = logicalRef.current;
-      const solid = solidRef.current;
-      const fdx = Math.round(-Math.sin(yaw));
-      const fdz = Math.round(-Math.cos(yaw));
-      const gx = Math.floor(x);
-      const gz = Math.floor(z);
+      const fdx = Math.round(-Math.sin(yaw)),
+        fdz = Math.round(-Math.cos(yaw));
+      const gx = Math.floor(x),
+        gz = Math.floor(z);
+      const ngx = gx + fdx,
+        ngz = gz + fdz;
+      if (walkable(ngx, ngz)) beginAnim(ngx + 0.5, ngz + 0.5, yaw, true);
+      else onBlockedMoveRef.current?.(fdx, fdz);
+    };
+    const moveBackwardHandler = (e) => {
+      if (guard()) return;
+      e.preventDefault();
+      const { x, z, yaw } = logicalRef.current;
+      const fdx = Math.round(-Math.sin(yaw)),
+        fdz = Math.round(-Math.cos(yaw));
+      const gx = Math.floor(x),
+        gz = Math.floor(z);
+      const ngx = gx - fdx,
+        ngz = gz - fdz;
+      if (walkable(ngx, ngz)) beginAnim(ngx + 0.5, ngz + 0.5, yaw, true);
+      else onBlockedMoveRef.current?.(-fdx, -fdz);
+    };
+    const strafeLeftHandler = (e) => {
+      if (guard()) return;
+      e.preventDefault();
+      const { x, z, yaw } = logicalRef.current;
+      const fdx = Math.round(-Math.sin(yaw)),
+        fdz = Math.round(-Math.cos(yaw));
+      const gx = Math.floor(x),
+        gz = Math.floor(z);
+      const sgx = gx + fdz,
+        sgz = gz - fdx;
+      if (walkable(sgx, sgz)) beginAnim(sgx + 0.5, sgz + 0.5, yaw, true);
+    };
+    const strafeRightHandler = (e) => {
+      if (guard()) return;
+      e.preventDefault();
+      const { x, z, yaw } = logicalRef.current;
+      const fdx = Math.round(-Math.sin(yaw)),
+        fdz = Math.round(-Math.cos(yaw));
+      const gx = Math.floor(x),
+        gz = Math.floor(z);
+      const sgx = gx - fdz,
+        sgz = gz + fdx;
+      if (walkable(sgx, sgz)) beginAnim(sgx + 0.5, sgz + 0.5, yaw, true);
+    };
+    const turnLeftHandler = (e) => {
+      if (guard()) return;
+      e.preventDefault();
+      const { x, z, yaw } = logicalRef.current;
+      beginAnim(x, z, yaw + Math.PI / 2, false);
+    };
+    const turnRightHandler = (e) => {
+      if (guard()) return;
+      e.preventDefault();
+      const { x, z, yaw } = logicalRef.current;
+      beginAnim(x, z, yaw - Math.PI / 2, false);
+    };
 
-      function walkable(cx, cz) {
-        if (cx < 0 || cz < 0 || cx >= width || cz >= height) return false;
-        if (canPhaseWallsRef.current) return true; // ghost phases through walls with empty hands
-        if (!solid) return false;
-        return solid[cz * width + cx] === 0;
-      }
-
-      function beginAnim(toX, toZ, toYaw, isMove) {
-        animRef.current = {
-          fromX: x,
-          fromZ: z,
-          fromYaw: yaw,
-          toX,
-          toZ,
-          toYaw,
-          startTime: performance.now(),
-          animating: true,
-        };
-        logicalRef.current = { x: toX, z: toZ, yaw: toYaw };
-        if (isMove) onStepRef.current?.();
-      }
-
-      if (e.code === "KeyW" || e.code === "ArrowUp") {
-        e.preventDefault();
-        const ngx = gx + fdx,
-          ngz = gz + fdz;
-        if (walkable(ngx, ngz)) beginAnim(ngx + 0.5, ngz + 0.5, yaw, true);
-        else onBlockedMoveRef.current?.(fdx, fdz);
-      } else if (e.code === "KeyS" || e.code === "ArrowDown") {
-        e.preventDefault();
-        const ngx = gx - fdx,
-          ngz = gz - fdz;
-        if (walkable(ngx, ngz)) beginAnim(ngx + 0.5, ngz + 0.5, yaw, true);
-        else onBlockedMoveRef.current?.(-fdx, -fdz);
-      } else if (e.code === "KeyA") {
-        e.preventDefault();
-        const sgx = gx + fdz,
-          sgz = gz - fdx;
-        if (walkable(sgx, sgz)) beginAnim(sgx + 0.5, sgz + 0.5, yaw, true);
-      } else if (e.code === "KeyD") {
-        e.preventDefault();
-        const sgx = gx - fdz,
-          sgz = gz + fdx;
-        if (walkable(sgx, sgz)) beginAnim(sgx + 0.5, sgz + 0.5, yaw, true);
-      } else if (e.code === "KeyQ") {
-        e.preventDefault();
-        beginAnim(x, z, yaw + Math.PI / 2, false);
-      } else if (e.code === "KeyE") {
-        e.preventDefault();
-        beginAnim(x, z, yaw - Math.PI / 2, false);
+    const bindings = [
+      [keybindings.moveForward, moveForwardHandler],
+      [keybindings.moveBackward, moveBackwardHandler],
+      [keybindings.strafeLeft, strafeLeftHandler],
+      [keybindings.strafeRight, strafeRightHandler],
+      [keybindings.turnLeft, turnLeftHandler],
+      [keybindings.turnRight, turnRightHandler],
+    ];
+    for (const [keys, handler] of bindings) {
+      if (keys.length) hotkeys(keys.join(","), handler);
+    }
+    return () => {
+      for (const [keys, handler] of bindings) {
+        if (keys.length) hotkeys.unbind(keys.join(","), handler);
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [width, height]);
+  }, [width, height, keybindings]);
 
   useEffect(() => {
     let rafId;
@@ -1189,6 +1233,7 @@ export default function App() {
   const [adventurerLootPerChest, setAdventurerLootPerChest] = useState(10);
   const [turnsPerWave, setTurnsPerWave] = useState(TURNS_PER_WAVE);
   const [showSettings, setShowSettings] = useState(false);
+  const [keybindings, setKeybindings] = useKeybindings();
 
   // Chests state
   const [chests, setChests] = useState([]);
@@ -2311,6 +2356,7 @@ export default function App() {
       blocked: showRecipeMenu || gameState !== "playing",
       onBlockedMove,
       canPhaseWalls: !playerHands.left && !playerHands.right,
+      keybindings,
     },
   );
 
@@ -2341,10 +2387,10 @@ export default function App() {
     }
   }, [passageTraversal]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // E key — toggle passage at player position
+  // togglePassage key — toggle passage at player position
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.code !== "KeyF") return;
+    const handler = (e) => {
+      e.preventDefault();
       if (passageTraversal.kind === "active") {
         setPassageTraversal(cancelPassageTraversal());
         return;
@@ -2374,9 +2420,12 @@ export default function App() {
       }
       showMsg("Nothing to interact with here.");
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [passageTraversal, passageMask, dungeonWidth, showMsg]); // eslint-disable-line react-hooks/exhaustive-deps
+    const keys = keybindings.togglePassage.join(",");
+    if (keys) hotkeys(keys, handler);
+    return () => {
+      if (keys) hotkeys.unbind(keys, handler);
+    };
+  }, [passageTraversal, passageMask, dungeonWidth, showMsg, keybindings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Detect what the player is facing (uses logical position for immediate response)
   // camera is a dep to force recompute after each move/turn
@@ -2422,104 +2471,9 @@ export default function App() {
     return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press I to offer tea`;
   }, [facingTarget, stoveStates, initialMobs, mobSatiations]);
 
-  // I key — interact / recipe menu navigation
+  // interact / recipe menu navigation
   useEffect(() => {
-    const onKey = (e) => {
-      if (showRecipeMenu) {
-        if (e.code === "KeyI" || e.code === "Escape") {
-          e.preventDefault();
-          setShowRecipeMenu(false);
-          return;
-        }
-        const num = parseInt(e.key);
-        if (num >= 1 && num <= RECIPES.length) {
-          e.preventDefault();
-          const recipe = RECIPES[num - 1];
-          if (
-            recipe.ingredientId &&
-            (ingredients[recipe.ingredientId] ?? 0) < 1
-          ) {
-            showMsg(
-              `You need ${recipe.ingredientName} to brew ${recipe.name}!`,
-            );
-            return;
-          }
-          if (recipe.ingredientId) {
-            const newIng = {
-              ...ingredientsRef.current,
-              [recipe.ingredientId]:
-                ingredientsRef.current[recipe.ingredientId] - 1,
-            };
-            ingredientsRef.current = newIng;
-            setIngredients(newIng);
-          }
-          setStoveStates((prev) => {
-            const next = new Map(prev);
-            next.set(activeStoveKey, {
-              brewing: {
-                recipe,
-                stepsRemaining: recipe.timeToBrew,
-                ready: false,
-              },
-            });
-            return next;
-          });
-          setShowRecipeMenu(false);
-          showMsg(
-            `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
-          );
-        }
-        return;
-      }
-
-      if (e.code === "Period") {
-        e.preventDefault();
-        onStep();
-        return;
-      }
-
-      if (e.code === "KeyZ") {
-        e.preventDefault();
-        if (gameState !== "playing") return;
-        if (playerHands.left) {
-          showMsg(`You discard your ${playerHands.left.name}.`);
-          setPlayerHands((prev) => ({ ...prev, left: null }));
-          if (!firstTeaDeliveredRef.current) {
-            firstTeaDeliveredRef.current = true;
-            setTimeout(() => {
-              showMsg(
-                "With empty hands you can pass through walls — explore the dungeon!",
-              );
-            }, 1500);
-          }
-        } else {
-          showMsg("Your left hand is empty.");
-        }
-        return;
-      }
-
-      if (e.code === "KeyX") {
-        e.preventDefault();
-        if (gameState !== "playing") return;
-        if (playerHands.right) {
-          showMsg(`You discard your ${playerHands.right.name}.`);
-          setPlayerHands((prev) => ({ ...prev, right: null }));
-          if (!firstTeaDeliveredRef.current) {
-            firstTeaDeliveredRef.current = true;
-            setTimeout(() => {
-              showMsg(
-                "With empty hands you can pass through walls — explore the dungeon!",
-              );
-            }, 1500);
-          }
-        } else {
-          showMsg("Your right hand is empty.");
-        }
-        return;
-      }
-
-      if (e.code !== "KeyI") return;
-      e.preventDefault();
+    function doInteract() {
       if (!facingTarget) return;
       if (gameState !== "playing") return;
 
@@ -2610,14 +2564,12 @@ export default function App() {
             );
           }, 5500);
         }
-
         function applyMobSatiation(value) {
           const next = [...mobSatiationsRef.current];
           next[facingTarget.mobIdx] = value;
           mobSatiationsRef.current = next;
           setMobSatiations(next);
         }
-
         if (tea.ruined || tea.temperature < lo) {
           applyMobSatiation(10);
           showSpeechBubble(
@@ -2632,11 +2584,8 @@ export default function App() {
           );
         } else {
           const isPreferred = mob.preferredRecipeId === tea.recipe.id;
-          const baseSatiation = 100;
-          const bonus = isPreferred
-            ? baseSatiation * (supersatiationBonus / 100)
-            : 0;
-          applyMobSatiation(baseSatiation + bonus);
+          const bonus = isPreferred ? 100 * (supersatiationBonus / 100) : 0;
+          applyMobSatiation(100 + bonus);
           if (isPreferred) {
             showSpeechBubble(
               mobBubbleId,
@@ -2650,9 +2599,125 @@ export default function App() {
           }
         }
       }
+    }
+
+    const interactHandler = (e) => {
+      e.preventDefault();
+      if (showRecipeMenu) {
+        setShowRecipeMenu(false);
+        return;
+      }
+      doInteract();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const waitHandler = (e) => {
+      if (showRecipeMenu) return;
+      e.preventDefault();
+      onStep();
+    };
+    const discardLeftHandler = (e) => {
+      if (showRecipeMenu) return;
+      e.preventDefault();
+      if (gameState !== "playing") return;
+      if (playerHands.left) {
+        showMsg(`You discard your ${playerHands.left.name}.`);
+        setPlayerHands((prev) => ({ ...prev, left: null }));
+        if (!firstTeaDeliveredRef.current) {
+          firstTeaDeliveredRef.current = true;
+          setTimeout(() => {
+            showMsg(
+              "With empty hands you can pass through walls — explore the dungeon!",
+            );
+          }, 1500);
+        }
+      } else {
+        showMsg("Your left hand is empty.");
+      }
+    };
+    const discardRightHandler = (e) => {
+      if (showRecipeMenu) return;
+      e.preventDefault();
+      if (gameState !== "playing") return;
+      if (playerHands.right) {
+        showMsg(`You discard your ${playerHands.right.name}.`);
+        setPlayerHands((prev) => ({ ...prev, right: null }));
+        if (!firstTeaDeliveredRef.current) {
+          firstTeaDeliveredRef.current = true;
+          setTimeout(() => {
+            showMsg(
+              "With empty hands you can pass through walls — explore the dungeon!",
+            );
+          }, 1500);
+        }
+      } else {
+        showMsg("Your right hand is empty.");
+      }
+    };
+    const recipeCloseHandler = (e) => {
+      if (!showRecipeMenu) return;
+      e.preventDefault();
+      setShowRecipeMenu(false);
+    };
+    const recipeSelectHandler = (e) => {
+      if (!showRecipeMenu) return;
+      e.preventDefault();
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= RECIPES.length) {
+        const recipe = RECIPES[num - 1];
+        if (
+          recipe.ingredientId &&
+          (ingredients[recipe.ingredientId] ?? 0) < 1
+        ) {
+          showMsg(`You need ${recipe.ingredientName} to brew ${recipe.name}!`);
+          return;
+        }
+        if (recipe.ingredientId) {
+          const newIng = {
+            ...ingredientsRef.current,
+            [recipe.ingredientId]:
+              ingredientsRef.current[recipe.ingredientId] - 1,
+          };
+          ingredientsRef.current = newIng;
+          setIngredients(newIng);
+        }
+        setStoveStates((prev) => {
+          const next = new Map(prev);
+          next.set(activeStoveKey, {
+            brewing: {
+              recipe,
+              stepsRemaining: recipe.timeToBrew,
+              ready: false,
+            },
+          });
+          return next;
+        });
+        setShowRecipeMenu(false);
+        showMsg(
+          `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
+        );
+      }
+    };
+
+    const interactKeys = keybindings.interact.join(",");
+    const waitKeys = keybindings.wait.join(",");
+    const discardLeftKeys = keybindings.discardLeft.join(",");
+    const discardRightKeys = keybindings.discardRight.join(",");
+
+    if (interactKeys) hotkeys(interactKeys, interactHandler);
+    if (waitKeys) hotkeys(waitKeys, waitHandler);
+    if (discardLeftKeys) hotkeys(discardLeftKeys, discardLeftHandler);
+    if (discardRightKeys) hotkeys(discardRightKeys, discardRightHandler);
+    hotkeys("escape", recipeCloseHandler);
+    hotkeys("1,2,3,4,5,6,7,8,9", recipeSelectHandler);
+
+    return () => {
+      if (interactKeys) hotkeys.unbind(interactKeys, interactHandler);
+      if (waitKeys) hotkeys.unbind(waitKeys, waitHandler);
+      if (discardLeftKeys) hotkeys.unbind(discardLeftKeys, discardLeftHandler);
+      if (discardRightKeys)
+        hotkeys.unbind(discardRightKeys, discardRightHandler);
+      hotkeys.unbind("escape", recipeCloseHandler);
+      hotkeys.unbind("1,2,3,4,5,6,7,8,9", recipeSelectHandler);
+    };
   }, [
     showRecipeMenu,
     facingTarget,
@@ -2668,6 +2733,7 @@ export default function App() {
     supersatiationBonus,
     ingredients,
     gameState,
+    keybindings,
   ]);
 
   // Minimap
@@ -2954,6 +3020,8 @@ export default function App() {
             setMaxDoors,
             tintColors,
             setTintColors,
+            keybindings,
+            setKeybindings,
           }}
         />
 

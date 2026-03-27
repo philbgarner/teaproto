@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { KeybindingsPanel } from "./components/KeybindingsPanel";
 
 const tabStyle = (active) => ({
   flex: 1,
@@ -65,6 +66,8 @@ export default function SettingsTabs({
   setTintColors,
   onPickerFocus,
   onPickerBlur,
+  keybindings,
+  setKeybindings,
 }) {
   const [activeTab, setActiveTab] = useState("difficulty");
   const [seedInput, setSeedInput] = useState(String(dungeonSeed));
@@ -108,6 +111,12 @@ export default function SettingsTabs({
           onClick={() => setActiveTab("lighting")}
         >
           lighting
+        </button>
+        <button
+          style={tabStyle(activeTab === "keys")}
+          onClick={() => setActiveTab("keys")}
+        >
+          keys
         </button>
       </div>
 
@@ -288,6 +297,10 @@ export default function SettingsTabs({
               onChange={(v) => setMaxDoors(Math.round(v))}
             />
           </>
+        )}
+
+        {activeTab === "keys" && keybindings && (
+          <KeybindingsPanel keybindings={keybindings} setKeybindings={setKeybindings} />
         )}
 
         {activeTab === "lighting" && tintColors && (
