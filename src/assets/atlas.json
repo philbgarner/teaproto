@@ -14,7 +14,7 @@
     { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
     { "id": 2, "name": "Flagstone", "uv": [256, 128] },
     { "id": 3, "name": "Concrete", "uv": [384, 128] },
-    { "id": 4, "name": "Steel", "uv": [448, 128] },
+    { "id": 4, "name": "Steel", "uv": [321, 192] },
     { "id": 5, "name": "Dirt", "uv": [384, 256] },
     { "id": 6, "name": "Grass", "uv": [128, 256] }
   ],
@@ -23,6 +23,20 @@
     { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
     { "id": 2, "name": "Concrete", "uv": [384, 128] },
     { "id": 3, "name": "Plaster", "uv": [448, 192] }
+  ],
+  "ceilingTypes": [
+    { "id": 0, "name": "none" },
+    { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
+    { "id": 2, "name": "Flagstone", "uv": [256, 128] },
+    { "id": 3, "name": "Concrete", "uv": [384, 128] },
+    { "id": 4, "name": "Steel", "uv": [321, 192] },
+    { "id": 5, "name": "Dirt", "uv": [384, 256] },
+    { "id": 6, "name": "Grass", "uv": [128, 256] }
+  ],
+  "ceilingOverlays": [
+    { "id": 1, "name": "trapGrid", "uv": [256, 192] },
+    { "id": 2, "name": "floorGrid", "uv": [192, 192] },
+    { "id": 3, "name": "dirtRust", "uv": [384, 192] }
   ],
   "overlays": [
     { "id": 1, "name": "dartTrap", "uv": [320, 128] },

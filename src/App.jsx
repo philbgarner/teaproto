@@ -23,6 +23,7 @@ import {
   cancelPassageTraversal,
 } from "../mazetools/src/turn/passageTraversal";
 import { RECIPES } from "./tea";
+import { THEMES, THEME_KEYS } from "./themes";
 import { useMusic } from "./hooks/useMusic";
 import { useMessage } from "./hooks/useMessage";
 import { useMinimapData } from "./hooks/useMinimapData";
@@ -60,9 +61,11 @@ function _atlasUvToId(uv) {
 }
 const _defaultFloorEntry = atlasIndex.floorTypes.byName("Cobblestone");
 const _defaultWallEntry = atlasIndex.wallTypes.byName("Cobblestone");
+const _defaultCeilingEntry = atlasIndex.ceilingTypes.byName("Cobblestone");
 const TILE_FLOOR = _defaultFloorEntry && "uv" in _defaultFloorEntry
   ? _atlasUvToId(_defaultFloorEntry.uv) : 0;
-const TILE_CEILING = TILE_FLOOR;
+const TILE_CEILING = _defaultCeilingEntry && "uv" in _defaultCeilingEntry
+  ? _atlasUvToId(_defaultCeilingEntry.uv) : TILE_FLOOR;
 const TILE_WALL = _defaultWallEntry && "uv" in _defaultWallEntry
   ? _atlasUvToId(_defaultWallEntry.uv) : 0;
 
@@ -72,6 +75,9 @@ const FLOOR_TILE_MAP = atlasIndex.data.floorTypes.map((ft) =>
 );
 const WALL_TILE_MAP = atlasIndex.data.wallTypes.map((wt) =>
   "uv" in wt ? _atlasUvToId(wt.uv) : TILE_WALL,
+);
+const CEILING_TILE_MAP = atlasIndex.data.ceilingTypes.map((ct) =>
+  "uv" in ct ? _atlasUvToId(ct.uv) : TILE_CEILING,
 );
 
 function loadTileTexture(src) {
@@ -811,6 +817,7 @@ export default function App() {
   const solidData = useMemo(() => dungeon.textures.solid.image.data, [dungeon]);
   const floorData = useMemo(() => dungeon.textures.floorType.image.data, [dungeon]);
   const wallData = useMemo(() => dungeon.textures.wallType.image.data, [dungeon]);
+  const ceilingData = useMemo(() => dungeon.textures.ceilingType.image.data, [dungeon]);
   const temperatureData = useMemo(
     () => dungeon.textures.temperature.image.data,
     [dungeon],
@@ -826,28 +833,50 @@ export default function App() {
     };
   }, [dungeon]);
 
-  // Assign floor types to every room and corridor by theme
+  // Assign floor/wall/ceiling types to every room and corridor by theme
   useMemo(() => {
     console.log("[App] useMemo: themed rooms start");
     const floorData = dungeon.textures.floorType.image.data;
+    const wallData = dungeon.textures.wallType.image.data;
+    const ceilingData = dungeon.textures.ceilingType.image.data;
+    const solidData = dungeon.textures.solid.image.data;
+    const rng = makeRng(dungeon.seed);
     const themes = {};
     for (const [roomId, room] of dungeon.rooms) {
-      let floorId;
+      let floorId, wallId, ceilingId;
       if (roomId === dungeon.startRoomId) {
         floorId = atlasIndex.floorTypes.idByName("Steel");
+        wallId = atlasIndex.wallTypes.idByName("Concrete");
+        ceilingId = atlasIndex.ceilingTypes.idByName("Steel");
       } else if (roomId === dungeon.endRoomId) {
         floorId = atlasIndex.floorTypes.idByName("Flagstone");
+        wallId = atlasIndex.wallTypes.idByName("Plaster");
+        ceilingId = atlasIndex.ceilingTypes.idByName("Flagstone");
       } else if (room.type === "corridor") {
         floorId = atlasIndex.floorTypes.idByName("Cobblestone");
+        wallId = atlasIndex.wallTypes.idByName("Cobblestone");
+        ceilingId = atlasIndex.ceilingTypes.idByName("Cobblestone");
       } else {
-        floorId = atlasIndex.floorTypes.idByName("Cobblestone");
+        const key = THEME_KEYS[Math.floor(rng() * THEME_KEYS.length)];
+        const theme = THEMES[key];
+        floorId = atlasIndex.floorTypes.idByName(theme.floorType);
+        wallId = atlasIndex.wallTypes.idByName(theme.wallType);
+        ceilingId = atlasIndex.ceilingTypes.idByName(theme.ceilingType);
       }
       themes[roomId] = (x, y, ctx) => {
-        floorData[y * ctx.width + x] = floorId;
+        const i = y * ctx.width + x;
+        if (solidData[i] === 0) {
+          floorData[i] = floorId;
+          ceilingData[i] = ceilingId;
+        } else {
+          wallData[i] = wallId;
+        }
       };
     }
     generateThemedRooms(dungeon, themes);
     dungeon.textures.floorType.needsUpdate = true;
+    dungeon.textures.wallType.needsUpdate = true;
+    dungeon.textures.ceilingType.needsUpdate = true;
     console.log("[App] useMemo: themed rooms done");
   }, [dungeon]);
 
@@ -2924,8 +2953,10 @@ export default function App() {
                 tintColors={tintColors}
                 floorData={floorData}
                 wallData={wallData}
+                ceilingData={ceilingData}
                 floorTileMap={FLOOR_TILE_MAP}
                 wallTileMap={WALL_TILE_MAP}
+                ceilingTileMap={CEILING_TILE_MAP}
                 style={{ width: "100%", height: "100%" }}
               />
             )}
