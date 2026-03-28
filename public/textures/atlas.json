@@ -1,67 +1,67 @@
 {
   "tileSize": 64,
   "architecture": [
-    { "id": 1, "name": "archTopLeft",      "uv": [0,   0]   },
-    { "id": 2, "name": "archTopRight",     "uv": [64,  0]   },
-    { "id": 3, "name": "archVoid",         "uv": [128, 0]   },
-    { "id": 4, "name": "archDoor",         "uv": [256, 0]   },
-    { "id": 5, "name": "stoneWall",        "uv": [0,   64]  },
-    { "id": 6, "name": "stoneColumn",      "uv": [64,  64]  },
-    { "id": 7, "name": "stoneColumnBase",  "uv": [128, 64]  }
+    { "id": 1, "name": "archTopLeft", "uv": [0, 0] },
+    { "id": 2, "name": "archTopRight", "uv": [64, 0] },
+    { "id": 3, "name": "archVoid", "uv": [128, 0] },
+    { "id": 4, "name": "archDoor", "uv": [256, 0] },
+    { "id": 5, "name": "stoneWall", "uv": [0, 64] },
+    { "id": 6, "name": "stoneColumn", "uv": [64, 64] },
+    { "id": 7, "name": "stoneColumnBase", "uv": [128, 64] }
   ],
   "floorTypes": [
     { "id": 0, "name": "none" },
-    { "id": 1, "name": "Cobblestone",  "uv": [192, 128] },
-    { "id": 2, "name": "Flagstone",    "uv": [256, 128] },
-    { "id": 3, "name": "Concrete",     "uv": [384, 128] },
-    { "id": 4, "name": "Steel",        "uv": [448, 128] },
-    { "id": 5, "name": "Dirt",         "uv": [384, 256] },
-    { "id": 6, "name": "Grass",        "uv": [128, 256] }
+    { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
+    { "id": 2, "name": "Flagstone", "uv": [256, 128] },
+    { "id": 3, "name": "Concrete", "uv": [384, 128] },
+    { "id": 4, "name": "Steel", "uv": [448, 128] },
+    { "id": 5, "name": "Dirt", "uv": [384, 256] },
+    { "id": 6, "name": "Grass", "uv": [128, 256] }
   ],
   "wallTypes": [
     { "id": 0, "name": "none" },
-    { "id": 1, "name": "BoulderStone", "uv": [128, 128] },
-    { "id": 2, "name": "Concrete",     "uv": [384, 128] },
-    { "id": 3, "name": "Plaster",      "uv": [448, 192] }
+    { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
+    { "id": 2, "name": "Concrete", "uv": [384, 128] },
+    { "id": 3, "name": "Plaster", "uv": [448, 192] }
   ],
   "overlays": [
-    { "id": 1, "name": "dartTrap",    "uv": [320, 128] },
-    { "id": 2, "name": "trapGrid",    "uv": [256, 192] },
-    { "id": 3, "name": "floorGrid",   "uv": [192, 192] },
-    { "id": 4, "name": "dirtRust",    "uv": [384, 192] },
+    { "id": 1, "name": "dartTrap", "uv": [320, 128] },
+    { "id": 2, "name": "trapGrid", "uv": [256, 192] },
+    { "id": 3, "name": "floorGrid", "uv": [192, 192] },
+    { "id": 4, "name": "dirtRust", "uv": [384, 192] },
     { "id": 5, "name": "tileOverlay", "uv": [448, 256] },
-    { "id": 6, "name": "spikeTrap",   "uv": [320, 256] }
+    { "id": 6, "name": "spikeTrap", "uv": [320, 256] }
   ],
   "wallOverlays": [
-    { "id": 1, "name": "dartTrap",        "uv": [320, 128] },
+    { "id": 1, "name": "dartTrap", "uv": [320, 128] },
     { "id": 2, "name": "buttonUnpressed", "uv": [192, 256] },
-    { "id": 3, "name": "buttonPressed",   "uv": [256, 256] }
+    { "id": 3, "name": "buttonPressed", "uv": [256, 256] }
   ],
   "water": [
-    { "id": 1, "name": "waterTopLeft",    "uv": [0,  128] },
-    { "id": 2, "name": "waterTop",        "uv": [64, 128] },
-    { "id": 3, "name": "waterLeft",       "uv": [0,  192] },
-    { "id": 4, "name": "waterCenter",     "uv": [64, 192] },
-    { "id": 5, "name": "waterBottomLeft", "uv": [0,  256] },
-    { "id": 6, "name": "waterBottom",     "uv": [64, 256] }
+    { "id": 1, "name": "waterTopLeft", "uv": [0, 128] },
+    { "id": 2, "name": "waterTop", "uv": [64, 128] },
+    { "id": 3, "name": "waterLeft", "uv": [0, 192] },
+    { "id": 4, "name": "waterCenter", "uv": [64, 192] },
+    { "id": 5, "name": "waterBottomLeft", "uv": [0, 256] },
+    { "id": 6, "name": "waterBottom", "uv": [64, 256] }
   ],
   "sprites": [
-    { "id": 1, "name": "teaomatic",     "uv": [448, 320], "size": [64, 192] },
-    { "id": 2, "name": "machinePanelA", "uv": [448, 512]                    },
-    { "id": 3, "name": "machinePanelB", "uv": [448, 576]                    }
+    { "id": 1, "name": "teaomatic", "uv": [448, 320], "size": [64, 192] },
+    { "id": 2, "name": "machinePanelA", "uv": [448, 512] },
+    { "id": 3, "name": "machinePanelB", "uv": [448, 576] }
   ],
   "aoOverlays": [
-    { "id": 1,  "name": "aoEdgeTop",          "uv": [0,   512] },
-    { "id": 2,  "name": "aoEdgeRight",         "uv": [64,  512] },
-    { "id": 3,  "name": "aoEdgeBottom",        "uv": [128, 512] },
-    { "id": 4,  "name": "aoEdgeLeft",          "uv": [192, 512] },
-    { "id": 5,  "name": "aoCornerTopRight",    "uv": [0,   576] },
-    { "id": 6,  "name": "aoCornerBottomRight", "uv": [64,  576] },
-    { "id": 7,  "name": "aoCornerBottomLeft",  "uv": [128, 576] },
-    { "id": 8,  "name": "aoCornerTopLeft",     "uv": [192, 576] },
-    { "id": 9,  "name": "aoInnerTopRight",     "uv": [0,   640] },
-    { "id": 10, "name": "aoInnerBottomRight",  "uv": [64,  640] },
-    { "id": 11, "name": "aoInnerBottomLeft",   "uv": [128, 640] },
-    { "id": 12, "name": "aoInnerTopLeft",      "uv": [192, 640] }
+    { "id": 1, "name": "aoEdgeTop", "uv": [0, 512] },
+    { "id": 2, "name": "aoEdgeRight", "uv": [64, 512] },
+    { "id": 3, "name": "aoEdgeBottom", "uv": [128, 512] },
+    { "id": 4, "name": "aoEdgeLeft", "uv": [192, 512] },
+    { "id": 5, "name": "aoCornerTopRight", "uv": [0, 576] },
+    { "id": 6, "name": "aoCornerBottomRight", "uv": [64, 576] },
+    { "id": 7, "name": "aoCornerBottomLeft", "uv": [128, 576] },
+    { "id": 8, "name": "aoCornerTopLeft", "uv": [192, 576] },
+    { "id": 9, "name": "aoInnerTopRight", "uv": [0, 640] },
+    { "id": 10, "name": "aoInnerBottomRight", "uv": [64, 640] },
+    { "id": 11, "name": "aoInnerBottomLeft", "uv": [128, 640] },
+    { "id": 12, "name": "aoInnerTopLeft", "uv": [192, 640] }
   ]
 }

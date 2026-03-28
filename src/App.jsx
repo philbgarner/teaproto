@@ -5,8 +5,11 @@ import { generateBspDungeon } from "../mazetools/src/bsp";
 import {
   generateContent,
   generateHiddenPassages,
+  generateThemedRooms,
   makeContentRng,
 } from "../mazetools/src/content";
+import { buildAtlasIndex } from "../mazetools/src/atlas";
+import atlasJson from "../public/textures/atlas.json";
 import { buildTileAtlas } from "../mazetools/src/rendering/tileAtlas";
 import { PerspectiveDungeonView } from "../mazetools/src/rendering/PerspectiveDungeonView";
 import {
@@ -35,6 +38,8 @@ import { MinimapSidebar } from "./components/MinimapSidebar";
 import { DifficultyModal } from "./components/DifficultyModal";
 
 import "./App.css";
+
+const atlasIndex = buildAtlasIndex(atlasJson);
 
 // ---------------------------------------------------------------------------
 // Tile atlas
@@ -821,6 +826,29 @@ export default function App() {
     };
   }, [dungeon]);
 
+  // Assign floor types to every room and corridor by theme
+  useMemo(() => {
+    const floorData = dungeon.textures.floorType.image.data;
+    const themes = {};
+    for (const [roomId, room] of dungeon.rooms) {
+      let floorId;
+      if (roomId === dungeon.startRoomId) {
+        floorId = atlasIndex.floorTypes.idByName("Steel");
+      } else if (roomId === dungeon.endRoomId) {
+        floorId = atlasIndex.floorTypes.idByName("Flagstone");
+      } else if (room.type === "corridor") {
+        floorId = atlasIndex.floorTypes.idByName("Cobblestone");
+      } else {
+        floorId = atlasIndex.floorTypes.idByName("Cobblestone");
+      }
+      themes[roomId] = (x, y, ctx) => {
+        floorData[y * ctx.width + x] = floorId;
+      };
+    }
+    generateThemedRooms(dungeon, themes);
+    dungeon.textures.floorType.needsUpdate = true;
+  }, [dungeon]);
+
   // Stove placements via generateContent — 2 stoves in end room at distanceToWall === 1
   const stovePlacements = useMemo(() => {
     let count = 0;
@@ -853,105 +881,110 @@ export default function App() {
 
   const [maxDoors, setMaxDoors] = useState(3);
 
-  // Door placements — one door per corridor/room threshold, with walls on either side
-  const doorPlacements = useMemo(() => {
-    const W = dungeon.width;
-    const H = dungeon.height;
-    const solidArr = dungeon.textures.solid.image.data;
-    const regionArr = dungeon.textures.regionId.image.data;
+  // Door placements — disabled pending rework
+  // eslint-disable-next-line no-unused-vars
+  const doorPlacements = [];
+  // const doorPlacements = useMemo(() => {
+  //   return [];
+  //   const W = dungeon.width;
+  //   const H = dungeon.height;
+  //   const solidArr = dungeon.textures.solid.image.data;
+  //   const regionArr = dungeon.textures.regionId.image.data;
 
-    function isCorridor(x, z) {
-      if (x < 0 || z < 0 || x >= W || z >= H) return false;
-      return solidArr[z * W + x] === 0 && regionArr[z * W + x] === 0;
-    }
-    function isRoom(x, z) {
-      if (x < 0 || z < 0 || x >= W || z >= H) return false;
-      return solidArr[z * W + x] === 0 && regionArr[z * W + x] !== 0;
-    }
+  //   function isCorridor(x, z) {
+  //     if (x < 0 || z < 0 || x >= W || z >= H) return false;
+  //     return solidArr[z * W + x] === 0 && regionArr[z * W + x] === 0;
+  //   }
+  //   function isRoom(x, z) {
+  //     if (x < 0 || z < 0 || x >= W || z >= H) return false;
+  //     return solidArr[z * W + x] === 0 && regionArr[z * W + x] !== 0;
+  //   }
 
-    // Find all threshold cells: corridor cells directly adjacent to a room cell
-    const groups = new Map();
-    const DIRS4 = [
-      [0, -1],
-      [0, 1],
-      [-1, 0],
-      [1, 0],
-    ];
-    for (let z = 0; z < H; z++) {
-      for (let x = 0; x < W; x++) {
-        if (!isCorridor(x, z)) continue;
-        for (const [dx, dz] of DIRS4) {
-          if (isRoom(x + dx, z + dz)) {
-            // Group key: direction + the fixed coordinate (row or column index)
-            const key = `${dx}_${dz}_${dx === 0 ? z : x}`;
-            if (!groups.has(key)) groups.set(key, []);
-            groups.get(key).push({ x, z, dx, dz });
-            break;
-          }
-        }
-      }
-    }
+  //   // Find all threshold cells: corridor cells directly adjacent to a room cell
+  //   const groups = new Map();
+  //   const DIRS4 = [
+  //     [0, -1],
+  //     [0, 1],
+  //     [-1, 0],
+  //     [1, 0],
+  //   ];
+  //   for (let z = 0; z < H; z++) {
+  //     for (let x = 0; x < W; x++) {
+  //       if (!isCorridor(x, z)) continue;
+  //       for (const [dx, dz] of DIRS4) {
+  //         if (isRoom(x + dx, z + dz)) {
+  //           // Group key: direction + the fixed coordinate (row or column index)
+  //           const key = `${dx}_${dz}_${dx === 0 ? z : x}`;
+  //           if (!groups.has(key)) groups.set(key, []);
+  //           groups.get(key).push({ x, z, dx, dz });
+  //           break;
+  //         }
+  //       }
+  //     }
+  //   }
 
-    // Collect all candidate door positions without mutating solidArr yet
-    const candidates = [];
-    for (const cells of groups.values()) {
-      if (cells.length === 0) continue;
-      const { dx, dz } = cells[0];
-      cells.sort((a, b) => (dx === 0 ? a.x - b.x : a.z - b.z));
-      const midIdx = Math.floor(cells.length / 2);
-      const { x, z } = cells[midIdx];
-      const doorYaw = dx === 0 ? 0 : Math.PI / 2;
-      candidates.push({
-        cells,
-        midIdx,
-        placement: {
-          x,
-          z,
-          type: "door",
-          offsetX: dx === 0 ? -0.45 : 0,
-          offsetZ: dx !== 0 ? 0.45 : 0,
-          offsetY: CEILING_H / 2,
-          yaw: doorYaw,
-          meta: { blockDx: dx, blockDz: dz },
-        },
-      });
-    }
+  //   // Collect all candidate door positions without mutating solidArr yet
+  //   const candidates = [];
+  //   for (const cells of groups.values()) {
+  //     if (cells.length === 0) continue;
+  //     const { dx, dz } = cells[0];
+  //     cells.sort((a, b) => (dx === 0 ? a.x - b.x : a.z - b.z));
+  //     const midIdx = Math.floor(cells.length / 2);
+  //     const { x, z } = cells[midIdx];
+  //     const doorYaw = dx === 0 ? 0 : Math.PI / 2;
+  //     candidates.push({
+  //       cells,
+  //       midIdx,
+  //       placement: {
+  //         x,
+  //         z,
+  //         type: "door",
+  //         offsetX: dx === 0 ? -0.45 : 0,
+  //         offsetZ: dx !== 0 ? 0.45 : 0,
+  //         offsetY: CEILING_H / 2,
+  //         yaw: doorYaw,
+  //         meta: { blockDx: dx, blockDz: dz },
+  //       },
+  //     });
+  //   }
 
-    // Sort deterministically by position, then cap at maxDoors
-    candidates.sort(
-      (a, b) => a.placement.z - b.placement.z || a.placement.x - b.placement.x,
-    );
-    const selected = new Set(candidates.slice(0, maxDoors).map((_, i) => i));
+  //   // Sort deterministically by position, then cap at maxDoors
+  //   candidates.sort(
+  //     (a, b) => a.placement.z - b.placement.z || a.placement.x - b.placement.x,
+  //   );
+  //   const selected = new Set(candidates.slice(0, maxDoors).map((_, i) => i));
 
-    const placements = [];
-    candidates.forEach((c, i) => {
-      if (selected.has(i)) {
-        // Door centred on the corridor tile; pivot group placed at hinge edge.
-        // The door mesh is offset +0.45 along local X inside the group, so
-        // the group origin (hinge) must be shifted -0.45 in world space to
-        // keep the visual centre on the tile.  After a Y rotation of PI/2 the
-        // local X axis maps to world -Z, so the shift flips to +0.45 in Z.
-        c.cells.forEach((cell, j) => {
-          if (j !== c.midIdx) {
-            // Wall off non-door threshold cells to narrow the opening
-            solidArr[cell.z * W + cell.x] = 255;
-          }
-        });
-        placements.push(c.placement);
-      }
-      // else: leave corridor open with no door
-    });
+  //   const placements = [];
+  //   candidates.forEach((c, i) => {
+  //     if (selected.has(i)) {
+  //       // Door centred on the corridor tile; pivot group placed at hinge edge.
+  //       // The door mesh is offset +0.45 along local X inside the group, so
+  //       // the group origin (hinge) must be shifted -0.45 in world space to
+  //       // keep the visual centre on the tile.  After a Y rotation of PI/2 the
+  //       // local X axis maps to world -Z, so the shift flips to +0.45 in Z.
+  //       c.cells.forEach((cell, j) => {
+  //         if (j !== c.midIdx) {
+  //           // Wall off non-door threshold cells to narrow the opening
+  //           solidArr[cell.z * W + cell.x] = 255;
+  //         }
+  //       });
+  //       placements.push(c.placement);
+  //     }
+  //     // else: leave corridor open with no door
+  //   });
 
-    dungeon.textures.solid.needsUpdate = true;
-    return placements;
-  }, [dungeon, maxDoors]);
+  //   dungeon.textures.solid.needsUpdate = true;
+  //   return placements;
+  // }, [dungeon, maxDoors]);
 
   // Torchlight tint band colours
   const [tintColors, setTintColors] = useState(() => {
     try {
       const stored = localStorage.getItem("tintColors");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch {
+      // No empty block.
+    }
     return DEFAULT_TINT_COLORS;
   });
 
@@ -971,11 +1004,8 @@ export default function App() {
   );
   const objects = useMemo(() => {
     const halfH = (TILE_SIZE * 0.7) / 2;
-    return [
-      ...stovePlacements.map((s) => ({ ...s, offsetY: halfH })),
-      ...doorPlacements,
-    ];
-  }, [stovePlacements, doorPlacements]);
+    return [...stovePlacements.map((s) => ({ ...s, offsetY: halfH }))];
+  }, [stovePlacements]);
 
   // Passive mobs — one per non-end room (up to 3)
   const initialMobs = useMemo(() => {
@@ -1210,7 +1240,7 @@ export default function App() {
     }
     return Array.from(pairs).map((s) => s.split(",").map(Number));
   }, [
-    dungeon,
+    // dungeon,
     solidData,
     regionIdData,
     dungeonWidth,
@@ -1489,7 +1519,7 @@ export default function App() {
       }
       return spawned;
     },
-    [adventurerSpawnRooms],
+    [adventurerSpawnRooms, dungeonHeight, dungeonWidth],
   );
 
   // On each player step: cool tea, count down brewing, run game loop
