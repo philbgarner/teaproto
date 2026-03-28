@@ -9,7 +9,7 @@ import {
   makeContentRng,
 } from "../mazetools/src/content";
 import { buildAtlasIndex } from "../mazetools/src/atlas";
-import atlasJson from "../public/textures/atlas.json";
+import atlasJson from "./assets/atlas.json";
 import { buildTileAtlas } from "../mazetools/src/rendering/tileAtlas";
 import { PerspectiveDungeonView } from "../mazetools/src/rendering/PerspectiveDungeonView";
 import {
@@ -39,7 +39,9 @@ import { DifficultyModal } from "./components/DifficultyModal";
 
 import "./App.css";
 
+console.log("[App module] top-level eval start");
 const atlasIndex = buildAtlasIndex(atlasJson);
+console.log("[App module] atlasIndex built");
 
 // ---------------------------------------------------------------------------
 // Tile atlas
@@ -775,10 +777,12 @@ function makeRng(seed) {
   };
 }
 
+console.log("[App module] all top-level defs done");
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
 export default function App() {
+  console.log("[App] render start");
   const [dungeonSeed, setDungeonSeed] = useState(DUNGEON_SEED);
   const [dungeonWidth, setDungeonWidth] = useState(DUNGEON_W);
   const [dungeonHeight, setDungeonHeight] = useState(DUNGEON_H);
@@ -788,8 +792,9 @@ export default function App() {
   const [maxRoomSize, setMaxRoomSize] = useState(7);
 
   const dungeon = useMemo(
-    () =>
-      generateBspDungeon({
+    () => {
+      console.log("[App] useMemo: generateBspDungeon start");
+      const d = generateBspDungeon({
         width: dungeonWidth,
         height: dungeonHeight,
         seed: dungeonSeed,
@@ -798,7 +803,10 @@ export default function App() {
         minRoomSize,
         maxRoomSize,
         corridorWidth: 2,
-      }),
+      });
+      console.log("[App] useMemo: generateBspDungeon done");
+      return d;
+    },
     [
       dungeonSeed,
       dungeonWidth,
@@ -828,6 +836,7 @@ export default function App() {
 
   // Assign floor types to every room and corridor by theme
   useMemo(() => {
+    console.log("[App] useMemo: themed rooms start");
     const floorData = dungeon.textures.floorType.image.data;
     const themes = {};
     for (const [roomId, room] of dungeon.rooms) {
@@ -847,10 +856,12 @@ export default function App() {
     }
     generateThemedRooms(dungeon, themes);
     dungeon.textures.floorType.needsUpdate = true;
+    console.log("[App] useMemo: themed rooms done");
   }, [dungeon]);
 
   // Stove placements via generateContent — 2 stoves in end room at distanceToWall === 1
   const stovePlacements = useMemo(() => {
+    console.log("[App] useMemo: stovePlacements start");
     let count = 0;
     const { objects } = generateContent(dungeon, {
       seed: DUNGEON_SEED + 7,
@@ -876,6 +887,7 @@ export default function App() {
         count++;
       },
     });
+    console.log("[App] useMemo: stovePlacements done", objects.length);
     return objects;
   }, [dungeon]);
 
@@ -989,10 +1001,12 @@ export default function App() {
   });
 
   // Object registry and world placements
+  console.log("[App] render: makeStoveProto / doorTex / doorProto section");
   const stoveProto = useMemo(() => makeStoveProto(), []);
   const [doorTex, setDoorTex] = useState(null);
   useEffect(() => {
-    loadTileTexture(SRC_DOOR).then(setDoorTex);
+    console.log("[App] useEffect: loadTileTexture (door) start");
+    loadTileTexture(SRC_DOOR).then((t) => { console.log("[App] useEffect: loadTileTexture (door) done"); setDoorTex(t); });
   }, []);
   const doorProto = useMemo(() => makeDoorProto(doorTex), [doorTex]);
   const objectRegistry = useMemo(
@@ -1009,6 +1023,7 @@ export default function App() {
 
   // Passive mobs — one per non-end room (up to 3)
   const initialMobs = useMemo(() => {
+    console.log("[App] useMemo: initialMobs start");
     const mobs = [];
     let idx = 0;
     for (const [roomId, room] of dungeon.rooms) {
@@ -1079,6 +1094,7 @@ export default function App() {
   }, [dungeon, dungeonSeed]);
 
   const initialChests = useMemo(() => {
+    console.log("[App] useMemo: initialChests start");
     const rng = makeRng(dungeonSeed ^ 0x2aabcdef);
     const nonEndRooms = [...dungeon.rooms.values()].filter(
       (r) => r.id !== dungeon.endRoomId,
@@ -1117,9 +1133,11 @@ export default function App() {
   );
   const [texture, setTexture] = useState(null);
   useEffect(() => {
-    loadRepackedAtlasTexture([SRC_FLOOR, SRC_CEILING, SRC_WALL]).then(
-      setTexture,
-    );
+    console.log("[App] useEffect: loadRepackedAtlasTexture start");
+    loadRepackedAtlasTexture([SRC_FLOOR, SRC_CEILING, SRC_WALL]).then((t) => {
+      console.log("[App] useEffect: loadRepackedAtlasTexture done");
+      setTexture(t);
+    });
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -1195,6 +1213,7 @@ export default function App() {
   // Scan every cell and check right/down neighbors; a pair is added only once (a < b).
   // Pairs where a door sits at the threshold are excluded — doors block temperature flow.
   const regionAdjacency = useMemo(() => {
+    console.log("[App] useMemo: regionAdjacency start");
     // Build set of cell boundaries blocked by doors.
     // A door at (door.x, door.z) separates that cell from the adjacent room cell
     // in the direction stored in meta.blockDx / meta.blockDz.
@@ -1238,7 +1257,9 @@ export default function App() {
         }
       }
     }
-    return Array.from(pairs).map((s) => s.split(",").map(Number));
+    const result = Array.from(pairs).map((s) => s.split(",").map(Number));
+    console.log("[App] useMemo: regionAdjacency done, pairs:", result.length);
+    return result;
   }, [
     // dungeon,
     solidData,
@@ -1348,6 +1369,7 @@ export default function App() {
 
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
+    console.log("[App] useEffect: dungeon reset start");
     const freshSatiations = initialMobs.map(() => 40);
     setPlayerHands({
       left: {
@@ -1415,6 +1437,7 @@ export default function App() {
     showMsg(
       "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press I Key)",
     );
+    console.log("[App] useEffect: dungeon reset done");
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -1524,6 +1547,7 @@ export default function App() {
 
   // On each player step: cool tea, count down brewing, run game loop
   const onStep = useCallback(() => {
+    console.log("[onStep] start, gameState:", gameState);
     if (gameState !== "playing") return;
     // --- Tea cooling ---
     // Check if player is in a warm or cozy room (roomTemp > 127)
@@ -1590,6 +1614,7 @@ export default function App() {
     });
 
     // --- Game step processing (uses refs for synchronous cross-state reads) ---
+    console.log("[onStep] tea cooling done, starting turn processing");
     const newTurnCount = turnCountRef.current + 1;
     turnCountRef.current = newTurnCount;
 
@@ -1610,6 +1635,7 @@ export default function App() {
 
     // --- Wave spawning ---
     // The countdown to the next wave only ticks when all enemies are dead.
+    console.log("[onStep] wave spawning check, turn:", newTurnCount, "countdown:", waveCountdownRef.current);
     const allEnemiesDead = newAdventurers.every((a) => !a.alive);
     let newWaveCountdown = waveCountdownRef.current;
     if (allEnemiesDead) {
@@ -1700,6 +1726,7 @@ export default function App() {
     }
 
     // Phase 1 — compute intended moves (adventurers are transparent to each other)
+    console.log("[onStep] Phase 1: adventurer AI, count:", newAdventurers.filter(a => a.alive).length);
     const mobPlayerOccupied = new Set([
       ...newMobPositions.map((p) => `${p.x}_${p.z}`),
     ]);
@@ -2043,6 +2070,7 @@ export default function App() {
     });
 
     const anyInCombat = intendedMoves.some((m) => m.inCombat);
+    console.log("[onStep] Phase 1 done, anyInCombat:", anyInCombat);
 
     if (anyInCombat) {
       // Phase 2 — detect swap pairs
@@ -2139,6 +2167,7 @@ export default function App() {
     }
 
     // --- Conscious mob AI: move toward nearest adventurer in line of sight ---
+    console.log("[onStep] mob AI start");
     for (let i = 0; i < initialMobs.length; i++) {
       if (newMobSatiations[i] <= 0) continue; // unconscious
       const pos = newMobPositions[i];
@@ -2262,6 +2291,7 @@ export default function App() {
     }
 
     // --- Commit all ref + state updates ---
+    console.log("[onStep] committing state updates");
     adventurersRef.current = newAdventurers;
     currentWaveRef.current = newWave;
     playerXpRef.current = newPlayerXp;
@@ -2317,6 +2347,7 @@ export default function App() {
       return next;
     });
 
+    console.log("[onStep] done, turn:", newTurnCount);
     if (stepMessage) showMsg(stepMessage);
     for (const { entityId, text } of pendingSpeechBubbles) {
       showSpeechBubble(entityId, text, 6000);
@@ -2845,6 +2876,7 @@ export default function App() {
   const { minimapRef, minimapTooltip, setMinimapTooltip, onMinimapMouseMove } =
     useMinimapData(minimapMobs, dungeonWidth, dungeonHeight);
 
+  console.log("[App] render: returning JSX, texture:", !!texture, "doorTex:", !!doorTex);
   return (
     <>
       <div

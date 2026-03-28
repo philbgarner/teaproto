@@ -3,6 +3,7 @@ import { TitleScreen } from "./components/TitleScreen";
 import App from "./App.jsx";
 
 export function GameRoot() {
+  console.log("[GameRoot] render");
   // 'title' | 'transitioning' | 'game'
   const [phase, setPhase] = useState("title");
   const [titleOpacity, setTitleOpacity] = useState(1);
