@@ -42,10 +42,10 @@ import "./App.css";
 const TILE_PX = 64;
 const TILE_SIZE = 3;
 const CEILING_H = 3;
-const SRC_FLOOR = { x: 0, y: 0 };
-const SRC_CEILING = { x: 0, y: 64 };
+const SRC_FLOOR = { x: 192, y: 128 };
+const SRC_CEILING = { x: 192, y: 128 };
 const SRC_WALL = { x: 0, y: 128 };
-const SRC_DOOR = { x: 0, y: 192 };
+const SRC_DOOR = { x: 0, y: 64 };
 const DEFAULT_TINT_COLORS = ["#fffef9", "#efdbb3", "#e3c5cf", "#8e8bb6"];
 const TILE_FLOOR = 0;
 const TILE_CEILING = 1;
@@ -77,7 +77,7 @@ function loadTileTexture(src) {
       resolve(tex);
     };
     img.onerror = reject;
-    img.src = `${import.meta.env.BASE_URL}textures/tileset.png`;
+    img.src = `${import.meta.env.BASE_URL}textures/atlas.png`;
   });
 }
 

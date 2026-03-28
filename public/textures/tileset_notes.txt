@@ -1,0 +1,26 @@
+designed for a 64x64 grid, so it's easy to access everything. it's assumed you can flip and recolor as needed.
+
+The images are (from top to bottom):
+arches and a black section to put behind if you want to hide the next room
+nice stone wall and dressed stone columns
+a rough boulder wall (or cobblestone floor) and a flagstone floor
+the dot is an overlay for floor or wall tiles to create a single dart trap or similar.
+
+"concrete" or a solid, non-descript surface. intended for prototyping or unfinished parts of a dungeon. It also functions as slightly damaged, unlit metal surface.
+
+floor tile grid to give planks or pavers, overlay it on eg. the concrete tile.
+
+water! all the various parts for making a lake in your dungeon.
+3x3 trap grid, for spike traps
+steel floor tiles (or ceiling)
+dirt overlay, put it on the concrete and then the 3x3 tile overlay to create rusty metal tiles.
+fancy plaster ceiling or wall panel
+2 buttons, one pressed, one not, for use with the boulder wall.
+spike trap!
+dirt
+3x3 tile overlay
+grass
+the all important teaomatic machine
+some more related machine panels
+
+a bunch of ambient occlusion sprites to use as overlays. add AO for free :)

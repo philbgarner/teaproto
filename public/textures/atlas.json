@@ -1,0 +1,17 @@
+{
+  "tileSize": 64,
+  "floorTypes": [
+    { "id": 0, "name": "none" },
+    { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
+    { "id": 2, "name": "Flagstone", "uv": [256, 128] },
+    { "id": 3, "name": "Concrete", "uv": [384, 128] }
+  ],
+  "overlays": [],
+  "wallTypes": [
+    { "id": 0, "name": "none" },
+    { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
+    { "id": 2, "name": "Flagstone", "uv": [256, 128] },
+    { "id": 3, "name": "Concrete", "uv": [384, 128] }
+  ],
+  "wallOverlays": []
+}
