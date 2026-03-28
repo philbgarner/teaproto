@@ -10,7 +10,7 @@ import {
 } from "../mazetools/src/content";
 import { buildAtlasIndex } from "../mazetools/src/atlas";
 import atlasJson from "./assets/atlas.json";
-import { buildTileAtlas } from "../mazetools/src/rendering/tileAtlas";
+import { buildTileAtlas, uvToTileId } from "../mazetools/src/rendering/tileAtlas";
 import { PerspectiveDungeonView } from "../mazetools/src/rendering/PerspectiveDungeonView";
 import {
   buildPassageMask,
@@ -47,16 +47,32 @@ console.log("[App module] atlasIndex built");
 // Tile atlas
 // ---------------------------------------------------------------------------
 const TILE_PX = 64;
+const ATLAS_SHEET_W = 512;
+const ATLAS_SHEET_H = 1024;
 const TILE_SIZE = 3;
 const CEILING_H = 3;
-const SRC_FLOOR = { x: 192, y: 128 };
-const SRC_CEILING = { x: 192, y: 128 };
-const SRC_WALL = { x: 0, y: 128 };
 const SRC_DOOR = { x: 0, y: 64 };
 const DEFAULT_TINT_COLORS = ["#fffef9", "#efdbb3", "#e3c5cf", "#8e8bb6"];
-const TILE_FLOOR = 0;
-const TILE_CEILING = 1;
-const TILE_WALL = 2;
+
+// Default tile IDs derived from atlas.json entries (row-major in 512×1024 sheet)
+function _atlasUvToId(uv) {
+  return uvToTileId(uv[0], uv[1], TILE_PX, ATLAS_SHEET_W);
+}
+const _defaultFloorEntry = atlasIndex.floorTypes.byName("Cobblestone");
+const _defaultWallEntry = atlasIndex.wallTypes.byName("Cobblestone");
+const TILE_FLOOR = _defaultFloorEntry && "uv" in _defaultFloorEntry
+  ? _atlasUvToId(_defaultFloorEntry.uv) : 0;
+const TILE_CEILING = TILE_FLOOR;
+const TILE_WALL = _defaultWallEntry && "uv" in _defaultWallEntry
+  ? _atlasUvToId(_defaultWallEntry.uv) : 0;
+
+// Build maps: atlas type ID (1-based) → row-major tile ID in the full atlas sheet
+const FLOOR_TILE_MAP = atlasIndex.data.floorTypes.map((ft) =>
+  "uv" in ft ? _atlasUvToId(ft.uv) : TILE_FLOOR,
+);
+const WALL_TILE_MAP = atlasIndex.data.wallTypes.map((wt) =>
+  "uv" in wt ? _atlasUvToId(wt.uv) : TILE_WALL,
+);
 
 function loadTileTexture(src) {
   return new Promise((resolve, reject) => {
@@ -66,17 +82,7 @@ function loadTileTexture(src) {
       canvas.width = TILE_PX;
       canvas.height = TILE_PX;
       const ctx = canvas.getContext("2d");
-      ctx.drawImage(
-        img,
-        src.x,
-        src.y,
-        TILE_PX,
-        TILE_PX,
-        0,
-        0,
-        TILE_PX,
-        TILE_PX,
-      );
+      ctx.drawImage(img, src.x, src.y, TILE_PX, TILE_PX, 0, 0, TILE_PX, TILE_PX);
       const tex = new THREE.CanvasTexture(canvas);
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
@@ -88,35 +94,19 @@ function loadTileTexture(src) {
   });
 }
 
-function loadRepackedAtlasTexture(sources) {
+function loadAtlasTexture() {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = TILE_PX * sources.length;
-      canvas.height = TILE_PX;
-      const ctx = canvas.getContext("2d");
-      sources.forEach(({ x, y }, i) => {
-        ctx.drawImage(
-          img,
-          x,
-          y,
-          TILE_PX,
-          TILE_PX,
-          i * TILE_PX,
-          0,
-          TILE_PX,
-          TILE_PX,
-        );
-      });
-      const tex = new THREE.CanvasTexture(canvas);
+      const tex = new THREE.Texture(img);
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
       tex.generateMipmaps = false;
+      tex.needsUpdate = true;
       resolve(tex);
     };
     img.onerror = reject;
-    img.src = `${import.meta.env.BASE_URL}textures/tileset.png`;
+    img.src = `${import.meta.env.BASE_URL}textures/atlas.png`;
   });
 }
 
@@ -819,6 +809,8 @@ export default function App() {
   );
 
   const solidData = useMemo(() => dungeon.textures.solid.image.data, [dungeon]);
+  const floorData = useMemo(() => dungeon.textures.floorType.image.data, [dungeon]);
+  const wallData = useMemo(() => dungeon.textures.wallType.image.data, [dungeon]);
   const temperatureData = useMemo(
     () => dungeon.textures.temperature.image.data,
     [dungeon],
@@ -1128,14 +1120,14 @@ export default function App() {
 
   // Tile atlas + texture
   const atlas = useMemo(
-    () => buildTileAtlas(TILE_PX * 3, TILE_PX, TILE_PX, TILE_PX),
+    () => buildTileAtlas(ATLAS_SHEET_W, ATLAS_SHEET_H, TILE_PX, TILE_PX),
     [],
   );
   const [texture, setTexture] = useState(null);
   useEffect(() => {
-    console.log("[App] useEffect: loadRepackedAtlasTexture start");
-    loadRepackedAtlasTexture([SRC_FLOOR, SRC_CEILING, SRC_WALL]).then((t) => {
-      console.log("[App] useEffect: loadRepackedAtlasTexture done");
+    console.log("[App] useEffect: loadAtlasTexture start");
+    loadAtlasTexture().then((t) => {
+      console.log("[App] useEffect: loadAtlasTexture done");
       setTexture(t);
     });
   }, []);
@@ -2930,6 +2922,10 @@ export default function App() {
                 passageMask={passageMask ?? undefined}
                 speechBubbles={activeSpeechBubbles}
                 tintColors={tintColors}
+                floorData={floorData}
+                wallData={wallData}
+                floorTileMap={FLOOR_TILE_MAP}
+                wallTileMap={WALL_TILE_MAP}
                 style={{ width: "100%", height: "100%" }}
               />
             )}
