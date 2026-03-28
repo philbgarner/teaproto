@@ -1,11 +1,11 @@
 {
   "tileSize": 64,
   "architecture": [
-    { "id": 1, "name": "archTopLeft", "uv": [0, 0] },
-    { "id": 2, "name": "archTopRight", "uv": [64, 0] },
+    { "id": 1, "name": "archVoid", "uv": [0, 0] },
+    { "id": 2, "name": "archCobble", "uv": [64, 0] },
     { "id": 3, "name": "archVoid", "uv": [128, 0] },
     { "id": 4, "name": "archDoor", "uv": [256, 0] },
-    { "id": 5, "name": "stoneWall", "uv": [0, 64] },
+    { "id": 5, "name": "archBrick", "uv": [0, 64] },
     { "id": 6, "name": "stoneColumn", "uv": [64, 64] },
     { "id": 7, "name": "stoneColumnBase", "uv": [128, 64] }
   ],
@@ -21,6 +21,7 @@
   "wallTypes": [
     { "id": 0, "name": "none" },
     { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
+    { "id": 1, "name": "Brick", "uv": [0, 128] },
     { "id": 2, "name": "Concrete", "uv": [384, 128] },
     { "id": 3, "name": "Plaster", "uv": [448, 192] }
   ],
@@ -60,7 +61,7 @@
     { "id": 6, "name": "waterBottom", "uv": [64, 256] }
   ],
   "sprites": [
-    { "id": 1, "name": "teaomatic", "uv": [448, 320], "size": [64, 192] },
+    { "id": 1, "name": "teaomatic", "uv": [448, 320], "size": [64, 64] },
     { "id": 2, "name": "machinePanelA", "uv": [448, 512] },
     { "id": 3, "name": "machinePanelB", "uv": [448, 576] }
   ],

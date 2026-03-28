@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { aStar8 } from "../mazetools/src/astar";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { generateBspDungeon } from "../mazetools/src/bsp";
 import {
   generateContent,
@@ -10,7 +11,10 @@ import {
 } from "../mazetools/src/content";
 import { buildAtlasIndex } from "../mazetools/src/atlas";
 import atlasJson from "./assets/atlas.json";
-import { buildTileAtlas, uvToTileId } from "../mazetools/src/rendering/tileAtlas";
+import {
+  buildTileAtlas,
+  uvToTileId,
+} from "../mazetools/src/rendering/tileAtlas";
 import { PerspectiveDungeonView } from "../mazetools/src/rendering/PerspectiveDungeonView";
 import {
   buildPassageMask,
@@ -52,7 +56,6 @@ const ATLAS_SHEET_W = 512;
 const ATLAS_SHEET_H = 1024;
 const TILE_SIZE = 3;
 const CEILING_H = 3;
-const SRC_DOOR = { x: 0, y: 64 };
 const DEFAULT_TINT_COLORS = ["#fffef9", "#efdbb3", "#e3c5cf", "#8e8bb6"];
 
 // Default tile IDs derived from atlas.json entries (row-major in 512×1024 sheet)
@@ -62,12 +65,18 @@ function _atlasUvToId(uv) {
 const _defaultFloorEntry = atlasIndex.floorTypes.byName("Cobblestone");
 const _defaultWallEntry = atlasIndex.wallTypes.byName("Cobblestone");
 const _defaultCeilingEntry = atlasIndex.ceilingTypes.byName("Cobblestone");
-const TILE_FLOOR = _defaultFloorEntry && "uv" in _defaultFloorEntry
-  ? _atlasUvToId(_defaultFloorEntry.uv) : 0;
-const TILE_CEILING = _defaultCeilingEntry && "uv" in _defaultCeilingEntry
-  ? _atlasUvToId(_defaultCeilingEntry.uv) : TILE_FLOOR;
-const TILE_WALL = _defaultWallEntry && "uv" in _defaultWallEntry
-  ? _atlasUvToId(_defaultWallEntry.uv) : 0;
+const TILE_FLOOR =
+  _defaultFloorEntry && "uv" in _defaultFloorEntry
+    ? _atlasUvToId(_defaultFloorEntry.uv)
+    : 0;
+const TILE_CEILING =
+  _defaultCeilingEntry && "uv" in _defaultCeilingEntry
+    ? _atlasUvToId(_defaultCeilingEntry.uv)
+    : TILE_FLOOR;
+const TILE_WALL =
+  _defaultWallEntry && "uv" in _defaultWallEntry
+    ? _atlasUvToId(_defaultWallEntry.uv)
+    : 0;
 
 // Build maps: atlas type ID (1-based) → row-major tile ID in the full atlas sheet
 const FLOOR_TILE_MAP = atlasIndex.data.floorTypes.map((ft) =>
@@ -79,26 +88,9 @@ const WALL_TILE_MAP = atlasIndex.data.wallTypes.map((wt) =>
 const CEILING_TILE_MAP = atlasIndex.data.ceilingTypes.map((ct) =>
   "uv" in ct ? _atlasUvToId(ct.uv) : TILE_CEILING,
 );
-
-function loadTileTexture(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = TILE_PX;
-      canvas.height = TILE_PX;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, src.x, src.y, TILE_PX, TILE_PX, 0, 0, TILE_PX, TILE_PX);
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.magFilter = THREE.NearestFilter;
-      tex.minFilter = THREE.NearestFilter;
-      tex.generateMipmaps = false;
-      resolve(tex);
-    };
-    img.onerror = reject;
-    img.src = `${import.meta.env.BASE_URL}textures/atlas.png`;
-  });
-}
+const ARCH_COBBLE_UV = atlasIndex.architecture.byName("archCobble")?.uv ?? [64, 0];
+const ARCH_BRICK_UV = atlasIndex.architecture.byName("archBrick")?.uv ?? [0, 64];
+const COBBLESTONE_WALL_ID = atlasIndex.wallTypes.idByName("Cobblestone");
 
 function loadAtlasTexture() {
   return new Promise((resolve, reject) => {
@@ -118,31 +110,6 @@ function loadAtlasTexture() {
 
 // ---------------------------------------------------------------------------
 // Stove 3-D object (1x1 cube textured with 'S')
-// ---------------------------------------------------------------------------
-function makeStoveProto() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 64;
-  canvas.height = 64;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#3a3a3a";
-  ctx.fillRect(0, 0, 64, 64);
-  ctx.strokeStyle = "#777";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(3, 3, 58, 58);
-  ctx.fillStyle = "#ff9900";
-  ctx.font = "bold 12px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("Stove", 32, 32);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.magFilter = THREE.NearestFilter;
-  tex.minFilter = THREE.NearestFilter;
-  tex.generateMipmaps = false;
-  const size = TILE_SIZE * 0.7;
-  const geo = new THREE.BoxGeometry(size, size, size);
-  const mat = new THREE.MeshStandardMaterial({ map: tex });
-  return new THREE.Mesh(geo, mat);
-}
 
 // ---------------------------------------------------------------------------
 // Door 3-D object — thin slab spanning full cell width and ceiling height
@@ -219,56 +186,23 @@ void main() {
 }
 `;
 
-function makeDoorProto(tex) {
-  if (!tex) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 64;
-    canvas.height = 128;
-    const ctx = canvas.getContext("2d");
-    // Wood background
-    ctx.fillStyle = "#6b4226";
-    ctx.fillRect(0, 0, 64, 128);
-    // Wood grain
-    ctx.strokeStyle = "#5a3520";
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 8; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * 9, 0);
-      ctx.lineTo(i * 9 + 3, 128);
-      ctx.stroke();
-    }
-    // Outer frame
-    ctx.strokeStyle = "#3d2412";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(2, 2, 60, 124);
-    // Upper panel
-    ctx.strokeStyle = "#3d2412";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(8, 10, 48, 46);
-    // Lower panel
-    ctx.strokeRect(8, 66, 48, 54);
-    // Door handle
-    ctx.strokeStyle = "#050505";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(32, 56, 4, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = "#333";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    tex = new THREE.CanvasTexture(canvas);
-    tex.magFilter = THREE.NearestFilter;
-    tex.minFilter = THREE.NearestFilter;
-    tex.generateMipmaps = false;
-  }
-  const geo = new THREE.BoxGeometry(
-    TILE_SIZE * 0.9,
-    CEILING_H * 0.98,
-    TILE_SIZE * 0.04,
+function makeDoorProto(atlasTex, archUvX, archUvY) {
+  const geo = new THREE.PlaneGeometry(TILE_SIZE * 0.9, CEILING_H * 0.98);
+  const uMin = archUvX / ATLAS_SHEET_W;
+  const uMax = (archUvX + TILE_PX) / ATLAS_SHEET_W;
+  const vMin = 1 - (archUvY + TILE_PX) / ATLAS_SHEET_H;
+  const vMax = 1 - archUvY / ATLAS_SHEET_H;
+  // PlaneGeometry vertex order: TL, TR, BL, BR
+  geo.setAttribute(
+    "uv",
+    new THREE.BufferAttribute(
+      new Float32Array([uMin, vMax, uMax, vMax, uMin, vMin, uMax, vMin]),
+      2,
+    ),
   );
   const mat = new THREE.ShaderMaterial({
     uniforms: {
-      uMap: { value: tex },
+      uMap: { value: atlasTex },
       uFogColor: { value: new THREE.Color(0, 0, 0) },
       uFogNear: { value: 4 },
       uFogFar: { value: 28 },
@@ -282,12 +216,7 @@ function makeDoorProto(tex) {
     fragmentShader: DOOR_FRAG,
     side: THREE.DoubleSide,
   });
-  const mesh = new THREE.Mesh(geo, mat);
-  // Offset mesh so hinge edge sits at group origin (group = pivot point)
-  mesh.position.set(TILE_SIZE * 0.45, 0, 0);
-  const group = new THREE.Group();
-  group.add(mesh);
-  return group;
+  return new THREE.Mesh(geo, mat);
 }
 
 // ---------------------------------------------------------------------------
@@ -787,37 +716,43 @@ export default function App() {
   const [minRoomSize, setMinRoomSize] = useState(3);
   const [maxRoomSize, setMaxRoomSize] = useState(7);
 
-  const dungeon = useMemo(
-    () => {
-      console.log("[App] useMemo: generateBspDungeon start");
-      const d = generateBspDungeon({
-        width: dungeonWidth,
-        height: dungeonHeight,
-        seed: dungeonSeed,
-        minLeafSize,
-        maxLeafSize,
-        minRoomSize,
-        maxRoomSize,
-        corridorWidth: 2,
-      });
-      console.log("[App] useMemo: generateBspDungeon done");
-      return d;
-    },
-    [
-      dungeonSeed,
-      dungeonWidth,
-      dungeonHeight,
+  const dungeon = useMemo(() => {
+    console.log("[App] useMemo: generateBspDungeon start");
+    const d = generateBspDungeon({
+      width: dungeonWidth,
+      height: dungeonHeight,
+      seed: dungeonSeed,
       minLeafSize,
       maxLeafSize,
       minRoomSize,
       maxRoomSize,
-    ],
-  );
+      corridorWidth: 2,
+    });
+    console.log("[App] useMemo: generateBspDungeon done");
+    return d;
+  }, [
+    dungeonSeed,
+    dungeonWidth,
+    dungeonHeight,
+    minLeafSize,
+    maxLeafSize,
+    minRoomSize,
+    maxRoomSize,
+  ]);
 
   const solidData = useMemo(() => dungeon.textures.solid.image.data, [dungeon]);
-  const floorData = useMemo(() => dungeon.textures.floorType.image.data, [dungeon]);
-  const wallData = useMemo(() => dungeon.textures.wallType.image.data, [dungeon]);
-  const ceilingData = useMemo(() => dungeon.textures.ceilingType.image.data, [dungeon]);
+  const floorData = useMemo(
+    () => dungeon.textures.floorType.image.data,
+    [dungeon],
+  );
+  const wallData = useMemo(
+    () => dungeon.textures.wallType.image.data,
+    [dungeon],
+  );
+  const ceilingData = useMemo(
+    () => dungeon.textures.ceilingType.image.data,
+    [dungeon],
+  );
   const temperatureData = useMemo(
     () => dungeon.textures.temperature.image.data,
     [dungeon],
@@ -843,6 +778,7 @@ export default function App() {
     const rng = makeRng(dungeon.seed);
     const themes = {};
     for (const [roomId, room] of dungeon.rooms) {
+      console.log("room", room);
       let floorId, wallId, ceilingId;
       if (roomId === dungeon.startRoomId) {
         floorId = atlasIndex.floorTypes.idByName("Steel");
@@ -852,11 +788,13 @@ export default function App() {
         floorId = atlasIndex.floorTypes.idByName("Flagstone");
         wallId = atlasIndex.wallTypes.idByName("Plaster");
         ceilingId = atlasIndex.ceilingTypes.idByName("Flagstone");
-      } else if (room.type === "corridor") {
-        floorId = atlasIndex.floorTypes.idByName("Cobblestone");
-        wallId = atlasIndex.wallTypes.idByName("Cobblestone");
-        ceilingId = atlasIndex.ceilingTypes.idByName("Cobblestone");
-      } else {
+      }
+      // else if (room.type === "corridor") {
+      //   floorId = atlasIndex.floorTypes.idByName("Cobblestone");
+      //   wallId = atlasIndex.wallTypes.idByName("Cobblestone");
+      //   ceilingId = atlasIndex.ceilingTypes.idByName("Cobblestone");
+      // }
+      else {
         const key = THEME_KEYS[Math.floor(rng() * THEME_KEYS.length)];
         const theme = THEMES[key];
         floorId = atlasIndex.floorTypes.idByName(theme.floorType);
@@ -915,100 +853,113 @@ export default function App() {
   const [maxDoors, setMaxDoors] = useState(3);
 
   // Door placements — disabled pending rework
-  // eslint-disable-next-line no-unused-vars
-  const doorPlacements = [];
-  // const doorPlacements = useMemo(() => {
-  //   return [];
-  //   const W = dungeon.width;
-  //   const H = dungeon.height;
-  //   const solidArr = dungeon.textures.solid.image.data;
-  //   const regionArr = dungeon.textures.regionId.image.data;
+  const doorPlacements = useMemo(() => {
+    const W = dungeon.width;
+    const H = dungeon.height;
+    const solidArr = dungeon.textures.solid.image.data;
+    const regionArr = dungeon.textures.regionId.image.data;
+    const wallDataArr = dungeon.textures.wallType.image.data;
 
-  //   function isCorridor(x, z) {
-  //     if (x < 0 || z < 0 || x >= W || z >= H) return false;
-  //     return solidArr[z * W + x] === 0 && regionArr[z * W + x] === 0;
-  //   }
-  //   function isRoom(x, z) {
-  //     if (x < 0 || z < 0 || x >= W || z >= H) return false;
-  //     return solidArr[z * W + x] === 0 && regionArr[z * W + x] !== 0;
-  //   }
+    function isCorridor(x, z) {
+      if (x < 0 || z < 0 || x >= W || z >= H) return false;
+      return solidArr[z * W + x] === 0 && regionArr[z * W + x] === 0;
+    }
+    function isRoom(x, z) {
+      if (x < 0 || z < 0 || x >= W || z >= H) return false;
+      return solidArr[z * W + x] === 0 && regionArr[z * W + x] !== 0;
+    }
 
-  //   // Find all threshold cells: corridor cells directly adjacent to a room cell
-  //   const groups = new Map();
-  //   const DIRS4 = [
-  //     [0, -1],
-  //     [0, 1],
-  //     [-1, 0],
-  //     [1, 0],
-  //   ];
-  //   for (let z = 0; z < H; z++) {
-  //     for (let x = 0; x < W; x++) {
-  //       if (!isCorridor(x, z)) continue;
-  //       for (const [dx, dz] of DIRS4) {
-  //         if (isRoom(x + dx, z + dz)) {
-  //           // Group key: direction + the fixed coordinate (row or column index)
-  //           const key = `${dx}_${dz}_${dx === 0 ? z : x}`;
-  //           if (!groups.has(key)) groups.set(key, []);
-  //           groups.get(key).push({ x, z, dx, dz });
-  //           break;
-  //         }
-  //       }
-  //     }
-  //   }
+    // Find all threshold cells: corridor cells directly adjacent to a room cell
+    const groups = new Map();
+    const DIRS4 = [
+      [0, -1],
+      [0, 1],
+      [-1, 0],
+      [1, 0],
+    ];
+    for (let z = 0; z < H; z++) {
+      for (let x = 0; x < W; x++) {
+        if (!isCorridor(x, z)) continue;
+        for (const [dx, dz] of DIRS4) {
+          if (isRoom(x + dx, z + dz)) {
+            // Group key: direction + the fixed coordinate (row or column index)
+            const key = `${dx}_${dz}_${dx === 0 ? z : x}`;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push({ x, z, dx, dz });
+            break;
+          }
+        }
+      }
+    }
 
-  //   // Collect all candidate door positions without mutating solidArr yet
-  //   const candidates = [];
-  //   for (const cells of groups.values()) {
-  //     if (cells.length === 0) continue;
-  //     const { dx, dz } = cells[0];
-  //     cells.sort((a, b) => (dx === 0 ? a.x - b.x : a.z - b.z));
-  //     const midIdx = Math.floor(cells.length / 2);
-  //     const { x, z } = cells[midIdx];
-  //     const doorYaw = dx === 0 ? 0 : Math.PI / 2;
-  //     candidates.push({
-  //       cells,
-  //       midIdx,
-  //       placement: {
-  //         x,
-  //         z,
-  //         type: "door",
-  //         offsetX: dx === 0 ? -0.45 : 0,
-  //         offsetZ: dx !== 0 ? 0.45 : 0,
-  //         offsetY: CEILING_H / 2,
-  //         yaw: doorYaw,
-  //         meta: { blockDx: dx, blockDz: dz },
-  //       },
-  //     });
-  //   }
+    // Collect all candidate door positions without mutating solidArr yet
+    const candidates = [];
+    for (const cells of groups.values()) {
+      if (cells.length === 0) continue;
+      const { dx, dz } = cells[0];
+      cells.sort((a, b) => (dx === 0 ? a.x - b.x : a.z - b.z));
+      const midIdx = Math.floor(cells.length / 2);
+      const { x, z } = cells[midIdx];
+      const doorYaw = dx === 0 ? 0 : Math.PI / 2;
 
-  //   // Sort deterministically by position, then cap at maxDoors
-  //   candidates.sort(
-  //     (a, b) => a.placement.z - b.placement.z || a.placement.x - b.placement.x,
-  //   );
-  //   const selected = new Set(candidates.slice(0, maxDoors).map((_, i) => i));
+      // Sample the adjacent room's wall type from a perpendicular solid cell.
+      // Perpendicular to direction (dx, dz) is (-dz, dx).
+      const rx = x + dx;
+      const rz = z + dz;
+      let roomWallId = 0;
+      for (const [px, pz] of [[rx - dz, rz + dx], [rx + dz, rz - dx]]) {
+        if (px >= 0 && px < W && pz >= 0 && pz < H) {
+          const pi = pz * W + px;
+          if (solidArr[pi] !== 0 && wallDataArr[pi] !== 0) {
+            roomWallId = wallDataArr[pi];
+            break;
+          }
+        }
+      }
+      const archType = roomWallId === COBBLESTONE_WALL_ID ? "cobble" : "brick";
 
-  //   const placements = [];
-  //   candidates.forEach((c, i) => {
-  //     if (selected.has(i)) {
-  //       // Door centred on the corridor tile; pivot group placed at hinge edge.
-  //       // The door mesh is offset +0.45 along local X inside the group, so
-  //       // the group origin (hinge) must be shifted -0.45 in world space to
-  //       // keep the visual centre on the tile.  After a Y rotation of PI/2 the
-  //       // local X axis maps to world -Z, so the shift flips to +0.45 in Z.
-  //       c.cells.forEach((cell, j) => {
-  //         if (j !== c.midIdx) {
-  //           // Wall off non-door threshold cells to narrow the opening
-  //           solidArr[cell.z * W + cell.x] = 255;
-  //         }
-  //       });
-  //       placements.push(c.placement);
-  //     }
-  //     // else: leave corridor open with no door
-  //   });
+      candidates.push({
+        cells,
+        midIdx,
+        roomWallId: roomWallId || COBBLESTONE_WALL_ID,
+        placement: {
+          x,
+          z,
+          type: `door_${archType}`,
+          offsetX: 0,
+          offsetZ: 0,
+          offsetY: CEILING_H / 2,
+          yaw: doorYaw,
+          meta: { blockDx: dx, blockDz: dz },
+        },
+      });
+    }
 
-  //   dungeon.textures.solid.needsUpdate = true;
-  //   return placements;
-  // }, [dungeon, maxDoors]);
+    // Sort deterministically by position, then cap at maxDoors
+    candidates.sort(
+      (a, b) => a.placement.z - b.placement.z || a.placement.x - b.placement.x,
+    );
+    const selected = new Set(candidates.slice(0, maxDoors).map((_, i) => i));
+
+    const placements = [];
+    candidates.forEach((c, i) => {
+      if (selected.has(i)) {
+        c.cells.forEach((cell, j) => {
+          if (j !== c.midIdx) {
+            // Wall off non-door threshold cells; use the room's wall type
+            solidArr[cell.z * W + cell.x] = 255;
+            wallDataArr[cell.z * W + cell.x] = c.roomWallId;
+          }
+        });
+        placements.push(c.placement);
+      }
+      // else: leave corridor open with no door
+    });
+
+    dungeon.textures.solid.needsUpdate = true;
+    dungeon.textures.wallType.needsUpdate = true;
+    return placements;
+  }, [dungeon, maxDoors]);
 
   // Torchlight tint band colours
   const [tintColors, setTintColors] = useState(() => {
@@ -1022,25 +973,12 @@ export default function App() {
   });
 
   // Object registry and world placements
-  console.log("[App] render: makeStoveProto / doorTex / doorProto section");
-  const stoveProto = useMemo(() => makeStoveProto(), []);
-  const [doorTex, setDoorTex] = useState(null);
-  useEffect(() => {
-    console.log("[App] useEffect: loadTileTexture (door) start");
-    loadTileTexture(SRC_DOOR).then((t) => { console.log("[App] useEffect: loadTileTexture (door) done"); setDoorTex(t); });
-  }, []);
-  const doorProto = useMemo(() => makeDoorProto(doorTex), [doorTex]);
-  const objectRegistry = useMemo(
-    () => ({
-      stove: () => stoveProto.clone(true),
-      door: () => doorProto.clone(true),
-    }),
-    [stoveProto, doorProto],
-  );
   const objects = useMemo(() => {
-    const halfH = (TILE_SIZE * 0.7) / 2;
-    return [...stovePlacements.map((s) => ({ ...s, offsetY: halfH }))];
-  }, [stovePlacements]);
+    return [
+      ...stovePlacements.map((s) => ({ ...s, offsetY: 0, scale: 0.75 })),
+      ...doorPlacements,
+    ];
+  }, [stovePlacements, doorPlacements]);
 
   // Passive mobs — one per non-end room (up to 3)
   const initialMobs = useMemo(() => {
@@ -1160,6 +1098,59 @@ export default function App() {
       setTexture(t);
     });
   }, []);
+  const [stoveProto, setStoveProto] = useState(null);
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    loader.load(
+      `${import.meta.env.BASE_URL}textures/teaomatic.glb`,
+      (gltf) => {
+        gltf.scene.traverse((child) => {
+          if (!child.isMesh) return;
+          const map = child.material?.map ?? null;
+          child.material = new THREE.ShaderMaterial({
+            uniforms: {
+              uMap:      { value: map },
+              uFogColor: { value: new THREE.Color(0, 0, 0) },
+              uFogNear:  { value: 4 },
+              uFogFar:   { value: 28 },
+              uTime:     { value: 0 },
+              uTint0:    { value: new THREE.Color(1.0, 0.9, 0.68) },
+              uTint1:    { value: new THREE.Color(1.0, 0.94, 0.76) },
+              uTint2:    { value: new THREE.Color(0.6, 0.55, 0.8) },
+              uTint3:    { value: new THREE.Color(0.3, 0.25, 0.6) },
+            },
+            vertexShader: DOOR_VERT,
+            fragmentShader: DOOR_FRAG,
+            side: THREE.FrontSide,
+          });
+        });
+        setStoveProto(gltf.scene);
+      },
+      undefined,
+      (err) => console.error("Failed to load stove.glb", err),
+    );
+  }, []);
+  const doorCobbleProto = useMemo(
+    () =>
+      texture &&
+      makeDoorProto(texture, ARCH_COBBLE_UV[0], ARCH_COBBLE_UV[1]),
+    [texture],
+  );
+  const doorBrickProto = useMemo(
+    () =>
+      texture && makeDoorProto(texture, ARCH_BRICK_UV[0], ARCH_BRICK_UV[1]),
+    [texture],
+  );
+  const objectRegistry = useMemo(
+    () => ({
+      ...(stoveProto && { stove: () => stoveProto.clone(true) }),
+      ...(doorCobbleProto && {
+        door_cobble: () => doorCobbleProto.clone(true),
+      }),
+      ...(doorBrickProto && { door_brick: () => doorBrickProto.clone(true) }),
+    }),
+    [stoveProto, doorCobbleProto, doorBrickProto],
+  );
 
   // ---------------------------------------------------------------------------
   // Game state
@@ -1656,7 +1647,12 @@ export default function App() {
 
     // --- Wave spawning ---
     // The countdown to the next wave only ticks when all enemies are dead.
-    console.log("[onStep] wave spawning check, turn:", newTurnCount, "countdown:", waveCountdownRef.current);
+    console.log(
+      "[onStep] wave spawning check, turn:",
+      newTurnCount,
+      "countdown:",
+      waveCountdownRef.current,
+    );
     const allEnemiesDead = newAdventurers.every((a) => !a.alive);
     let newWaveCountdown = waveCountdownRef.current;
     if (allEnemiesDead) {
@@ -1721,7 +1717,10 @@ export default function App() {
     ]);
     const closedDoorCells = new Set(
       doorPlacements
-        .filter((d) => d.type === "door" && !stepOccupied.has(`${d.x}_${d.z}`))
+        .filter(
+          (d) =>
+            d.type.startsWith("door") && !stepOccupied.has(`${d.x}_${d.z}`),
+        )
         .map((d) => `${d.x}_${d.z}`),
     );
     function isWalkableForLos(x, z) {
@@ -1747,7 +1746,10 @@ export default function App() {
     }
 
     // Phase 1 — compute intended moves (adventurers are transparent to each other)
-    console.log("[onStep] Phase 1: adventurer AI, count:", newAdventurers.filter(a => a.alive).length);
+    console.log(
+      "[onStep] Phase 1: adventurer AI, count:",
+      newAdventurers.filter((a) => a.alive).length,
+    );
     const mobPlayerOccupied = new Set([
       ...newMobPositions.map((p) => `${p.x}_${p.z}`),
     ]);
@@ -2378,11 +2380,12 @@ export default function App() {
     tempDropPerStep,
     heatingPerStep,
     satiationDropPerStep,
-    adventurerDreadRate,
     solidData,
     regionIdData,
     regionAdjacency,
     dungeonWidth,
+    dungeonHeight,
+    turnsPerWave,
     temperatureData,
     dungeon,
     initialMobs,
@@ -2897,7 +2900,7 @@ export default function App() {
   const { minimapRef, minimapTooltip, setMinimapTooltip, onMinimapMouseMove } =
     useMinimapData(minimapMobs, dungeonWidth, dungeonHeight);
 
-  console.log("[App] render: returning JSX, texture:", !!texture, "doorTex:", !!doorTex);
+  console.log("[App] render: returning JSX, texture:", !!texture);
   return (
     <>
       <div
