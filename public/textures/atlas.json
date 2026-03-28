@@ -6,12 +6,15 @@
     { "id": 2, "name": "Flagstone", "uv": [256, 128] },
     { "id": 3, "name": "Concrete", "uv": [384, 128] }
   ],
-  "overlays": [],
+  "overlays": [
+    { "id": 1, "name": "dartTrap", "uv": [320, 128] },
+    { "id": 2, "name": "trapGrid", "uv": [256, 192] }
+  ],
   "wallTypes": [
     { "id": 0, "name": "none" },
     { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
     { "id": 2, "name": "Flagstone", "uv": [256, 128] },
     { "id": 3, "name": "Concrete", "uv": [384, 128] }
   ],
-  "wallOverlays": []
+  "wallOverlays": [{ "id": 1, "name": "dartTrap", "uv": [320, 128] }]
 }
