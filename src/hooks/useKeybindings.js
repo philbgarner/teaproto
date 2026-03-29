@@ -12,6 +12,9 @@ export const DEFAULT_KEYBINDINGS = {
   discardLeft: ["z"],
   discardRight: ["x"],
   togglePassage: ["space"],
+  optionNext: ["tab", "down"],
+  optionPrev: ["up"],
+  optionSelect: ["space"],
 };
 
 function loadKeybindings() {

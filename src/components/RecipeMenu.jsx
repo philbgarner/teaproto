@@ -1,3 +1,5 @@
+import { formatKey } from "./KeybindingsPanel";
+
 /**
  * Overlay menu for selecting a recipe to brew at a stove. Displayed centred
  * over the 3D viewport when the player interacts with a stove.
@@ -12,9 +14,12 @@
  *   onSelectRecipe: (recipe: object) => void,
  *   onCancel: () => void,
  *   showMsg: (text: string) => void,
+ *   selectedIndex: number,
+ *   keybindings: object,
  * }} props
  */
-export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, showMsg }) {
+export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, showMsg, selectedIndex, keybindings }) {
+  const fmtKeys = (keys) => (keys ?? []).map(formatKey).join("/") || "—";
   return (
     <div
       style={{
@@ -48,6 +53,7 @@ export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, sho
         const have = recipe.ingredientId
           ? (ingredients[recipe.ingredientId] ?? 0)
           : null;
+        const isCursor = i === selectedIndex;
         return (
           <div
             key={recipe.id}
@@ -65,7 +71,10 @@ export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, sho
               marginBottom: 4,
               background: locked
                 ? "rgba(80,0,0,0.3)"
+                : isCursor
+                ? "rgba(255,200,0,0.15)"
                 : "rgba(255,255,255,0.05)",
+              border: isCursor ? "1px solid rgba(255,200,0,0.4)" : "1px solid transparent",
               fontSize: 13,
               opacity: locked ? 0.6 : 1,
             }}
@@ -94,7 +103,7 @@ export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, sho
         );
       })}
       <div style={{ marginTop: 10, color: "#555", fontSize: 11 }}>
-        Press number to select · I / Esc to cancel
+        {fmtKeys(keybindings?.optionPrev)}/{fmtKeys(keybindings?.optionNext)} to navigate · {fmtKeys(keybindings?.optionSelect)} to select · number to pick · esc to cancel
       </div>
     </div>
   );

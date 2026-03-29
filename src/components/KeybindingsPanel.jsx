@@ -13,6 +13,9 @@ const ACTION_LABELS = {
   discardLeft:   "Discard left hand",
   discardRight:  "Discard right hand",
   togglePassage: "Toggle passage",
+  optionNext:    "Menu: next option",
+  optionPrev:    "Menu: prev option",
+  optionSelect:  "Menu: select option",
 };
 
 const KEY_DISPLAY = {
@@ -23,7 +26,7 @@ const KEY_DISPLAY = {
   "pageup": "pgup", "pagedown": "pgdn",
 };
 
-function formatKey(k) {
+export function formatKey(k) {
   return KEY_DISPLAY[k] ?? KEY_DISPLAY[k.toLowerCase()] ?? k;
 }
 

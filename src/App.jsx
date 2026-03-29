@@ -1196,6 +1196,7 @@ export default function App() {
   // stoveStates: Map<"x_z", { brewing: null | { recipe, stepsRemaining, ready } }>
   const [stoveStates, setStoveStates] = useState(() => new Map());
   const [showRecipeMenu, setShowRecipeMenu] = useState(false);
+  const [recipeMenuCursor, setRecipeMenuCursor] = useState(0);
   const [activeStoveKey, setActiveStoveKey] = useState(null);
   const { message, setMessage, showMsg } = useMessage();
   const ruinedNotifiedRef = useRef(new Set());
@@ -2571,6 +2572,7 @@ export default function App() {
         const state = stoveStates.get(facingTarget.stoveKey);
         if (!state?.brewing) {
           setActiveStoveKey(facingTarget.stoveKey);
+          setRecipeMenuCursor(0);
           setShowRecipeMenu(true);
         } else if (state.brewing.ready) {
           const recipe = state.brewing.recipe;
@@ -2787,15 +2789,66 @@ export default function App() {
       }
     };
 
+    const recipeOptionNextHandler = (e) => {
+      if (!showRecipeMenu) return;
+      e.preventDefault();
+      setRecipeMenuCursor((c) => (c + 1) % RECIPES.length);
+    };
+    const recipeOptionPrevHandler = (e) => {
+      if (!showRecipeMenu) return;
+      e.preventDefault();
+      setRecipeMenuCursor((c) => (c - 1 + RECIPES.length) % RECIPES.length);
+    };
+    const recipeOptionSelectHandler = (e) => {
+      if (!showRecipeMenu) return;
+      e.preventDefault();
+      const recipe = RECIPES[recipeMenuCursor];
+      if (!recipe) return;
+      if (
+        recipe.ingredientId &&
+        (ingredientsRef.current[recipe.ingredientId] ?? 0) < 1
+      ) {
+        showMsg(`You need ${recipe.ingredientName} to brew ${recipe.name}!`);
+        return;
+      }
+      if (recipe.ingredientId) {
+        const newIng = {
+          ...ingredientsRef.current,
+          [recipe.ingredientId]: ingredientsRef.current[recipe.ingredientId] - 1,
+        };
+        ingredientsRef.current = newIng;
+        setIngredients(newIng);
+      }
+      setStoveStates((prev) => {
+        const next = new Map(prev);
+        next.set(activeStoveKey, {
+          brewing: {
+            recipe,
+            stepsRemaining: recipe.timeToBrew,
+            ready: false,
+          },
+        });
+        return next;
+      });
+      setShowRecipeMenu(false);
+      showMsg(`Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`);
+    };
+
     const interactKeys = keybindings.interact.join(",");
     const waitKeys = keybindings.wait.join(",");
     const discardLeftKeys = keybindings.discardLeft.join(",");
     const discardRightKeys = keybindings.discardRight.join(",");
+    const optionNextKeys = (keybindings.optionNext ?? []).join(",");
+    const optionPrevKeys = (keybindings.optionPrev ?? []).join(",");
+    const optionSelectKeys = (keybindings.optionSelect ?? []).join(",");
 
     if (interactKeys) hotkeys(interactKeys, interactHandler);
     if (waitKeys) hotkeys(waitKeys, waitHandler);
     if (discardLeftKeys) hotkeys(discardLeftKeys, discardLeftHandler);
     if (discardRightKeys) hotkeys(discardRightKeys, discardRightHandler);
+    if (optionNextKeys) hotkeys(optionNextKeys, recipeOptionNextHandler);
+    if (optionPrevKeys) hotkeys(optionPrevKeys, recipeOptionPrevHandler);
+    if (optionSelectKeys) hotkeys(optionSelectKeys, recipeOptionSelectHandler);
     hotkeys("escape", recipeCloseHandler);
     hotkeys("1,2,3,4,5,6,7,8,9", recipeSelectHandler);
 
@@ -2805,6 +2858,9 @@ export default function App() {
       if (discardLeftKeys) hotkeys.unbind(discardLeftKeys, discardLeftHandler);
       if (discardRightKeys)
         hotkeys.unbind(discardRightKeys, discardRightHandler);
+      if (optionNextKeys) hotkeys.unbind(optionNextKeys, recipeOptionNextHandler);
+      if (optionPrevKeys) hotkeys.unbind(optionPrevKeys, recipeOptionPrevHandler);
+      if (optionSelectKeys) hotkeys.unbind(optionSelectKeys, recipeOptionSelectHandler);
       hotkeys.unbind("escape", recipeCloseHandler);
       hotkeys.unbind("1,2,3,4,5,6,7,8,9", recipeSelectHandler);
     };
@@ -2824,6 +2880,7 @@ export default function App() {
     ingredients,
     gameState,
     keybindings,
+    recipeMenuCursor,
   ]);
 
   // Minimap
@@ -3004,6 +3061,8 @@ export default function App() {
                 recipes={RECIPES}
                 ingredients={ingredients}
                 showMsg={showMsg}
+                selectedIndex={recipeMenuCursor}
+                keybindings={keybindings}
                 onSelectRecipe={(recipe) => {
                   if (recipe.ingredientId) {
                     const newIng = {
