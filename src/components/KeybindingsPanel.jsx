@@ -15,6 +15,18 @@ const ACTION_LABELS = {
   togglePassage: "Toggle passage",
 };
 
+const KEY_DISPLAY = {
+  " ": "space", "space": "space",
+  "up": "↑", "down": "↓", "left": "←", "right": "→",
+  "escape": "esc", "enter": "enter", "backspace": "bksp",
+  "tab": "tab", "delete": "del", "home": "home", "end": "end",
+  "pageup": "pgup", "pagedown": "pgdn",
+};
+
+function formatKey(k) {
+  return KEY_DISPLAY[k] ?? KEY_DISPLAY[k.toLowerCase()] ?? k;
+}
+
 function keyEventToHotkey(e) {
   const map = {
     ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
@@ -92,7 +104,7 @@ export function KeybindingsPanel({ keybindings, setKeybindings }) {
                 return (
                   <span key={i} style={chipStyle(isCapturing)}>
                     <span onClick={() => setCapturing(isCapturing ? null : { action, index: i })}>
-                      {isCapturing ? "..." : key}
+                      {isCapturing ? "..." : formatKey(key)}
                     </span>
                     <span
                       onClick={() => removeKey(action, i)}

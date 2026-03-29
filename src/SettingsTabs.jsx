@@ -300,7 +300,10 @@ export default function SettingsTabs({
         )}
 
         {activeTab === "keys" && keybindings && (
-          <KeybindingsPanel keybindings={keybindings} setKeybindings={setKeybindings} />
+          <KeybindingsPanel
+            keybindings={keybindings}
+            setKeybindings={setKeybindings}
+          />
         )}
 
         {activeTab === "lighting" && tintColors && (
@@ -322,7 +325,11 @@ export default function SettingsTabs({
                     const next = [...tintColors];
                     next[i] = e.target.value;
                     setTintColors(next);
-                    try { localStorage.setItem("tintColors", JSON.stringify(next)); } catch {}
+                    try {
+                      localStorage.setItem("tintColors", JSON.stringify(next));
+                    } catch {
+                      // No empty.
+                    }
                   }}
                   onFocus={() => onPickerFocus?.()}
                   onBlur={() => onPickerBlur?.()}
