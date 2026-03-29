@@ -7,11 +7,11 @@ export const DEFAULT_KEYBINDINGS = {
   strafeRight: ["d"],
   turnLeft: ["q"],
   turnRight: ["e"],
-  interact: [" "],
+  interact: ["space"],
   wait: ["."],
   discardLeft: ["z"],
   discardRight: ["x"],
-  togglePassage: [" "],
+  togglePassage: ["space"],
 };
 
 function loadKeybindings() {
