@@ -1,17 +1,17 @@
 import { useState } from "react";
 
 export const DEFAULT_KEYBINDINGS = {
-  moveForward:   ["w", "up"],
-  moveBackward:  ["s", "down"],
-  strafeLeft:    ["a"],
-  strafeRight:   ["d"],
-  turnLeft:      ["q"],
-  turnRight:     ["e"],
-  interact:      ["i"],
-  wait:          ["."],
-  discardLeft:   ["z"],
-  discardRight:  ["x"],
-  togglePassage: ["f"],
+  moveForward: ["w", "up"],
+  moveBackward: ["s", "down"],
+  strafeLeft: ["a"],
+  strafeRight: ["d"],
+  turnLeft: ["q"],
+  turnRight: ["e"],
+  interact: [" "],
+  wait: ["."],
+  discardLeft: ["z"],
+  discardRight: ["x"],
+  togglePassage: [" "],
 };
 
 function loadKeybindings() {

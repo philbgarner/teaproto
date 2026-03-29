@@ -88,8 +88,12 @@ const WALL_TILE_MAP = atlasIndex.data.wallTypes.map((wt) =>
 const CEILING_TILE_MAP = atlasIndex.data.ceilingTypes.map((ct) =>
   "uv" in ct ? _atlasUvToId(ct.uv) : TILE_CEILING,
 );
-const ARCH_COBBLE_UV = atlasIndex.architecture.byName("archCobble")?.uv ?? [64, 0];
-const ARCH_BRICK_UV = atlasIndex.architecture.byName("archBrick")?.uv ?? [0, 64];
+const ARCH_COBBLE_UV = atlasIndex.architecture.byName("archCobble")?.uv ?? [
+  64, 0,
+];
+const ARCH_BRICK_UV = atlasIndex.architecture.byName("archBrick")?.uv ?? [
+  0, 64,
+];
 const COBBLESTONE_WALL_ID = atlasIndex.wallTypes.idByName("Cobblestone");
 
 function loadAtlasTexture() {
@@ -907,7 +911,10 @@ export default function App() {
       const rx = x + dx;
       const rz = z + dz;
       let roomWallId = 0;
-      for (const [px, pz] of [[rx - dz, rz + dx], [rx + dz, rz - dx]]) {
+      for (const [px, pz] of [
+        [rx - dz, rz + dx],
+        [rx + dz, rz - dx],
+      ]) {
         if (px >= 0 && px < W && pz >= 0 && pz < H) {
           const pi = pz * W + px;
           if (solidArr[pi] !== 0 && wallDataArr[pi] !== 0) {
@@ -1109,15 +1116,15 @@ export default function App() {
           const map = child.material?.map ?? null;
           child.material = new THREE.ShaderMaterial({
             uniforms: {
-              uMap:      { value: map },
+              uMap: { value: map },
               uFogColor: { value: new THREE.Color(0, 0, 0) },
-              uFogNear:  { value: 4 },
-              uFogFar:   { value: 28 },
-              uTime:     { value: 0 },
-              uTint0:    { value: new THREE.Color(1.0, 0.9, 0.68) },
-              uTint1:    { value: new THREE.Color(1.0, 0.94, 0.76) },
-              uTint2:    { value: new THREE.Color(0.6, 0.55, 0.8) },
-              uTint3:    { value: new THREE.Color(0.3, 0.25, 0.6) },
+              uFogNear: { value: 4 },
+              uFogFar: { value: 28 },
+              uTime: { value: 0 },
+              uTint0: { value: new THREE.Color(1.0, 0.9, 0.68) },
+              uTint1: { value: new THREE.Color(1.0, 0.94, 0.76) },
+              uTint2: { value: new THREE.Color(0.6, 0.55, 0.8) },
+              uTint3: { value: new THREE.Color(0.3, 0.25, 0.6) },
             },
             vertexShader: DOOR_VERT,
             fragmentShader: DOOR_FRAG,
@@ -1132,13 +1139,11 @@ export default function App() {
   }, []);
   const doorCobbleProto = useMemo(
     () =>
-      texture &&
-      makeDoorProto(texture, ARCH_COBBLE_UV[0], ARCH_COBBLE_UV[1]),
+      texture && makeDoorProto(texture, ARCH_COBBLE_UV[0], ARCH_COBBLE_UV[1]),
     [texture],
   );
   const doorBrickProto = useMemo(
-    () =>
-      texture && makeDoorProto(texture, ARCH_BRICK_UV[0], ARCH_BRICK_UV[1]),
+    () => texture && makeDoorProto(texture, ARCH_BRICK_UV[0], ARCH_BRICK_UV[1]),
     [texture],
   );
   const objectRegistry = useMemo(
@@ -1447,7 +1452,7 @@ export default function App() {
 
     playMainTheme();
     showMsg(
-      "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press I Key)",
+      "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
     );
     console.log("[App] useEffect: dungeon reset done");
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2540,10 +2545,10 @@ export default function App() {
     if (!facingTarget) return null;
     if (facingTarget.type === "stove") {
       const state = stoveStates.get(facingTarget.stoveKey);
-      if (!state?.brewing) return "Stove — Press I to brew tea";
+      if (!state?.brewing) return "Stove — Press [space] to brew tea";
       if (state.brewing.ready)
-        return `${state.brewing.recipe.name} is ready! — Press I to collect`;
-      return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press I for status`;
+        return `${state.brewing.recipe.name} is ready! — Press [space] to collect`;
+      return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press [space] for status`;
     }
     const mob = initialMobs[facingTarget.mobIdx];
     const preferredRecipe = RECIPES.find(
@@ -2551,9 +2556,9 @@ export default function App() {
     );
     const isUnconscious = mobSatiations[facingTarget.mobIdx] <= 0;
     if (isUnconscious) {
-      return `${mob?.name} is unconscious — Press I to offer tea to revive`;
+      return `${mob?.name} is unconscious — Press [space] to offer tea to revive`;
     }
-    return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press I to offer tea`;
+    return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press [space] to offer tea`;
   }, [facingTarget, stoveStates, initialMobs, mobSatiations]);
 
   // interact / recipe menu navigation
@@ -2641,7 +2646,7 @@ export default function App() {
         if (!firstTeaDeliveredRef.current) {
           firstTeaDeliveredRef.current = true;
           showMsg(
-            "Head back to the tea machine (stove) in the kitchen and press I to brew another tea!",
+            `Head back to the tea machine (stove) in the kitchen and press [${keybindings.interact[0] === " " ? "space" : keybindings.interact[0]}] to brew another tea!`,
           );
           setTimeout(() => {
             showMsg(
