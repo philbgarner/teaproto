@@ -15,6 +15,14 @@ import {
   buildTileAtlas,
   uvToTileId,
 } from "../mazetools/src/rendering/tileAtlas";
+import {
+  TORCH_UNIFORMS_GLSL,
+  TORCH_HASH_GLSL,
+  TORCH_FNS_GLSL,
+  makeTorchUniforms,
+  DEFAULT_TORCH_HEX,
+  DEFAULT_TORCH_INTENSITY,
+} from "../mazetools/src/rendering/torchLighting";
 import { PerspectiveDungeonView } from "../mazetools/src/rendering/PerspectiveDungeonView";
 import {
   buildPassageMask,
@@ -56,7 +64,6 @@ const ATLAS_SHEET_W = 512;
 const ATLAS_SHEET_H = 1024;
 const TILE_SIZE = 3;
 const CEILING_H = 3;
-const DEFAULT_TINT_COLORS = ["#fffef9", "#efdbb3", "#e3c5cf", "#8e8bb6"];
 
 // Character sprite sheet dimensions (public/textures/characters.png)
 const CHAR_SHEET_W = 512;
@@ -154,56 +161,21 @@ void main() {
 const DOOR_FRAG = /* glsl */ `
 uniform sampler2D uMap;
 uniform vec3  uFogColor;
-uniform float uFogNear;
-uniform float uFogFar;
-uniform float uTime;
-uniform vec3  uTint0;
-uniform vec3  uTint1;
-uniform vec3  uTint2;
-uniform vec3  uTint3;
+${TORCH_UNIFORMS_GLSL}
 
 varying vec2  vUv;
 varying float vFogDist;
 varying vec2  vWorldPos;
 
-float hash(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
+${TORCH_HASH_GLSL}
+${TORCH_FNS_GLSL}
 
 void main() {
   vec4 color = texture2D(uMap, vUv);
   if (color.a < 0.01) discard;
 
-  float raw = sin(uTime * 7.0)  * 0.45
-            + sin(uTime * 13.7) * 0.35
-            + sin(uTime * 3.1)  * 0.20;
-  float flicker = (floor(raw * 1.5 + 0.5)) / 6.0;
-
-  float dist = clamp((vFogDist - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
-  float flickeredDist = clamp(dist + flicker * 0.03, 0.0, 1.0);
-  float curved = pow(flickeredDist, 0.75);
-  float band = floor(curved * 5.0);
-
-  float timeSlot = floor(uTime * 1.5);
-  vec2 cell = floor(vWorldPos * 0.5);
-  float spatialNoise = hash(cell + vec2(timeSlot * 7.3, timeSlot * 3.1));
-  float turb = (floor(spatialNoise * 3.0) / 3.0) * 0.18;
-
-  float brightness;
-  vec3  tint;
-  if (band < 1.0) {
-    brightness = 1.00 - turb; tint = uTint0;
-  } else if (band < 2.0) {
-    brightness = 0.55; tint = uTint1;
-  } else if (band < 3.0) {
-    brightness = 0.22; tint = uTint2;
-  } else if (band < 4.0) {
-    brightness = 0.10; tint = uTint3;
-  } else {
-    brightness = 0.00; tint = vec3(1.0);
-  }
-
-  vec3 lit = color.rgb * tint * brightness;
+  float band = torchBand(0.03);
+  vec3 lit = applyTorchLighting(color.rgb, band);
   gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
 }
 `;
@@ -229,10 +201,7 @@ function makeDoorProto(atlasTex, archUvX, archUvY) {
       uFogNear: { value: 4 },
       uFogFar: { value: 28 },
       uTime: { value: 0 },
-      uTint0: { value: new THREE.Color(1.0, 0.9, 0.68) },
-      uTint1: { value: new THREE.Color(1.0, 0.94, 0.76) },
-      uTint2: { value: new THREE.Color(0.6, 0.55, 0.8) },
-      uTint3: { value: new THREE.Color(0.3, 0.25, 0.6) },
+      ...makeTorchUniforms(),
     },
     vertexShader: DOOR_VERT,
     fragmentShader: DOOR_FRAG,
@@ -1006,15 +975,23 @@ export default function App() {
     return placements;
   }, [dungeon, maxDoors]);
 
-  // Torchlight tint band colours
-  const [tintColors, setTintColors] = useState(() => {
+  // Additive torch colour
+  const [torchColor, setTorchColor] = useState(() => {
     try {
-      const stored = localStorage.getItem("tintColors");
-      if (stored) return JSON.parse(stored);
+      return localStorage.getItem("torchColor") ?? DEFAULT_TORCH_HEX;
     } catch {
-      // No empty block.
+      return DEFAULT_TORCH_HEX;
     }
-    return DEFAULT_TINT_COLORS;
+  });
+
+  // Additive torch intensity
+  const [torchIntensity, setTorchIntensity] = useState(() => {
+    try {
+      const stored = localStorage.getItem("torchIntensity");
+      return stored !== null ? parseFloat(stored) : DEFAULT_TORCH_INTENSITY;
+    } catch {
+      return DEFAULT_TORCH_INTENSITY;
+    }
   });
 
   // Object registry and world placements
@@ -1175,10 +1152,7 @@ export default function App() {
               uFogNear: { value: 4 },
               uFogFar: { value: 28 },
               uTime: { value: 0 },
-              uTint0: { value: new THREE.Color(1.0, 0.9, 0.68) },
-              uTint1: { value: new THREE.Color(1.0, 0.94, 0.76) },
-              uTint2: { value: new THREE.Color(0.6, 0.55, 0.8) },
-              uTint3: { value: new THREE.Color(0.3, 0.25, 0.6) },
+              ...makeTorchUniforms(),
             },
             vertexShader: DOOR_VERT,
             fragmentShader: DOOR_FRAG,
@@ -3086,7 +3060,8 @@ export default function App() {
                 adventurerSpriteAtlas={characterSpriteAtlas}
                 passageMask={passageMask ?? undefined}
                 speechBubbles={activeSpeechBubbles}
-                tintColors={tintColors}
+                torchColor={torchColor}
+                torchIntensity={torchIntensity}
                 floorData={floorData}
                 wallData={wallData}
                 ceilingData={ceilingData}
@@ -3245,8 +3220,10 @@ export default function App() {
             setAdventurerLootPerChest,
             maxDoors,
             setMaxDoors,
-            tintColors,
-            setTintColors,
+            torchColor,
+            setTorchColor,
+            torchIntensity,
+            setTorchIntensity,
             keybindings,
             setKeybindings,
           }}

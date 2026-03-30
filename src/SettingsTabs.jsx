@@ -62,8 +62,10 @@ export default function SettingsTabs({
   setMaxRoomSize,
   maxDoors,
   setMaxDoors,
-  tintColors,
-  setTintColors,
+  torchColor,
+  setTorchColor,
+  torchIntensity,
+  setTorchIntensity,
   onPickerFocus,
   onPickerBlur,
   keybindings,
@@ -306,45 +308,46 @@ export default function SettingsTabs({
           />
         )}
 
-        {activeTab === "lighting" && tintColors && (
+        {activeTab === "lighting" && (
           <>
-            {[
-              { label: "Band 0 (near)", desc: "" },
-              { label: "Band 1", desc: "" },
-              { label: "Band 2", desc: "" },
-              { label: "Band 3 (far)", desc: "" },
-            ].map(({ label }, i) => (
-              <div key={i} style={{ fontSize: 11, color: "#888" }}>
-                <div style={{ marginBottom: 2 }}>
-                  {label} <span style={{ color: "#555" }}></span>
-                </div>
-                <input
-                  type="color"
-                  value={tintColors[i]}
-                  onChange={(e) => {
-                    const next = [...tintColors];
-                    next[i] = e.target.value;
-                    setTintColors(next);
-                    try {
-                      localStorage.setItem("tintColors", JSON.stringify(next));
-                    } catch {
-                      // No empty.
-                    }
-                  }}
-                  onFocus={() => onPickerFocus?.()}
-                  onBlur={() => onPickerBlur?.()}
-                  style={{
-                    width: "100%",
-                    height: 28,
-                    padding: 2,
-                    border: "1px solid #444",
-                    background: "#111",
-                    cursor: "pointer",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-            ))}
+          <SliderRow
+            label="Torch intensity"
+            value={torchIntensity}
+            min={0}
+            max={2}
+            step={0.05}
+            onChange={(v) => {
+              setTorchIntensity(v);
+              try { localStorage.setItem("torchIntensity", String(v)); } catch { /* */ }
+            }}
+            format={(v) => v.toFixed(2)}
+          />
+          <div style={{ fontSize: 11, color: "#888" }}>
+            <div style={{ marginBottom: 2 }}>Torch colour</div>
+            <input
+              type="color"
+              value={torchColor}
+              onChange={(e) => {
+                setTorchColor(e.target.value);
+                try {
+                  localStorage.setItem("torchColor", e.target.value);
+                } catch {
+                  // No empty.
+                }
+              }}
+              onFocus={() => onPickerFocus?.()}
+              onBlur={() => onPickerBlur?.()}
+              style={{
+                width: "100%",
+                height: 28,
+                padding: 2,
+                border: "1px solid #444",
+                background: "#111",
+                cursor: "pointer",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
           </>
         )}
       </div>
