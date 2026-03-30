@@ -16,9 +16,8 @@ import {
   uvToTileId,
 } from "../mazetools/src/rendering/tileAtlas";
 import {
-  TORCH_UNIFORMS_GLSL,
-  TORCH_HASH_GLSL,
-  TORCH_FNS_GLSL,
+  TORCH_OBJECT_VERT,
+  TORCH_OBJECT_FRAG,
   makeTorchUniforms,
   DEFAULT_TORCH_HEX,
   DEFAULT_TORCH_INTENSITY,
@@ -138,47 +137,8 @@ function loadAtlasTexture() {
 }
 
 // ---------------------------------------------------------------------------
-// Stove 3-D object (1x1 cube textured with 'S')
-
-// ---------------------------------------------------------------------------
 // Door 3-D object — thin slab spanning full cell width and ceiling height
 // ---------------------------------------------------------------------------
-const DOOR_VERT = /* glsl */ `
-varying vec2  vUv;
-varying float vFogDist;
-varying vec2  vWorldPos;
-
-void main() {
-  vUv = uv;
-  vec4 worldPos = modelMatrix * vec4(position, 1.0);
-  vWorldPos = worldPos.xz;
-  vec4 eyePos = viewMatrix * worldPos;
-  vFogDist = length(eyePos.xyz);
-  gl_Position = projectionMatrix * eyePos;
-}
-`;
-
-const DOOR_FRAG = /* glsl */ `
-uniform sampler2D uMap;
-uniform vec3  uFogColor;
-${TORCH_UNIFORMS_GLSL}
-
-varying vec2  vUv;
-varying float vFogDist;
-varying vec2  vWorldPos;
-
-${TORCH_HASH_GLSL}
-${TORCH_FNS_GLSL}
-
-void main() {
-  vec4 color = texture2D(uMap, vUv);
-  if (color.a < 0.01) discard;
-
-  float band = torchBand(0.03);
-  vec3 lit = applyTorchLighting(color.rgb, band);
-  gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
-}
-`;
 
 function makeDoorProto(atlasTex, archUvX, archUvY) {
   const geo = new THREE.PlaneGeometry(TILE_SIZE * 0.9, CEILING_H * 0.98);
@@ -203,51 +163,11 @@ function makeDoorProto(atlasTex, archUvX, archUvY) {
       uTime: { value: 0 },
       ...makeTorchUniforms(),
     },
-    vertexShader: DOOR_VERT,
-    fragmentShader: DOOR_FRAG,
+    vertexShader: TORCH_OBJECT_VERT,
+    fragmentShader: TORCH_OBJECT_FRAG,
     side: THREE.DoubleSide,
   });
   return new THREE.Mesh(geo, mat);
-}
-
-// ---------------------------------------------------------------------------
-// Mob + Adventurer sprite atlas (2 columns: col 0 = mob, col 1 = adventurer)
-// ---------------------------------------------------------------------------
-function makeMobSpriteAtlas() {
-  const TILE = 64;
-  const canvas = document.createElement("canvas");
-  canvas.width = TILE * 2;
-  canvas.height = TILE;
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Col 0 — friendly mob (circle + "M")
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(32, 28, 26, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#333";
-  ctx.font = "bold 32px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("M", 32, 28);
-
-  // Col 1 — adventurer (circle + "A")
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(TILE + 32, 28, 26, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#111";
-  ctx.font = "bold 32px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("A", TILE + 32, 28);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.magFilter = THREE.NearestFilter;
-  tex.minFilter = THREE.NearestFilter;
-  tex.generateMipmaps = false;
-  return { texture: tex, columns: 2, rows: 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -1004,11 +924,27 @@ export default function App() {
 
   // Passive mobs — one per non-end room (up to 3)
   const initialMobs = useMemo(() => {
-    console.log("[App] useMemo: initialMobs start, rooms:", dungeon.rooms.size, "endRoomId:", dungeon.endRoomId, "MOB_NAMES:", MOB_NAMES);
+    console.log(
+      "[App] useMemo: initialMobs start, rooms:",
+      dungeon.rooms.size,
+      "endRoomId:",
+      dungeon.endRoomId,
+      "MOB_NAMES:",
+      MOB_NAMES,
+    );
     const mobs = [];
     let idx = 0;
     for (const [roomId, room] of dungeon.rooms) {
-      console.log("[App] initialMobs room:", roomId, "type:", room.type, "isEnd:", roomId === dungeon.endRoomId, "idx:", idx);
+      console.log(
+        "[App] initialMobs room:",
+        roomId,
+        "type:",
+        room.type,
+        "isEnd:",
+        roomId === dungeon.endRoomId,
+        "idx:",
+        idx,
+      );
       if (roomId === dungeon.endRoomId || idx >= MOB_NAMES.length) continue;
       mobs.push({
         id: `mob_${idx}`,
@@ -1108,8 +1044,6 @@ export default function App() {
     return chests;
   }, [dungeon, solidData, dungeonSeed, dungeonWidth]);
 
-  const mobSpriteAtlas = useMemo(() => makeMobSpriteAtlas(), []);
-
   // Tile atlas + texture
   const atlas = useMemo(
     () => buildTileAtlas(ATLAS_SHEET_W, ATLAS_SHEET_H, TILE_PX, TILE_PX),
@@ -1136,35 +1070,49 @@ export default function App() {
     };
     img.src = `${import.meta.env.BASE_URL}textures/monsters.png`;
   }, []);
-  const [stoveProto, setStoveProto] = useState(null);
-  useEffect(() => {
-    const loader = new GLTFLoader();
-    loader.load(
-      `${import.meta.env.BASE_URL}textures/teaomatic.glb`,
-      (gltf) => {
-        gltf.scene.traverse((child) => {
-          if (!child.isMesh) return;
-          const map = child.material?.map ?? null;
-          child.material = new THREE.ShaderMaterial({
-            uniforms: {
-              uMap: { value: map },
-              uFogColor: { value: new THREE.Color(0, 0, 0) },
-              uFogNear: { value: 4 },
-              uFogFar: { value: 28 },
-              uTime: { value: 0 },
-              ...makeTorchUniforms(),
-            },
-            vertexShader: DOOR_VERT,
-            fragmentShader: DOOR_FRAG,
-            side: THREE.FrontSide,
-          });
-        });
-        setStoveProto(gltf.scene);
-      },
-      undefined,
-      (err) => console.error("Failed to load stove.glb", err),
-    );
-  }, []);
+  //const [stoveProto, setStoveProto] = useState(null);
+  //useEffect(() => {
+  // const loader = new GLTFLoader();
+  // loader.load(
+  //   `${import.meta.env.BASE_URL}textures/teaomatic.glb`,
+  //   (gltf) => {
+  //     gltf.scene.traverse((child) => {
+  //       if (!child.isMesh) return;
+  //       const map = child.material?.map ?? null;
+  //       child.material = new THREE.ShaderMaterial({
+  //         uniforms: {
+  //           uMap: { value: map },
+  //           uFogColor: { value: new THREE.Color(0, 0, 0) },
+  //           uFogNear: { value: 4 },
+  //           uFogFar: { value: 28 },
+  //           uTime: { value: 0 },
+  //           ...makeTorchUniforms(),
+  //         },
+  //         vertexShader: TORCH_OBJECT_VERT,
+  //         fragmentShader: TORCH_OBJECT_FRAG,
+  //         side: THREE.FrontSide,
+  //       });
+  //       /*const mat = new THREE.ShaderMaterial({
+  //         uniforms: {
+  //           uMap: { value: atlasTex },
+  //           uFogColor: { value: new THREE.Color(0, 0, 0) },
+  //           uFogNear: { value: 4 },
+  //           uFogFar: { value: 28 },
+  //           uTime: { value: 0 },
+  //           ...makeTorchUniforms(),
+  //         },
+  //         vertexShader: TORCH_OBJECT_VERT,
+  //         fragmentShader: TORCH_OBJECT_FRAG,
+  //         side: THREE.DoubleSide,
+  //       });
+  //       return new THREE.Mesh(geo, mat);*/
+  //     });
+  //     setStoveProto(gltf.scene);
+  //   },
+  //   undefined,
+  //   (err) => console.error("Failed to load stove.glb", err),
+  // );
+  //}, []);
   const doorCobbleProto = useMemo(
     () =>
       texture && makeDoorProto(texture, ARCH_COBBLE_UV[0], ARCH_COBBLE_UV[1]),
