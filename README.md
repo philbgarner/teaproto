@@ -1,3 +1,12 @@
+# Credits
+
+Art: Imaya
+https://imayazing.itch.io/
+
+## References
+
+NOT AI ART!
+
 # Tea Proto
 
 A first-person dungeon crawler where you brew and serve tea to keep friendly mobs alive against waves of adventurers.
