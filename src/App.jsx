@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { aStar8 } from "../mazetools/src/astar";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { generateBspDungeon } from "../mazetools/src/bsp";
 import {
-  generateContent,
   generateHiddenPassages,
   generateThemedRooms,
   makeContentRng,
@@ -167,6 +165,46 @@ function makeDoorProto(atlasTex, archUvX, archUvY) {
     fragmentShader: TORCH_OBJECT_FRAG,
     side: THREE.DoubleSide,
   });
+  return new THREE.Mesh(geo, mat);
+}
+
+// ---------------------------------------------------------------------------
+// Teaomatic machine — atlas-textured BoxGeometry proto
+// ---------------------------------------------------------------------------
+function makeTeaomaticProto(atlasTex) {
+  const uvEntry = atlasIndex.sprites.byName("teaomatic");
+  const [uvX, uvY] = uvEntry.uv;
+  const [uvW, uvH] = uvEntry.size ?? [TILE_PX, TILE_PX];
+  const uMin = uvX / ATLAS_SHEET_W;
+  const uMax = (uvX + uvW) / ATLAS_SHEET_W;
+  const vMin = 1 - (uvY + uvH) / ATLAS_SHEET_H;
+  const vMax = 1 - uvY / ATLAS_SHEET_H;
+
+  const bW = TILE_SIZE * 0.65;
+  const bH = CEILING_H * 0.85;
+  const bD = TILE_SIZE * 0.65;
+  const geo = new THREE.BoxGeometry(bW, bH, bD);
+
+  // BoxGeometry vertex UV order per face: TL, TR, BL, BR
+  const faceUv = [uMin, vMax, uMax, vMax, uMin, vMin, uMax, vMin];
+  const uvArr = new Float32Array(6 * 8);
+  for (let i = 0; i < 6; i++) uvArr.set(faceUv, i * 8);
+  geo.setAttribute("uv", new THREE.BufferAttribute(uvArr, 2));
+
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uMap: { value: atlasTex },
+      uFogColor: { value: new THREE.Color(0, 0, 0) },
+      uFogNear: { value: 4 },
+      uFogFar: { value: 28 },
+      uTime: { value: 0 },
+      ...makeTorchUniforms(),
+    },
+    vertexShader: TORCH_OBJECT_VERT,
+    fragmentShader: TORCH_OBJECT_FRAG,
+    side: THREE.FrontSide,
+  });
+
   return new THREE.Mesh(geo, mat);
 }
 
@@ -751,34 +789,11 @@ export default function App() {
 
   // Stove placements via generateContent — 2 stoves in end room at distanceToWall === 1
   const stovePlacements = useMemo(() => {
-    console.log("[App] useMemo: stovePlacements start");
-    let count = 0;
-    const { objects } = generateContent(dungeon, {
-      seed: DUNGEON_SEED + 7,
-      callback: ({ x, y, masks, emit }) => {
-        if (count >= 2) return;
-        if (masks.getRegionId(x, y) !== dungeon.endRoomId) return;
-        if (masks.getSolid(x, y) === "wall") return;
-        if (masks.getDistanceToWall(x, y) !== 1) return;
-        // Skip cells adjacent to a corridor (doorway/entrance)
-        const neighbors = [
-          [x - 1, y],
-          [x + 1, y],
-          [x, y - 1],
-          [x, y + 1],
-        ];
-        const nearCorridor = neighbors.some(
-          ([nx, nz]) =>
-            masks.getSolid(nx, nz) !== "wall" &&
-            masks.getRegionId(nx, nz) === 0,
-        );
-        if (nearCorridor) return;
-        emit.object({ x, z: y, type: "stove" });
-        count++;
-      },
-    });
-    console.log("[App] useMemo: stovePlacements done", objects.length);
-    return objects;
+    const room = dungeon.rooms.get(dungeon.endRoomId);
+    if (!room) return [];
+    const cx = room.rect.x + Math.floor(room.rect.w / 2);
+    const cz = room.rect.y + Math.floor(room.rect.h / 2);
+    return [{ x: cx, z: cz, type: "stove" }];
   }, [dungeon]);
 
   const [maxDoors, setMaxDoors] = useState(3);
@@ -917,7 +932,10 @@ export default function App() {
   // Object registry and world placements
   const objects = useMemo(() => {
     return [
-      ...stovePlacements.map((s) => ({ ...s, offsetY: 0, scale: 0.75 })),
+      ...stovePlacements.map((s) => ({
+        ...s,
+        offsetY: (CEILING_H * 0.85) / 2,
+      })),
       ...doorPlacements,
     ];
   }, [stovePlacements, doorPlacements]);
@@ -1070,49 +1088,11 @@ export default function App() {
     };
     img.src = `${import.meta.env.BASE_URL}textures/monsters.png`;
   }, []);
-  //const [stoveProto, setStoveProto] = useState(null);
-  //useEffect(() => {
-  // const loader = new GLTFLoader();
-  // loader.load(
-  //   `${import.meta.env.BASE_URL}textures/teaomatic.glb`,
-  //   (gltf) => {
-  //     gltf.scene.traverse((child) => {
-  //       if (!child.isMesh) return;
-  //       const map = child.material?.map ?? null;
-  //       child.material = new THREE.ShaderMaterial({
-  //         uniforms: {
-  //           uMap: { value: map },
-  //           uFogColor: { value: new THREE.Color(0, 0, 0) },
-  //           uFogNear: { value: 4 },
-  //           uFogFar: { value: 28 },
-  //           uTime: { value: 0 },
-  //           ...makeTorchUniforms(),
-  //         },
-  //         vertexShader: TORCH_OBJECT_VERT,
-  //         fragmentShader: TORCH_OBJECT_FRAG,
-  //         side: THREE.FrontSide,
-  //       });
-  //       /*const mat = new THREE.ShaderMaterial({
-  //         uniforms: {
-  //           uMap: { value: atlasTex },
-  //           uFogColor: { value: new THREE.Color(0, 0, 0) },
-  //           uFogNear: { value: 4 },
-  //           uFogFar: { value: 28 },
-  //           uTime: { value: 0 },
-  //           ...makeTorchUniforms(),
-  //         },
-  //         vertexShader: TORCH_OBJECT_VERT,
-  //         fragmentShader: TORCH_OBJECT_FRAG,
-  //         side: THREE.DoubleSide,
-  //       });
-  //       return new THREE.Mesh(geo, mat);*/
-  //     });
-  //     setStoveProto(gltf.scene);
-  //   },
-  //   undefined,
-  //   (err) => console.error("Failed to load stove.glb", err),
-  // );
-  //}, []);
+
+  const teaomaticProto = useMemo(
+    () => texture && makeTeaomaticProto(texture),
+    [texture],
+  );
   const doorCobbleProto = useMemo(
     () =>
       texture && makeDoorProto(texture, ARCH_COBBLE_UV[0], ARCH_COBBLE_UV[1]),
@@ -1124,13 +1104,13 @@ export default function App() {
   );
   const objectRegistry = useMemo(
     () => ({
-      ...(stoveProto && { stove: () => stoveProto.clone(true) }),
+      ...(teaomaticProto && { stove: () => teaomaticProto.clone(true) }),
       ...(doorCobbleProto && {
         door_cobble: () => doorCobbleProto.clone(true),
       }),
       ...(doorBrickProto && { door_brick: () => doorBrickProto.clone(true) }),
     }),
-    [stoveProto, doorCobbleProto, doorBrickProto],
+    [teaomaticProto, doorCobbleProto, doorBrickProto],
   );
 
   // ---------------------------------------------------------------------------
