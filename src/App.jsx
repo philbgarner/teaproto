@@ -58,6 +58,24 @@ const TILE_SIZE = 3;
 const CEILING_H = 3;
 const DEFAULT_TINT_COLORS = ["#fffef9", "#efdbb3", "#e3c5cf", "#8e8bb6"];
 
+// Character sprite sheet dimensions (public/textures/characters.png)
+const CHAR_SHEET_W = 512;
+const CHAR_SHEET_H = 512;
+
+/**
+ * Convert a pixel-space UV rect {x, y, w, h} into the normalized [x, y, w, h]
+ * tuple expected by the billboard shader (y=0 is bottom in GL convention).
+ */
+function normalizeUvRect(rect, sheetW, sheetH) {
+  if (!rect) return undefined;
+  return [
+    rect.x / sheetW,
+    1.0 - (rect.y + rect.h) / sheetH,
+    rect.w / sheetW,
+    rect.h / sheetH,
+  ];
+}
+
 // Default tile IDs derived from atlas.json entries (row-major in 512×1024 sheet)
 function _atlasUvToId(uv) {
   return uvToTileId(uv[0], uv[1], TILE_PX, ATLAS_SHEET_W);
@@ -600,7 +618,16 @@ function useEotBCamera(
 const DUNGEON_SEED = 42;
 const DUNGEON_W = 32;
 const DUNGEON_H = DUNGEON_W;
-const MOB_NAMES = ["Skeleton", "Goblin", "Troll"];
+const MOB_TYPES = [
+  {
+    type: "bat",
+    name: "Bat",
+    geometrySize: [2, 1],
+    uvRect: { x: 0, y: 448, w: 128, h: 64 },
+  },
+];
+const MOB_TYPE_MAP = Object.fromEntries(MOB_TYPES.map((t) => [t.type, t]));
+const MOB_NAMES = MOB_TYPES.map((t) => t.name);
 
 // Dialog pools for when an adventurer first spots the ghost (player)
 const GHOST_DIALOG = [
@@ -657,6 +684,8 @@ const ADVENTURER_TYPES = [
     xp: 30,
     colorRgb: [1.0, 0.15, 0.15],
     drop: { id: "rations", name: "Iron Rations" },
+    geometrySize: [1, 1],
+    uvRect: { x: 192, y: 0, w: 64, h: 64 },
   },
   {
     type: "rogue",
@@ -667,6 +696,8 @@ const ADVENTURER_TYPES = [
     xp: 25,
     colorRgb: [0.9, 0.1, 0.9],
     drop: { id: "herbs", name: "Wild Herbs" },
+    geometrySize: [1, 1],
+    uvRect: { x: 192, y: 0, w: 64, h: 64 },
   },
   {
     type: "mage",
@@ -677,8 +708,15 @@ const ADVENTURER_TYPES = [
     xp: 40,
     colorRgb: [0.2, 0.3, 1.0],
     drop: { id: "dust", name: "Arcane Dust" },
+    geometrySize: [2, 2],
+    uvRect: { x: 192, y: 128, w: 128, h: 128 },
   },
 ];
+
+/** Keyed by adventurer type string for O(1) lookup in the mobiles memo. */
+const ADVENTURER_TYPE_MAP = Object.fromEntries(
+  ADVENTURER_TYPES.map((t) => [t.type, t]),
+);
 
 const STATUS_RGB = {
   ecstatic: [0.8, 0.2, 1.0],
@@ -989,22 +1027,25 @@ export default function App() {
 
   // Passive mobs — one per non-end room (up to 3)
   const initialMobs = useMemo(() => {
-    console.log("[App] useMemo: initialMobs start");
+    console.log("[App] useMemo: initialMobs start, rooms:", dungeon.rooms.size, "endRoomId:", dungeon.endRoomId, "MOB_NAMES:", MOB_NAMES);
     const mobs = [];
     let idx = 0;
     for (const [roomId, room] of dungeon.rooms) {
+      console.log("[App] initialMobs room:", roomId, "type:", room.type, "isEnd:", roomId === dungeon.endRoomId, "idx:", idx);
       if (roomId === dungeon.endRoomId || idx >= MOB_NAMES.length) continue;
       mobs.push({
         id: `mob_${idx}`,
         x: Math.floor(room.rect.x + room.rect.w / 2),
         z: Math.floor(room.rect.y + room.rect.h / 2),
         name: MOB_NAMES[idx],
+        type: MOB_TYPES[idx].type,
         preferredRecipeId: RECIPES[(idx * 3 + 1) % RECIPES.length].id,
         attack: MOB_ATTACK,
         defense: MOB_DEFENSE,
       });
       idx++;
     }
+    console.log("[App] useMemo: initialMobs done, count:", mobs.length, mobs);
     return mobs;
   }, [dungeon]);
 
@@ -1104,6 +1145,19 @@ export default function App() {
       console.log("[App] useEffect: loadAtlasTexture done");
       setTexture(t);
     });
+  }, []);
+  const [characterSpriteAtlas, setCharacterSpriteAtlas] = useState(null);
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      const tex = new THREE.Texture(img);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      tex.needsUpdate = true;
+      setCharacterSpriteAtlas({ texture: tex, columns: 1, rows: 1 });
+    };
+    img.src = `${import.meta.env.BASE_URL}textures/monsters.png`;
   }, []);
   const [stoveProto, setStoveProto] = useState(null);
   useEffect(() => {
@@ -1465,25 +1519,35 @@ export default function App() {
 
   const mobiles = useMemo(
     () => [
-      ...initialMobs.map((m, i) => ({
-        x: mobPositions[i].x,
-        z: mobPositions[i].z,
-        type: "mob",
-        tileId: 0,
-        color:
-          mobSatiations[i] <= 0
-            ? [0.25, 0.25, 0.25]
-            : (STATUS_RGB[mobStatuses[i]] ?? STATUS_RGB.thirsty),
-      })),
+      ...initialMobs.map((m, i) => {
+        const tmpl = MOB_TYPE_MAP[m.type];
+        return {
+          x: mobPositions[i].x,
+          z: mobPositions[i].z,
+          type: "mob",
+          tileId: 0,
+          color:
+            mobSatiations[i] <= 0
+              ? [0.25, 0.25, 0.25]
+              : (STATUS_RGB[mobStatuses[i]] ?? STATUS_RGB.thirsty),
+          geometrySize: tmpl?.geometrySize,
+          uvRect: normalizeUvRect(tmpl?.uvRect, CHAR_SHEET_W, CHAR_SHEET_H),
+        };
+      }),
       ...adventurers
         .filter((a) => a.alive)
-        .map((a) => ({
-          x: a.x,
-          z: a.z,
-          type: "adventurer",
-          tileId: 1,
-          color: a.colorRgb,
-        })),
+        .map((a) => {
+          const tmpl = ADVENTURER_TYPE_MAP[a.template];
+          return {
+            x: a.x,
+            z: a.z,
+            type: "adventurer",
+            tileId: 1,
+            color: a.colorRgb,
+            geometrySize: tmpl?.geometrySize,
+            uvRect: normalizeUvRect(tmpl?.uvRect, CHAR_SHEET_W, CHAR_SHEET_H),
+          };
+        }),
     ],
     [initialMobs, mobPositions, mobStatuses, mobSatiations, adventurers],
   );
@@ -2814,7 +2878,8 @@ export default function App() {
       if (recipe.ingredientId) {
         const newIng = {
           ...ingredientsRef.current,
-          [recipe.ingredientId]: ingredientsRef.current[recipe.ingredientId] - 1,
+          [recipe.ingredientId]:
+            ingredientsRef.current[recipe.ingredientId] - 1,
         };
         ingredientsRef.current = newIng;
         setIngredients(newIng);
@@ -2831,7 +2896,9 @@ export default function App() {
         return next;
       });
       setShowRecipeMenu(false);
-      showMsg(`Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`);
+      showMsg(
+        `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
+      );
     };
 
     const interactKeys = keybindings.interact.join(",");
@@ -2858,9 +2925,12 @@ export default function App() {
       if (discardLeftKeys) hotkeys.unbind(discardLeftKeys, discardLeftHandler);
       if (discardRightKeys)
         hotkeys.unbind(discardRightKeys, discardRightHandler);
-      if (optionNextKeys) hotkeys.unbind(optionNextKeys, recipeOptionNextHandler);
-      if (optionPrevKeys) hotkeys.unbind(optionPrevKeys, recipeOptionPrevHandler);
-      if (optionSelectKeys) hotkeys.unbind(optionSelectKeys, recipeOptionSelectHandler);
+      if (optionNextKeys)
+        hotkeys.unbind(optionNextKeys, recipeOptionNextHandler);
+      if (optionPrevKeys)
+        hotkeys.unbind(optionPrevKeys, recipeOptionPrevHandler);
+      if (optionSelectKeys)
+        hotkeys.unbind(optionSelectKeys, recipeOptionSelectHandler);
       hotkeys.unbind("escape", recipeCloseHandler);
       hotkeys.unbind("1,2,3,4,5,6,7,8,9", recipeSelectHandler);
     };
@@ -3012,7 +3082,8 @@ export default function App() {
                 objectRegistry={objectRegistry}
                 objectOccupiedKeys={doorOccupiedKeys}
                 mobiles={mobiles}
-                spriteAtlas={mobSpriteAtlas}
+                spriteAtlas={characterSpriteAtlas}
+                adventurerSpriteAtlas={characterSpriteAtlas}
                 passageMask={passageMask ?? undefined}
                 speechBubbles={activeSpeechBubbles}
                 tintColors={tintColors}
