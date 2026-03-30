@@ -1,0 +1,118 @@
+.root {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+}
+
+.canvas {
+    position: absolute;
+    inset: 0;
+}
+
+.menu {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: flex-end;
+    top: 65vh;
+    height: 3.5rem;
+    left: 15vw;
+    width: 80vw;
+}
+
+.menuItem {
+    background:
+        linear-gradient(180deg,
+            #7a7570 0%,
+            #5c5753 40%,
+            #4a4642 60%,
+            #3e3b38 100%);
+    border: none;
+    /* pixel-art emboss: hard 1px highlight top-left, shadow bottom-right */
+    box-shadow:
+        inset 0 2px 0 0 #a09890,
+        inset 2px 0 0 0 #8a8278,
+        inset 0 -2px 0 0 #2a2724,
+        inset -2px 0 0 0 #302d2a,
+        0 4px 0 0 #1a1816,
+        0 5px 8px rgba(0, 0, 0, 0.7);
+    /* outer cracked-stone bevel */
+    outline: 1px solid #252220;
+    color: #f8a81a;
+    font-size: 1.35rem;
+    font-family: "Maison Neue", Georgia, serif;
+    letter-spacing: 0.12em;
+    padding: 0.55em 2.5em;
+    cursor: pointer;
+    display: block;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.95),
+        0 -1px 0 rgba(255, 200, 80, 0.15);
+    transition:
+        color 0.1s,
+        text-shadow 0.1s,
+        box-shadow 0.1s,
+        transform 0.1s,
+        background 0.1s;
+    flex: 1 1;
+    image-rendering: pixelated;
+    /* faint noise texture via repeating-conic to suggest stone grain */
+    background-image:
+        repeating-conic-gradient(rgba(0,0,0,0.04) 0% 25%, transparent 0% 50%),
+        linear-gradient(180deg,
+            #7a7570 0%,
+            #5c5753 40%,
+            #4a4642 60%,
+            #3e3b38 100%);
+    background-size: 4px 4px, 100% 100%;
+}
+
+.menuItem:hover {
+    color: #fff8e8;
+    background-image:
+        repeating-conic-gradient(rgba(0,0,0,0.04) 0% 25%, transparent 0% 50%),
+        linear-gradient(180deg,
+            #8a837c 0%,
+            #6a6460 40%,
+            #565250 60%,
+            #4a4744 100%);
+    background-size: 4px 4px, 100% 100%;
+    box-shadow:
+        inset 0 2px 0 0 #b0a89e,
+        inset 2px 0 0 0 #9a9288,
+        inset 0 -2px 0 0 #2a2724,
+        inset -2px 0 0 0 #302d2a,
+        0 4px 0 0 #1a1816,
+        0 5px 12px rgba(0, 0, 0, 0.7),
+        inset 0 0 18px rgba(248, 168, 26, 0.08);
+    text-shadow:
+        0 0 24px rgba(212, 148, 10, 0.9),
+        0 0 8px rgba(255, 220, 100, 0.5),
+        0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.menuItem:active {
+    /* pressed: sink the button — invert the bevel */
+    background-image:
+        repeating-conic-gradient(rgba(0,0,0,0.06) 0% 25%, transparent 0% 50%),
+        linear-gradient(180deg,
+            #35322f 0%,
+            #4a4642 40%,
+            #5c5753 100%);
+    background-size: 4px 4px, 100% 100%;
+    box-shadow:
+        inset 0 2px 0 0 #2a2724,
+        inset 2px 0 0 0 #302d2a,
+        inset 0 -2px 0 0 #908880,
+        inset -2px 0 0 0 #807870,
+        inset 0 3px 8px rgba(0, 0, 0, 0.6),
+        0 1px 0 0 #1a1816;
+    transform: translateY(3px);
+    color: #e8901a;
+    text-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.9),
+        0 0 6px rgba(212, 148, 10, 0.4);
+}
