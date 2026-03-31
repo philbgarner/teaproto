@@ -3,7 +3,7 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    font-family: "Maison Neue", Georgia, serif;
+    font-family: "Metamorphous", serif;
 }
 
 /* ── Tab bar ─────────────────────────────────────────────────────────────── */
@@ -22,7 +22,7 @@
     border: none;
     color: #7a7060;
     font-size: 0.8rem;
-    font-family: "Maison Neue", Georgia, serif;
+    font-family: "Metamorphous", serif;
     letter-spacing: 0.08em;
     cursor: pointer;
     box-shadow:
@@ -118,7 +118,7 @@
         inset 0 2px 5px rgba(0, 0, 0, 0.55);
     color: #c8a060;
     font-size: 0.78rem;
-    font-family: "Maison Neue", Georgia, serif;
+    font-family: "Metamorphous", serif;
     padding: 0.3em 0.5em;
     min-width: 0;
 }
@@ -135,7 +135,7 @@
         inset 0 2px 5px rgba(0, 0, 0, 0.4);
     color: #9a8060;
     font-size: 0.78rem;
-    font-family: "Maison Neue", Georgia, serif;
+    font-family: "Metamorphous", serif;
     padding: 0.3em 0.7em;
     cursor: pointer;
     flex-shrink: 0;

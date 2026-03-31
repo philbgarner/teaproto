@@ -117,6 +117,11 @@ const ARCH_BRICK_UV = atlasIndex.architecture.byName("archBrick")?.uv ?? [
   0, 64,
 ];
 const COBBLESTONE_WALL_ID = atlasIndex.wallTypes.idByName("Cobblestone");
+const PASSAGE_OVERLAY_IDS = [
+  _atlasUvToId(atlasIndex.wallOverlays.byName("buttonUnpressed")?.uv ?? [256, 256]),
+  _atlasUvToId(atlasIndex.wallOverlays.byName("buttonPressed")?.uv ?? [192, 256]),
+  _atlasUvToId(atlasIndex.wallOverlays.byName("openEmptyDoorDark")?.uv ?? [192, 0]),
+];
 
 function loadAtlasTexture() {
   return new Promise((resolve, reject) => {
@@ -683,31 +688,48 @@ console.log("[App module] all top-level defs done");
 // App
 // ---------------------------------------------------------------------------
 export default function App() {
-  console.log("[App] render start");
   const {
-    dungeonSeed, setDungeonSeed,
-    dungeonWidth, setDungeonWidth,
-    dungeonHeight, setDungeonHeight,
-    minLeafSize, setMinLeafSize,
-    maxLeafSize, setMaxLeafSize,
-    minRoomSize, setMinRoomSize,
-    maxRoomSize, setMaxRoomSize,
-    maxDoors, setMaxDoors,
-    tempDropPerStep, setTempDropPerStep,
-    heatingPerStep, setHeatingPerStep,
-    satiationDropPerStep, setSatiationDropPerStep,
-    supersatiationBonus, setSupersatiationBonus,
-    turnsPerWave, setTurnsPerWave,
-    traversalFactor, setTraversalFactor,
-    adventurerDreadRate, setAdventurerDreadRate,
-    adventurerLootPerChest, setAdventurerLootPerChest,
-    torchColor, setTorchColor,
-    torchIntensity, setTorchIntensity,
-    keybindings, setKeybindings,
+    dungeonSeed,
+    setDungeonSeed,
+    dungeonWidth,
+    setDungeonWidth,
+    dungeonHeight,
+    setDungeonHeight,
+    minLeafSize,
+    setMinLeafSize,
+    maxLeafSize,
+    setMaxLeafSize,
+    minRoomSize,
+    setMinRoomSize,
+    maxRoomSize,
+    setMaxRoomSize,
+    maxDoors,
+    setMaxDoors,
+    tempDropPerStep,
+    setTempDropPerStep,
+    heatingPerStep,
+    setHeatingPerStep,
+    satiationDropPerStep,
+    setSatiationDropPerStep,
+    supersatiationBonus,
+    setSupersatiationBonus,
+    turnsPerWave,
+    setTurnsPerWave,
+    traversalFactor,
+    setTraversalFactor,
+    adventurerDreadRate,
+    setAdventurerDreadRate,
+    adventurerLootPerChest,
+    setAdventurerLootPerChest,
+    torchColor,
+    setTorchColor,
+    torchIntensity,
+    setTorchIntensity,
+    keybindings,
+    setKeybindings,
   } = useSettings();
 
   const dungeon = useMemo(() => {
-    console.log("[App] useMemo: generateBspDungeon start");
     const d = generateBspDungeon({
       width: dungeonWidth,
       height: dungeonHeight,
@@ -718,7 +740,6 @@ export default function App() {
       maxRoomSize,
       corridorWidth: 2,
     });
-    console.log("[App] useMemo: generateBspDungeon done");
     return d;
   }, [
     dungeonSeed,
@@ -761,7 +782,6 @@ export default function App() {
 
   // Assign floor/wall/ceiling types to every room and corridor by theme
   useMemo(() => {
-    console.log("[App] useMemo: themed rooms start");
     const floorData = dungeon.textures.floorType.image.data;
     const wallData = dungeon.textures.wallType.image.data;
     const ceilingData = dungeon.textures.ceilingType.image.data;
@@ -806,7 +826,6 @@ export default function App() {
     dungeon.textures.floorType.needsUpdate = true;
     dungeon.textures.wallType.needsUpdate = true;
     dungeon.textures.ceilingType.needsUpdate = true;
-    console.log("[App] useMemo: themed rooms done");
   }, [dungeon]);
 
   // Stove placements via generateContent — 2 stoves in end room at distanceToWall === 1
@@ -944,7 +963,6 @@ export default function App() {
   // Passive mobs — one per non-end room (up to 3)
   const initialMobs = useMemo(() => {
     console.log(
-      "[App] useMemo: initialMobs start, rooms:",
       dungeon.rooms.size,
       "endRoomId:",
       dungeon.endRoomId,
@@ -955,7 +973,6 @@ export default function App() {
     let idx = 0;
     for (const [roomId, room] of dungeon.rooms) {
       console.log(
-        "[App] initialMobs room:",
         roomId,
         "type:",
         room.type,
@@ -977,7 +994,6 @@ export default function App() {
       });
       idx++;
     }
-    console.log("[App] useMemo: initialMobs done, count:", mobs.length, mobs);
     return mobs;
   }, [dungeon]);
 
@@ -1033,7 +1049,6 @@ export default function App() {
   }, [dungeon, dungeonSeed]);
 
   const initialChests = useMemo(() => {
-    console.log("[App] useMemo: initialChests start");
     const rng = makeRng(dungeonSeed ^ 0x2aabcdef);
     const nonEndRooms = [...dungeon.rooms.values()].filter(
       (r) => r.id !== dungeon.endRoomId,
@@ -1070,9 +1085,7 @@ export default function App() {
   );
   const [texture, setTexture] = useState(null);
   useEffect(() => {
-    console.log("[App] useEffect: loadAtlasTexture start");
     loadAtlasTexture().then((t) => {
-      console.log("[App] useEffect: loadAtlasTexture done");
       setTexture(t);
     });
   }, []);
@@ -1186,7 +1199,6 @@ export default function App() {
   // Scan every cell and check right/down neighbors; a pair is added only once (a < b).
   // Pairs where a door sits at the threshold are excluded — doors block temperature flow.
   const regionAdjacency = useMemo(() => {
-    console.log("[App] useMemo: regionAdjacency start");
     // Build set of cell boundaries blocked by doors.
     // A door at (door.x, door.z) separates that cell from the adjacent room cell
     // in the direction stored in meta.blockDx / meta.blockDz.
@@ -1231,7 +1243,6 @@ export default function App() {
       }
     }
     const result = Array.from(pairs).map((s) => s.split(",").map(Number));
-    console.log("[App] useMemo: regionAdjacency done, pairs:", result.length);
     return result;
   }, [
     // dungeon,
@@ -1323,7 +1334,9 @@ export default function App() {
     _setPassageTraversal(s);
   }
   const traversalFactorRef = useRef(2.0);
-  useEffect(() => { traversalFactorRef.current = traversalFactor; }, [traversalFactor]);
+  useEffect(() => {
+    traversalFactorRef.current = traversalFactor;
+  }, [traversalFactor]);
   const traversalStartRef = useRef({ totalSteps: 0, factor: 2.0 });
 
   const { play: playMainTheme } = useMusic(
@@ -1336,7 +1349,6 @@ export default function App() {
 
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
-    console.log("[App] useEffect: dungeon reset start");
     const freshSatiations = initialMobs.map(() => 40);
     setPlayerHands({
       left: {
@@ -1404,7 +1416,6 @@ export default function App() {
     showMsg(
       "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
     );
-    console.log("[App] useEffect: dungeon reset done");
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -2928,7 +2939,6 @@ export default function App() {
   const { minimapRef, minimapTooltip, setMinimapTooltip, onMinimapMouseMove } =
     useMinimapData(minimapMobs, dungeonWidth, dungeonHeight);
 
-  console.log("[App] render: returning JSX, texture:", !!texture);
   return (
     <>
       <div
@@ -2954,7 +2964,16 @@ export default function App() {
         {/* Main area */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           {/* 3D view */}
-          <div style={{ flex: 1, position: "relative" }}>
+          <div style={{ flex: 1, position: "relative", outline: "1px solid #1a1816" }}>
+            {/* Inset bevel overlay — sits above the WebGL canvas */}
+            <div style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              zIndex: 10,
+              boxShadow:
+                "inset 0 6px 0 0 #1a1816, inset 6px 0 0 0 #1e1c1a, inset 0 -6px 0 0 #7a7268, inset -6px 0 0 0 #6a6258, inset 0 18px 40px rgba(0,0,0,0.7), inset 0 -6px 12px rgba(255,255,255,0.03)",
+            }} />
             {texture && (
               <PerspectiveDungeonView
                 solidData={solidData}
@@ -2981,6 +3000,7 @@ export default function App() {
                 spriteAtlas={characterSpriteAtlas}
                 adventurerSpriteAtlas={characterSpriteAtlas}
                 passageMask={passageMask ?? undefined}
+                passageOverlayIds={PASSAGE_OVERLAY_IDS}
                 speechBubbles={activeSpeechBubbles}
                 torchColor={torchColor}
                 torchIntensity={torchIntensity}
@@ -3010,12 +3030,16 @@ export default function App() {
                   bottom: 70,
                   left: "50%",
                   transform: "translateX(-50%)",
-                  background: "rgba(0,0,0,0.75)",
-                  border: "1px solid #888",
+                  backgroundColor: "#2e2c29",
+                  outline: "1px solid #1e1c1a",
+                  boxShadow: "inset 0 2px 0 0 #5a5450, inset 2px 0 0 0 #504a46, inset 0 -2px 0 0 #1a1816, inset -2px 0 0 0 #1e1c1a, inset 0 4px 12px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.8)",
+                  backgroundImage: "repeating-conic-gradient(rgba(0,0,0,0.03) 0% 25%, transparent 0% 50%)",
+                  backgroundSize: "4px 4px",
                   padding: "6px 14px",
-                  borderRadius: 4,
                   fontSize: 13,
-                  color: "#ffd",
+                  color: "#c8a060",
+                  fontFamily: '"Metamorphous", serif',
+                  letterSpacing: "0.05em",
                   pointerEvents: "none",
                   whiteSpace: "nowrap",
                 }}
@@ -3069,12 +3093,16 @@ export default function App() {
                   top: 16,
                   left: "50%",
                   transform: "translateX(-50%)",
-                  background: "rgba(0,0,0,0.82)",
-                  border: "1px solid #555",
+                  backgroundColor: "#2e2c29",
+                  outline: "1px solid #1e1c1a",
+                  boxShadow: "inset 0 2px 0 0 #5a5450, inset 2px 0 0 0 #504a46, inset 0 -2px 0 0 #1a1816, inset -2px 0 0 0 #1e1c1a, inset 0 4px 12px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.8)",
+                  backgroundImage: "repeating-conic-gradient(rgba(0,0,0,0.03) 0% 25%, transparent 0% 50%)",
+                  backgroundSize: "4px 4px",
                   padding: "8px 18px",
-                  borderRadius: 4,
                   fontSize: 13,
-                  color: "#fff",
+                  color: "#c8a060",
+                  fontFamily: '"Metamorphous", serif',
+                  letterSpacing: "0.04em",
                   maxWidth: 480,
                   textAlign: "center",
                   pointerEvents: "none",

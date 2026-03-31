@@ -1,0 +1,100 @@
+.sidebar {
+    width: 220px;
+    border-left: 2px solid #1e1c1a;
+    box-shadow: -2px 0 0 0 #3a3530;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+    background-color: #2a2724;
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.03) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+    font-family: "Metamorphous", serif;
+}
+
+.label {
+    font-size: 0.72rem;
+    color: #9a8060;
+    letter-spacing: 0.08em;
+}
+
+.canvasWrap {
+    position: relative;
+    display: inline-block;
+}
+
+.canvas {
+    image-rendering: pixelated;
+    display: block;
+    outline: 1px solid #3a3530;
+    box-shadow:
+        inset 0 1px 0 0 #1a1816,
+        inset 0 2px 5px rgba(0, 0, 0, 0.55),
+        0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.tooltip {
+    position: absolute;
+    background-color: #2e2c29;
+    outline: 1px solid #1e1c1a;
+    box-shadow:
+        inset 0 1px 0 0 #5a5450,
+        inset 1px 0 0 0 #504a46,
+        inset 0 -1px 0 0 #1a1816,
+        inset -1px 0 0 0 #1e1c1a,
+        inset 0 3px 8px rgba(0, 0, 0, 0.5),
+        0 4px 12px rgba(0, 0, 0, 0.8);
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.03) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+    padding: 5px 8px;
+    font-size: 0.68rem;
+    color: #c8a060;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.tooltipName {
+    font-weight: bold;
+    letter-spacing: 0.05em;
+}
+
+.tooltipRow {
+    color: #9a8060;
+    margin-top: 1px;
+}
+
+.checkboxLabel {
+    font-size: 0.72rem;
+    color: #9a8060;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    user-select: none;
+}
+
+.checkboxLabel input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #f8a81a;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+    font-size: 0.68rem;
+    color: #5a5040;
+    letter-spacing: 0.03em;
+    border-top: 1px solid #1e1c1a;
+    padding-top: 6px;
+}

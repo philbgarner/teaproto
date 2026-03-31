@@ -50,7 +50,8 @@
   "wallOverlays": [
     { "id": 1, "name": "dartTrap", "uv": [320, 128] },
     { "id": 2, "name": "buttonUnpressed", "uv": [192, 256] },
-    { "id": 3, "name": "buttonPressed", "uv": [256, 256] }
+    { "id": 3, "name": "buttonPressed", "uv": [256, 256] },
+    { "id": 4, "name": "openEmptyDoorDark", "uv": [192, 0] }
   ],
   "water": [
     { "id": 1, "name": "waterTopLeft", "uv": [0, 128] },

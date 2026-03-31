@@ -47,7 +47,7 @@ const T_BACKHILL = 0.5;
 const SLIDE_DUR = 0.9;
 const T_FC = 1.2; // front hill + castle, settled at T_FC + SLIDE_DUR = 2.1s
 
-const T_FLASH = 2.5;
+const T_FLASH = 2.9;
 
 const S1_BOLT_ON = 0.0;
 const S1_BOLT_OFF = 0.2;
@@ -63,7 +63,7 @@ const S2_OFF = 1.7;
 
 const T_FLASH_END = T_FLASH + S2_OFF; // 4.2s
 
-const T_LITE = T_FLASH_END + 0.3; // 4.5s — lite crossfade begins
+const T_LITE = T_FLASH_END + 1.3; // sit dark for 1s, then lite crossfade begins
 const DUR_LITE = 0.5;
 
 // White clouds drift in after sky has cleared
@@ -78,7 +78,7 @@ const MENU_SHOW_T = T_TITLE + DUR_TITLE + 0.3; // 7.45s
 const CASTLE_SLIDE_DUR = 0.9;
 
 // IDs of dark layers that fade OUT as lite fades IN
-const DARK_LAYER_IDS = new Set(["sky_d", "bhill_d", "fhill_d", "cast_d"]);
+const DARK_LAYER_IDS = new Set(["sky_d", "bhill_d", "fhill_d", "cast_d", "title_d"]);
 
 // ─── Static layer sequence ────────────────────────────────────────────────────
 // Render order: 0-1 sky, 2-3 storm clouds (behind hills), 4-5 back hill,
@@ -104,6 +104,7 @@ const SEQUENCE = [
     anim: "slideUp",
   },
   { id: "cast_d", ti: 14, ro: 9, start: T_FC, dur: SLIDE_DUR, anim: "slideUp" },
+  { id: "title_d", ti: 18, ro: 11, start: T_FC, dur: SLIDE_DUR, anim: "slideUp" },
   { id: "sky_l", ti: 1, ro: 1, start: T_LITE, dur: DUR_LITE, anim: "fadeIn" },
   { id: "bhill_l", ti: 5, ro: 5, start: T_LITE, dur: DUR_LITE, anim: "fadeIn" },
   {
@@ -122,14 +123,7 @@ const SEQUENCE = [
     dur: DUR_LITE,
     anim: "fadeIn",
   },
-  {
-    id: "title",
-    ti: 19,
-    ro: 12,
-    start: T_TITLE,
-    dur: DUR_TITLE,
-    anim: "slideUp",
-  },
+  { id: "title", ti: 19, ro: 12, start: T_LITE, dur: DUR_LITE, anim: "fadeIn" },
 ];
 
 // ─── Marionette cloud system ──────────────────────────────────────────────────
@@ -379,22 +373,10 @@ function SceneContent({
       }
     }
 
-    // ── Storm clouds — wiggle in place, fade in with sky, fade out at T_LITE ───
-    for (const { id, jerks, yFac } of STORM_CLOUD_DEFS) {
+    // ── Storm clouds — hidden entirely (no longer used in dark phase) ──────────
+    for (const { id } of STORM_CLOUD_DEFS) {
       const mesh = refs.current[id];
-      if (!mesh) continue;
-      mesh.position.x = jerkX(t, jerks, W);
-      mesh.position.y = H * yFac;
-      if (t < 0.8) {
-        mesh.material.opacity = easeOut(t / 0.8);
-      } else if (t >= T_LITE) {
-        mesh.material.opacity = Math.max(
-          0,
-          1 - easeOut((t - T_LITE) / DUR_LITE),
-        );
-      } else {
-        mesh.material.opacity = 1;
-      }
+      if (mesh) mesh.material.opacity = 0;
     }
 
     // ── White clouds + dark underlayers ──────────────────────────────────────
@@ -573,29 +555,68 @@ function MenuItem({ label, onClick }) {
   );
 }
 
+// ─── Difficulty presets ───────────────────────────────────────────────────────
+
+const DIFFICULTY_PRESETS = {
+  easy: {
+    tempDropPerStep: 0.5,
+    heatingPerStep: 6.0,
+    satiationDropPerStep: 0.1,
+    supersatiationBonus: 50,
+    turnsPerWave: 120,
+    traversalFactor: 2.0,
+    adventurerDreadRate: 0.5,
+    adventurerLootPerChest: 20,
+  },
+  normal: {
+    tempDropPerStep: 1.0,
+    heatingPerStep: 3.5,
+    satiationDropPerStep: 0.3,
+    supersatiationBonus: 25,
+    turnsPerWave: 60,
+    traversalFactor: 1.0,
+    adventurerDreadRate: 1.5,
+    adventurerLootPerChest: 10,
+  },
+  hard: {
+    tempDropPerStep: 2.0,
+    heatingPerStep: 1.5,
+    satiationDropPerStep: 0.6,
+    supersatiationBonus: 10,
+    turnsPerWave: 30,
+    traversalFactor: 0.5,
+    adventurerDreadRate: 3.0,
+    adventurerLootPerChest: 5,
+  },
+};
+
 // ─── Root component ───────────────────────────────────────────────────────────
 
 export function TitleScreen({ onNewGame }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuFading, setMenuFading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [choosingDifficulty, setChoosingDifficulty] = useState(false);
   const musicRef = useRef({});
   const skipRef = useRef(false);
   const settings = useSettings();
 
-  useEffect(() => {
-    const face = new FontFace(
-      "Maison Neue",
-      `url('${BASE}fonts/MaisonNeue.ttf') format('truetype')`,
-    );
-    face
-      .load()
-      .then((loaded) => document.fonts.add(loaded))
-      .catch(() => {});
-  }, []);
-
   function handleNewGame() {
     if (menuFading) return;
+    setChoosingDifficulty(true);
+  }
+
+  function handleDifficulty(level) {
+    if (menuFading) return;
+    const preset = DIFFICULTY_PRESETS[level];
+    settings.setTempDropPerStep(preset.tempDropPerStep);
+    settings.setHeatingPerStep(preset.heatingPerStep);
+    settings.setSatiationDropPerStep(preset.satiationDropPerStep);
+    settings.setSupersatiationBonus(preset.supersatiationBonus);
+    settings.setTurnsPerWave(preset.turnsPerWave);
+    settings.setTraversalFactor(preset.traversalFactor);
+    settings.setAdventurerDreadRate(preset.adventurerDreadRate);
+    settings.setAdventurerLootPerChest(preset.adventurerLootPerChest);
     setMenuFading(true);
     const FADE = 600;
     musicRef.current.fadeOutMusic?.(FADE);
@@ -635,9 +656,19 @@ export function TitleScreen({ onNewGame }) {
           pointerEvents: menuVisible && !menuFading ? "auto" : "none",
         }}
       >
-        <MenuItem label="New Game" onClick={handleNewGame} />
-        <MenuItem label="Settings" onClick={() => setShowSettings(true)} />
-        <MenuItem label="Credits" />
+        {!choosingDifficulty ? (
+          <>
+            <MenuItem label="New Game" onClick={handleNewGame} />
+            <MenuItem label="Settings" onClick={() => setShowSettings(true)} />
+            <MenuItem label="Credits" />
+          </>
+        ) : (
+          <>
+            <MenuItem label="Easy" onClick={() => handleDifficulty("easy")} />
+            <MenuItem label="Normal" onClick={() => handleDifficulty("normal")} />
+            <MenuItem label="Hard" onClick={() => handleDifficulty("hard")} />
+          </>
+        )}
       </div>
 
       {showSettings && (

@@ -44,25 +44,44 @@ export function SettingsProvider({ children }) {
   return (
     <SettingsContext.Provider
       value={{
-        dungeonSeed, setDungeonSeed,
-        dungeonWidth, setDungeonWidth,
-        dungeonHeight, setDungeonHeight,
-        minLeafSize, setMinLeafSize,
-        maxLeafSize, setMaxLeafSize,
-        minRoomSize, setMinRoomSize,
-        maxRoomSize, setMaxRoomSize,
-        maxDoors, setMaxDoors,
-        tempDropPerStep, setTempDropPerStep,
-        heatingPerStep, setHeatingPerStep,
-        satiationDropPerStep, setSatiationDropPerStep,
-        supersatiationBonus, setSupersatiationBonus,
-        turnsPerWave, setTurnsPerWave,
-        traversalFactor, setTraversalFactor,
-        adventurerDreadRate, setAdventurerDreadRate,
-        adventurerLootPerChest, setAdventurerLootPerChest,
-        torchColor, setTorchColor,
-        torchIntensity, setTorchIntensity,
-        keybindings, setKeybindings,
+        dungeonSeed,
+        setDungeonSeed,
+        dungeonWidth,
+        setDungeonWidth,
+        dungeonHeight,
+        setDungeonHeight,
+        minLeafSize,
+        setMinLeafSize,
+        maxLeafSize,
+        setMaxLeafSize,
+        minRoomSize,
+        setMinRoomSize,
+        maxRoomSize,
+        setMaxRoomSize,
+        maxDoors,
+        setMaxDoors,
+        tempDropPerStep,
+        setTempDropPerStep,
+        heatingPerStep,
+        setHeatingPerStep,
+        satiationDropPerStep,
+        setSatiationDropPerStep,
+        supersatiationBonus,
+        setSupersatiationBonus,
+        turnsPerWave,
+        setTurnsPerWave,
+        traversalFactor,
+        setTraversalFactor,
+        adventurerDreadRate,
+        setAdventurerDreadRate,
+        adventurerLootPerChest,
+        setAdventurerLootPerChest,
+        torchColor,
+        setTorchColor,
+        torchIntensity,
+        setTorchIntensity,
+        keybindings,
+        setKeybindings,
       }}
     >
       {children}
@@ -70,6 +89,7 @@ export function SettingsProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line
 export function useSettings() {
   return useContext(SettingsContext);
 }

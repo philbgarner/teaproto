@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { GameRoot } from "./GameRoot.jsx";
 
 export function ClickToBegin({ onBegin }) {
   return (
