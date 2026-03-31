@@ -66,15 +66,19 @@ const T_FLASH_END = T_FLASH + S2_OFF; // 4.2s
 const T_LITE = T_FLASH_END + 1.3; // sit dark for 1s, then lite crossfade begins
 const DUR_LITE = 0.5;
 
-// White clouds drift in after sky has cleared
-const T_WCLOUD1 = T_LITE + DUR_LITE + 0.3; // 5.3s
-const T_WCLOUD2 = T_WCLOUD1 + 0.35; // 5.65s
-const DUR_WCLOUD_FADE = 0.5;
-
-const T_TITLE = T_WCLOUD2 + 0.6; // 6.25s
+const T_TITLE = T_FLASH_END + 1.3 + 0.5 + 0.6; // After lite transition and some delay
 const DUR_TITLE = 0.9;
 
-const MENU_SHOW_T = T_TITLE + DUR_TITLE + 0.3; // 7.45s
+// White clouds drift in after castle has settled
+const T_WCLOUD1 = T_TITLE + DUR_TITLE + 0.5; // After title and castle are fully visible
+const T_WCLOUD2 = T_WCLOUD1 + 0.35;
+const DUR_WCLOUD_FADE = 0.5;
+
+// Flowers appear with white clouds
+const T_FLOWERS = T_WCLOUD1; // Same time as first white cloud
+const DUR_FLOWER_FADE = 0.5;
+
+const MENU_SHOW_T = T_WCLOUD2 + 0.6; // Updated to after white clouds
 const CASTLE_SLIDE_DUR = 0.9;
 
 // IDs of dark layers that fade OUT as lite fades IN
@@ -135,47 +139,52 @@ const SEQUENCE = [
 const JERK_DUR = 0.1; // seconds per jerk slide
 
 // Returns x position in world units for a cloud at scene-time t.
-// When loop=true the sequence repeats forever; first and last jerk positions
+// When loop=true the sequence repeats forever; first and last positions
 // must match so the wrap is seamless.
-function jerkX(t, jerks, W, loop = false) {
-  if (!jerks.length) return 0;
+// Clouds drift linearly between positions instead of instant movement.
+function driftX(t, positions, W, loop = false) {
+  if (!positions.length) return 0;
   let effectiveT = t;
-  if (loop && jerks.length > 1) {
-    const t0 = jerks[0][0];
-    const period = jerks[jerks.length - 1][0] - t0;
+  if (loop && positions.length > 1) {
+    const t0 = positions[0][0];
+    const period = positions[positions.length - 1][0] - t0;
     if (period > 0 && t > t0) effectiveT = t0 + ((t - t0) % period);
   }
-  if (effectiveT < jerks[0][0]) return jerks[0][1] * W;
-  let prevX = jerks[0][1] * W;
-  for (let i = 1; i < jerks.length; i++) {
-    const [jt, jx] = jerks[i];
-    const targetX = jx * W;
-    if (effectiveT < jt) {
-      const slideStart = jt - JERK_DUR;
-      if (effectiveT >= slideStart) {
-        const p = (effectiveT - slideStart) / JERK_DUR;
-        return prevX + (targetX - prevX) * easeOut(p);
-      }
-      return prevX;
+  if (effectiveT < positions[0][0]) return positions[0][1] * W;
+  
+  for (let i = 1; i < positions.length; i++) {
+    const [currT, currX] = positions[i];
+    const [prevT, prevX] = positions[i - 1];
+    const targetX = currX * W;
+    const startX = prevX * W;
+    
+    if (effectiveT < currT) {
+      // Linear interpolation between previous and current position
+      const p = (effectiveT - prevT) / (currT - prevT);
+      return startX + (targetX - startX) * p;
     }
-    prevX = targetX;
   }
-  return prevX;
+  
+  // Return last position if beyond the sequence
+  return positions[positions.length - 1][1] * W;
 }
 
-// Storm clouds — wiggle in place (puppet theater: jerky but not drifting).
+// Storm clouds — drift linearly between positions.
 // x values are absolute fractions of viewport width (0 = centre), staying small
-// so each cloud wiggles ±0.05–0.12 around its home position.
-// Dark underlayer (ro 2) and gray overlay (ro 3) have different jerk intervals
+// so each cloud drifts ±0.05–0.12 around its home position.
+// Dark underlayer (ro 2) and gray overlay (ro 3) have different timing
 // so the two layers move independently and create a sense of depth.
+// Gray clouds follow dark clouds with a delay.
+const STORM_CLOUD_DELAY = 0.3; // Gray clouds follow dark clouds by this delay
+
 const STORM_CLOUD_DEFS = [
-  // ── Dark/black underlayer — heavier beat, ~1.2–1.5 s between jerks ─────────
+  // ── Dark/black underlayer — slower, broader movements ─────────
   {
     id: "dc0",
     ti: 6,
     ro: 2,
     yFac: 0.43,
-    jerks: [
+    positions: [
       [0.0, -0.2],
       [1.3, -0.1],
       [2.5, -0.23],
@@ -188,7 +197,7 @@ const STORM_CLOUD_DEFS = [
     ti: 7,
     ro: 2,
     yFac: 0.47,
-    jerks: [
+    positions: [
       [0.0, 0.22],
       [1.5, 0.11],
       [2.8, 0.25],
@@ -201,7 +210,7 @@ const STORM_CLOUD_DEFS = [
     ti: 6,
     ro: 2,
     yFac: 0.39,
-    jerks: [
+    positions: [
       [0.0, -0.04],
       [1.1, -0.15],
       [2.3, -0.02],
@@ -214,7 +223,7 @@ const STORM_CLOUD_DEFS = [
     ti: 7,
     ro: 2,
     yFac: 0.41,
-    jerks: [
+    positions: [
       [0.0, 0.36],
       [1.4, 0.26],
       [2.7, 0.38],
@@ -222,13 +231,13 @@ const STORM_CLOUD_DEFS = [
       [5.3, 0.36],
     ],
   },
-  // ── Gray overlay — lighter beat, ~0.8–1.0 s between jerks, different phase ─
+  // ── Gray overlay — follows dark clouds with delay ─
   {
     id: "gc0",
     ti: 8,
     ro: 3,
     yFac: 0.3,
-    jerks: [
+    positions: [
       [0.0, 0.12],
       [0.9, 0.22],
       [1.8, 0.08],
@@ -242,7 +251,7 @@ const STORM_CLOUD_DEFS = [
     ti: 9,
     ro: 3,
     yFac: 0.34,
-    jerks: [
+    positions: [
       [0.0, -0.28],
       [0.7, -0.16],
       [1.6, -0.3],
@@ -256,7 +265,7 @@ const STORM_CLOUD_DEFS = [
     ti: 8,
     ro: 3,
     yFac: 0.26,
-    jerks: [
+    positions: [
       [0.0, 0.28],
       [1.0, 0.16],
       [2.0, 0.3],
@@ -269,7 +278,7 @@ const STORM_CLOUD_DEFS = [
     ti: 9,
     ro: 3,
     yFac: 0.37,
-    jerks: [
+    positions: [
       [0.0, -0.1],
       [0.8, -0.21],
       [1.7, -0.06],
@@ -280,10 +289,69 @@ const STORM_CLOUD_DEFS = [
   },
 ];
 
-// White clouds — gentle independent wiggle in the cleared lite sky.
-// Each has a dark underlayer (darkTi) that follows the same jerk sequence
+// White clouds — gentle independent drift in the cleared lite sky.
+// Each has a dark underlayer (darkTi) that follows the same movement sequence
 // but delayed by LITE_FOLLOW_DELAY seconds, so it lags then catches up.
 const LITE_FOLLOW_DELAY = 0.5;
+
+// Flowers — appear with white clouds and turn continuously
+const FLOWER_DEFS = [
+  {
+    id: "flower0",
+    ti: 20, // flower_sprite texture index
+    ro: 13, // render order - in front of most elements
+    xFac: -0.46, // horizontal position as fraction of viewport width
+    yFac: -0.22, // vertical position as fraction of viewport height (moved down)
+    scale: 0.8, // size multiplier
+    rotationSpeed: 0.5, // radians per second
+    pulseFrequency: 0.12, // Hz - slowest pulsing
+    startDelay: 0.0, // delay before this flower starts appearing
+  },
+  {
+    id: "flower1",
+    ti: 20,
+    ro: 13,
+    xFac: -0.35,
+    yFac: -0.42,
+    scale: 1.0,
+    rotationSpeed: -0.4,
+    pulseFrequency: 0.25, // Hz
+    startDelay: 0.6,
+  },
+  {
+    id: "flower2",
+    ti: 20,
+    ro: 13,
+    xFac: -0.17,
+    yFac: -0.26,
+    scale: 1.4,
+    rotationSpeed: -0.3,
+    pulseFrequency: 0.4, // Hz
+    startDelay: 0.4,
+  },
+  {
+    id: "flower3",
+    ti: 20,
+    ro: 13,
+    xFac: -0.04,
+    yFac: -0.12,
+    scale: 1.1,
+    rotationSpeed: 0.6,
+    pulseFrequency: 0.5, // Hz
+    startDelay: 0.8,
+  },
+  {
+    id: "flower4",
+    ti: 20,
+    ro: 13,
+    xFac: 0.06,
+    yFac: -0.28,
+    scale: 0.8,
+    rotationSpeed: -0.7, // counter-clockwise
+    pulseFrequency: 0.6, // Hz - fastest pulsing
+    startDelay: 0.2,
+  },
+];
 
 const LITE_CLOUD_DEFS = [
   {
@@ -294,7 +362,7 @@ const LITE_CLOUD_DEFS = [
     yFac: 0.42,
     startT: T_WCLOUD1,
     loop: true,
-    jerks: [
+    positions: [
       [T_WCLOUD1, 0.06],
       [T_WCLOUD1 + 2.8, 0.02],
       [T_WCLOUD1 + 5.5, 0.07],
@@ -309,7 +377,7 @@ const LITE_CLOUD_DEFS = [
     yFac: 0.34,
     startT: T_WCLOUD2,
     loop: true,
-    jerks: [
+    positions: [
       [T_WCLOUD2, -0.07],
       [T_WCLOUD2 + 3.1, -0.03],
       [T_WCLOUD2 + 6.0, -0.08],
@@ -373,14 +441,39 @@ function SceneContent({
       }
     }
 
-    // ── Storm clouds — hidden entirely (no longer used in dark phase) ──────────
-    for (const { id } of STORM_CLOUD_DEFS) {
-      const mesh = refs.current[id];
-      if (mesh) mesh.material.opacity = 0;
+    // ── Storm clouds — dark clouds drift, gray clouds follow with delay ──────────
+    // Storm clouds fade out after lite transition, before castle appears
+    let stormCloudOpacity;
+    if (t < T_LITE + DUR_LITE) {
+      stormCloudOpacity = 0.8; // Fully visible during dark phase
+    } else {
+      // Start fading out immediately after lite transition completes
+      const fadeProgress = Math.min(1, (t - (T_LITE + DUR_LITE)) / 2.0);
+      stormCloudOpacity = 0.8 * (1 - fadeProgress);
+    }
+    
+    for (const cloudDef of STORM_CLOUD_DEFS) {
+      const mesh = refs.current[cloudDef.id];
+      if (!mesh) continue;
+      mesh.position.y = H * cloudDef.yFac;
+      
+      if (cloudDef.positions) {
+        // Dark cloud - moves independently
+        mesh.position.x = driftX(t, cloudDef.positions, W);
+        mesh.material.opacity = stormCloudOpacity;
+      } else if (cloudDef.followTarget && cloudDef.followDelay) {
+        // Gray cloud - follows dark clouzd with delay
+        const targetCloud = STORM_CLOUD_DEFS.find(c => c.id === cloudDef.followTarget);
+        if (targetCloud && targetCloud.positions) {
+          const delayedT = Math.max(0, t - cloudDef.followDelay);
+          mesh.position.x = driftX(delayedT, targetCloud.positions, W);
+          mesh.material.opacity = stormCloudOpacity * 0.75; // Slightly more transparent
+        }
+      }
     }
 
     // ── White clouds + dark underlayers ──────────────────────────────────────
-    for (const { id, jerks, yFac, startT: st, loop } of LITE_CLOUD_DEFS) {
+    for (const { id, positions, yFac, startT: st, loop } of LITE_CLOUD_DEFS) {
       const mesh = refs.current[id];
       const darkMesh = refs.current[id + "_dark"];
       if (!mesh) continue;
@@ -391,20 +484,51 @@ function SceneContent({
         if (darkMesh) darkMesh.material.opacity = 0;
         continue;
       }
-      const opacity = easeOut(Math.min(1, (t - st) / DUR_WCLOUD_FADE));
-      mesh.position.x = jerkX(t, jerks, W, loop);
+      
+      // White clouds fade in faster over 1 second
+      const fadeInProgress = Math.min(1, (t - st) / 1.0);
+      const opacity = easeOut(fadeInProgress);
+      
+      mesh.position.x = driftX(t, positions, W, loop);
       mesh.material.opacity = opacity;
+      
       // Dark underlayer evaluates the same sequence but LITE_FOLLOW_DELAY behind,
       // clamped to startT so it doesn't evaluate before the cloud exists.
       if (darkMesh) {
-        darkMesh.position.x = jerkX(
+        darkMesh.position.x = driftX(
           Math.max(st, t - LITE_FOLLOW_DELAY),
-          jerks,
+          positions,
           W,
           loop,
         );
         darkMesh.material.opacity = opacity * 0.3;
       }
+    }
+
+    // ── Flowers — appear with white clouds and turn continuously ─────────────
+    for (const { id, xFac, yFac, scale, rotationSpeed, pulseFrequency, startDelay } of FLOWER_DEFS) {
+      const mesh = refs.current[id];
+      if (!mesh) continue;
+      
+      const flowerStartT = T_FLOWERS + startDelay;
+      mesh.position.x = W * xFac;
+      mesh.position.y = H * yFac;
+      
+      // Scale pulsing between 0.9 and 1.1 at flower-specific frequency
+      const pulseTime = t - flowerStartT;
+      const pulseFactor = 1.0 + 0.1 * Math.sin(2 * Math.PI * pulseFrequency * pulseTime);
+      const actualScale = scale * pulseFactor;
+      mesh.scale.set(actualScale * W, actualScale * W, 1);
+      
+      if (t < flowerStartT) {
+        mesh.material.opacity = 0;
+        mesh.rotation.z = 0;
+        continue;
+      }
+      
+      const opacity = easeOut(Math.min(1, (t - flowerStartT) / DUR_FLOWER_FADE));
+      mesh.material.opacity = opacity;
+      mesh.rotation.z = (t - flowerStartT) * rotationSpeed;
     }
 
     // ── Music ─────────────────────────────────────────────────────────────────
@@ -480,6 +604,25 @@ function SceneContent({
     </mesh>
   );
 
+  const flowerMesh = (id, ti, ro) => (
+    <mesh
+      key={id}
+      renderOrder={ro}
+      ref={(m) => {
+        if (m) refs.current[id] = m;
+      }}
+    >
+      <planeGeometry args={[w * 0.00002, w * 0.00002]} />
+      <meshBasicMaterial
+        map={textures[ti]}
+        transparent
+        opacity={0}
+        depthTest={false}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+
   return (
     <>
       {/* Static sequence layers */}
@@ -494,6 +637,9 @@ function SceneContent({
       )}
       {/* White clouds — lite sky */}
       {LITE_CLOUD_DEFS.map(({ id, ti, ro }) => fullMesh(id, ti, ro))}
+
+      {/* Flowers — appear with white clouds */}
+      {FLOWER_DEFS.map(({ id, ti, ro }) => flowerMesh(id, ti, ro))}
 
       {/* Lightning bolt — visible briefly before each screen flash */}
       {fullMesh("bolt", 3, 15)}
