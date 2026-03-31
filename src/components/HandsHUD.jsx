@@ -1,3 +1,5 @@
+import styles from "./styles/HandsHUD.module.css";
+
 /**
  * Displays a single held tea item, showing its name, current temperature,
  * whether it's in the ideal range, and whether it's been ruined.
@@ -5,17 +7,17 @@
 function HandDisplay({ label, tea }) {
   if (!tea) {
     return (
-      <div style={{ color: "#555" }}>
-        <span style={{ color: "#777" }}>{label}:</span> empty
+      <div className={styles.handEmpty}>
+        <span className={styles.handLabel}>{label}:</span> empty
       </div>
     );
   }
   const [lo, hi] = tea.recipe.idealTemperatureRange;
-  const tempColor = tea.ruined
-    ? "#f44"
+  const tempClass = tea.ruined
+    ? styles.tempRuined
     : tea.temperature > hi
-      ? "#f80"
-      : "#4f4";
+      ? styles.tempHot
+      : styles.tempNormal;
   const tempLabel = tea.ruined
     ? "(RUINED)"
     : tea.temperature > hi
@@ -23,14 +25,15 @@ function HandDisplay({ label, tea }) {
       : "(ideal)";
   return (
     <div>
-      <span style={{ color: "#777" }}>{label}:</span>{" "}
-      <span style={{ color: tea.ruined ? "#f44" : "#fa0" }}>{tea.name}</span>{" "}
-      <span style={{ color: tempColor }}>
+      <span className={styles.handLabel}>{label}:</span>{" "}
+      <span className={`${styles.teaName} ${tea.ruined ? styles.teaNameRuined : styles.teaNameNormal}`}>
+        {tea.name}
+      </span>{" "}
+      <span className={tempClass}>
         {tea.temperature}° {tempLabel}
       </span>
-      <span style={{ color: "#555", fontSize: 11 }}>
-        {" "}
-        [{lo}–{hi}°]
+      <span className={styles.tempRange}>
+        {" "}[{lo}–{hi}°]
       </span>
     </div>
   );
@@ -44,22 +47,7 @@ function HandDisplay({ label, tea }) {
  */
 export function HandsHUD({ hands }) {
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: "2.25rem",
-        left: 80,
-        right: 400,
-        display: "flex",
-        justifyContent: "space-between",
-        padding: "8px 20px",
-        background: "rgba(0,0,0,0.88)",
-        borderTop: "1px solid #333",
-        fontFamily: "'Metamorphous', serif",
-        fontSize: 13,
-        pointerEvents: "none",
-      }}
-    >
+    <div className={styles.hud}>
       <HandDisplay label="Left Hand" tea={hands.left} />
       <HandDisplay label="Right Hand" tea={hands.right} />
     </div>

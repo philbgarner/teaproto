@@ -1,3 +1,5 @@
+import styles from "./styles/StatusBar.module.css";
+
 /**
  * Bottom status bar showing position, facing direction, HP, XP, and
  * ingredient inventory.
@@ -21,28 +23,17 @@ function tempBand(temp) {
 
 export function StatusBar({ camera, facing, playerXp, ingredients, currentRoomTemp }) {
   return (
-    <div
-      style={{
-        height: 36,
-        display: "flex",
-        alignItems: "center",
-        padding: "0 16px",
-        gap: 24,
-        borderTop: "1px solid #333",
-        fontSize: 13,
-        flexShrink: 0,
-      }}
-    >
-      <span>
+    <div className={styles.bar}>
+      <span className={styles.coords}>
         ({Math.floor(camera.x)}, {Math.floor(camera.z)})
       </span>
-      <span>Facing: {facing}</span>
-      <span style={{ color: "#fa0" }}>XP: {playerXp}</span>
-      <span style={{ color: "#0df", fontSize: 11 }}>
+      <span className={styles.facing}>Facing: {facing}</span>
+      <span className={styles.xp}>XP: {playerXp}</span>
+      <span className={styles.ingredients}>
         Rations: {ingredients.rations} · Herbs: {ingredients.herbs} · Dust:{" "}
         {ingredients.dust}
       </span>
-      <span style={{ fontSize: 11, color: "#aaa" }}>
+      <span className={styles.roomTemp}>
         Room Temp: {tempBand(currentRoomTemp)}
       </span>
     </div>

@@ -1,4 +1,12 @@
-import { formatKey } from "./KeybindingsPanel";
+import { formatKey } from "./formatKey";
+
+const KEY_DISPLAY = {
+  " ": "space", space: "space",
+  up: "↑", down: "↓", left: "←", right: "→",
+  escape: "esc", enter: "enter", backspace: "bksp",
+  tab: "tab", delete: "del", home: "home", end: "end",
+  pageup: "pgup", pagedown: "pgdn",
+};
 
 /**
  * Overlay menu for selecting a recipe to brew at a stove. Displayed centred
@@ -19,7 +27,7 @@ import { formatKey } from "./KeybindingsPanel";
  * }} props
  */
 export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, showMsg, selectedIndex, keybindings }) {
-  const fmtKeys = (keys) => (keys ?? []).map(formatKey).join("/") || "—";
+  const fmtKeys = (keys) => (keys ?? []).map((k) => formatKey(k, KEY_DISPLAY)).join("/") || "—";
   return (
     <div
       style={{

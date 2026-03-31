@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ModalPanel from "./ModalPanel";
 import SettingsTabs from "../SettingsTabs";
+import styles from "./styles/DifficultyModal.module.css";
 
 const SETTINGS_KEYS = [
   "tempDropPerStep",
@@ -96,17 +97,6 @@ function savePresetsToStorage(presets) {
   localStorage.setItem("tea-presets", JSON.stringify(presets));
 }
 
-const btnStyle = {
-  background: "#333",
-  border: "1px solid #555",
-  color: "#ccc",
-  fontSize: 11,
-  padding: "3px 6px",
-  cursor: "pointer",
-  fontFamily: "'Metamorphous', serif",
-  width: "100%",
-};
-
 export function DifficultyModal({ visible, onClose, settingsProps }) {
   const [presets, setPresets] = useState(loadPresets);
   const [newPresetName, setNewPresetName] = useState("");
@@ -175,74 +165,22 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
       top="2rem"
       opacity={pickerActive ? 0.6 : 1}
     >
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          height: "calc(80vh - 5rem)",
-          minHeight: 0,
-        }}
-      >
+      <div className={styles.layout}>
         {/* Left: Presets + JSON */}
-        <div
-          style={{
-            width: 180,
-            flexShrink: 0,
-            borderRight: "1px solid #333",
-            paddingRight: 12,
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ fontSize: 11, color: "#888" }}>Presets</div>
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-              minHeight: 0,
-            }}
-          >
+        <div className={styles.sidebar}>
+          <div className={styles.sidebarLabel}>Presets</div>
+          <div className={styles.presetList}>
             {presets.map((preset, i) => (
-              <div
-                key={i}
-                style={{ display: "flex", gap: 4, alignItems: "center" }}
-              >
+              <div key={i} className={styles.presetRow}>
                 <button
+                  className={styles.presetBtn}
                   onClick={() => applySettings(preset.settings)}
-                  style={{
-                    flex: 1,
-                    background: "#222",
-                    border: "1px solid #444",
-                    color: "#ccc",
-                    fontSize: 11,
-                    padding: "3px 6px",
-                    cursor: "pointer",
-                    fontFamily: "'Metamorphous', serif",
-                    textAlign: "left",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
                 >
                   {preset.name}
                 </button>
                 <button
+                  className={styles.deleteBtn}
                   onClick={() => handleDeletePreset(i)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "#555",
-                    fontSize: 11,
-                    cursor: "pointer",
-                    padding: "0 2px",
-                    fontFamily: "'Metamorphous', serif",
-                    flexShrink: 0,
-                  }}
                 >
                   ✕
                 </button>
@@ -257,52 +195,25 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
               value={newPresetName}
               onChange={(e) => setNewPresetName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSavePreset()}
-              style={{
-                background: "#111",
-                border: "1px solid #444",
-                color: "#ccc",
-                fontSize: 11,
-                padding: "3px 6px",
-                fontFamily: "'Metamorphous', serif",
-                width: "100%",
-                boxSizing: "border-box",
-              }}
+              className={styles.input}
             />
-            <button onClick={handleSavePreset} style={btnStyle}>
+            <button className={styles.btn} onClick={handleSavePreset}>
               Save current
             </button>
           </div>
 
-          <div
-            style={{
-              borderTop: "1px solid #333",
-              paddingTop: 8,
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-            }}
-          >
-            <button onClick={handleExport} style={btnStyle}>
+          <div className={styles.divider}>
+            <button className={styles.btn} onClick={handleExport}>
               Export JSON
             </button>
             {exportText && (
               <textarea
                 readOnly
                 value={exportText}
-                style={{
-                  background: "#111",
-                  border: "1px solid #444",
-                  color: "#aaa",
-                  fontSize: 10,
-                  fontFamily: "'Metamorphous', serif",
-                  height: 80,
-                  resize: "vertical",
-                  width: "100%",
-                  boxSizing: "border-box",
-                }}
+                className={styles.textarea}
               />
             )}
-            <button onClick={() => setShowImport(!showImport)} style={btnStyle}>
+            <button className={styles.btn} onClick={() => setShowImport(!showImport)}>
               Import JSON
             </button>
             {showImport && (
@@ -314,24 +225,12 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
                     setImportText(e.target.value);
                     setImportError("");
                   }}
-                  style={{
-                    background: "#111",
-                    border: "1px solid #444",
-                    color: "#aaa",
-                    fontSize: 10,
-                    fontFamily: "'Metamorphous', serif",
-                    height: 80,
-                    resize: "vertical",
-                    width: "100%",
-                    boxSizing: "border-box",
-                  }}
+                  className={styles.textarea}
                 />
                 {importError && (
-                  <div style={{ color: "#f44", fontSize: 10 }}>
-                    {importError}
-                  </div>
+                  <div className={styles.error}>{importError}</div>
                 )}
-                <button onClick={handleImport} style={btnStyle}>
+                <button className={styles.btn} onClick={handleImport}>
                   Apply
                 </button>
               </div>
@@ -340,7 +239,7 @@ export function DifficultyModal({ visible, onClose, settingsProps }) {
         </div>
 
         {/* Right: Sliders */}
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div className={styles.content}>
           <SettingsTabs
             {...settingsProps}
             onPickerFocus={() => setPickerActive(true)}

@@ -1,29 +1,99 @@
-.modalPanelBackdrop {
-    background-color: rgba(0.3, 0.3, 0.3, 0.6);
+.backdrop {
+    background: rgba(0, 0, 0, 0.65);
     position: absolute;
-    left: 0;
-    top: 0;
-    margin: 0;
-    padding: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     z-index: 999999;
     pointer-events: all;
-}
-
-.modalPanelBackdrop > div {
-    pointer-events: all;
-}
-
-.closeButton {
-    position: absolute;
-    top: 14px;
-    height: 24px;
-    right: 0px;
-    z-index: 1;
-    max-width: 6rem;
-    transform: translateY(-18px);
-    z-index: 9;
     display: flex;
+    align-items: center;
     justify-content: center;
+}
+
+.panel {
+    background-color: #2e2c29;
+    outline: 1px solid #1e1c1a;
+    box-shadow:
+        inset 0 2px 0 0 #5a5450,
+        inset 2px 0 0 0 #504a46,
+        inset 0 -2px 0 0 #1a1816,
+        inset -2px 0 0 0 #1e1c1a,
+        inset 0 6px 20px rgba(0, 0, 0, 0.5),
+        0 8px 32px rgba(0, 0, 0, 0.85);
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.03) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+    display: flex;
+    flex-direction: column;
+    font-family: "Metamorphous", serif;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6em 1em;
+    border-bottom: 2px solid #1e1c1a;
+    box-shadow: 0 2px 0 0 #3a3530;
+    flex-shrink: 0;
+}
+
+.title {
+    color: #f8a81a;
+    font-family: "Metamorphous", serif;
+    font-size: 1rem;
+    letter-spacing: 0.15em;
+    text-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.9),
+        0 0 12px rgba(248, 168, 26, 0.3);
+}
+
+.closeBtn {
+    background-color: #3a3835;
+    border: none;
+    outline: 1px solid #252220;
+    box-shadow:
+        inset 0 1px 0 0 #6a6258,
+        inset 1px 0 0 0 #5a5450,
+        inset 0 -1px 0 0 #1e1c1a,
+        inset -1px 0 0 0 #252220,
+        inset 0 2px 5px rgba(0, 0, 0, 0.4);
+    color: #9a8060;
+    font-size: 0.85rem;
+    font-family: "Metamorphous", serif;
+    padding: 0.2em 0.6em;
+    cursor: pointer;
+    transition:
+        color 0.1s,
+        background-color 0.1s;
+}
+
+.closeBtn:hover {
+    color: #f8a81a;
+    background-color: #444240;
+}
+
+.closeBtn:active {
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 1px 0 0 #1e1c1a,
+        inset 1px 0 0 0 #252220,
+        inset 0 -1px 0 0 #6a6258,
+        inset -1px 0 0 0 #5a5450,
+        inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.body {
+    flex: 1;
+    min-height: 0;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.bodyScroll {
+    overflow-y: auto;
+    scrollbar-width: auto;
+    scrollbar-color: #5a5450 #2a2724;
 }

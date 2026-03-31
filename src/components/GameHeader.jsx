@@ -1,3 +1,5 @@
+import styles from "./styles/GameHeader.module.css";
+
 /**
  * Top header bar showing the game title, dungeon seed, and current wave number.
  *
@@ -5,50 +7,16 @@
  */
 export function GameHeader({ dungeonSeed, currentWave, onSettingsClick, onRandomizeSeed }) {
   return (
-    <div
-      style={{
-        height: 40,
-        display: "flex",
-        alignItems: "center",
-        padding: "0 16px",
-        gap: 16,
-        borderBottom: "1px solid #333",
-        flexShrink: 0,
-      }}
-    >
-      <span style={{ fontWeight: "bold", color: "#eee" }}>Tea Dungeon</span>
-      <span style={{ color: "#666", fontSize: 12 }}>seed: {dungeonSeed}</span>
-      <button
-        onClick={onRandomizeSeed}
-        style={{
-          background: "transparent",
-          border: "1px solid #444",
-          color: "#888",
-          fontSize: 12,
-          padding: "2px 6px",
-          cursor: "pointer",
-          fontFamily: "'Metamorphous', serif",
-        }}
-      >
+    <div className={styles.header}>
+      <span className={styles.title}>Tea Dungeon</span>
+      <span className={styles.seed}>seed: {dungeonSeed}</span>
+      <button className={styles.btn} onClick={onRandomizeSeed}>
         rng
       </button>
-      <span
-        style={{ color: currentWave > 0 ? "#f88" : "#555", fontSize: 12 }}
-      >
+      <span className={`${styles.wave} ${currentWave > 0 ? styles.waveActive : styles.waveInactive}`}>
         Wave {currentWave}
       </span>
-      <button
-        onClick={onSettingsClick}
-        style={{
-          background: "transparent",
-          border: "1px solid #444",
-          color: "#888",
-          fontSize: 12,
-          padding: "2px 8px",
-          cursor: "pointer",
-          fontFamily: "'Metamorphous', serif",
-        }}
-      >
+      <button className={styles.btn} onClick={onSettingsClick}>
         settings
       </button>
     </div>

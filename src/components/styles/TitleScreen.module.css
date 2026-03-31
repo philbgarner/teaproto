@@ -1,0 +1,210 @@
+.root {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+}
+
+.canvas {
+    position: absolute;
+    inset: 0;
+}
+
+.menu {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    top: 55vh;
+    left: 60vw;
+    height: 10rem;
+    width: 30vw;
+}
+
+.menuItem {
+    background-color: #4e4b47;
+    border: none;
+    /* pixel-art emboss: hard 1px highlight top-left, shadow bottom-right */
+    /* inset depth shadow accentuates the raised bevel */
+    box-shadow:
+        inset 0 2px 0 0 #a09890,
+        inset 2px 0 0 0 #8a8278,
+        inset 0 -2px 0 0 #2a2724,
+        inset -2px 0 0 0 #302d2a,
+        inset 0 4px 10px rgba(0, 0, 0, 0.45),
+        inset 0 -2px 5px rgba(255, 255, 255, 0.04),
+        0 4px 0 0 #1a1816,
+        0 5px 8px rgba(0, 0, 0, 0.7);
+    /* outer cracked-stone bevel */
+    outline: 1px solid #252220;
+    color: #f8a81a;
+    font-size: 1.35rem;
+    font-family: "Metamorphous", serif;
+    letter-spacing: 0.12em;
+    padding: 0.55em 2.5em;
+    cursor: pointer;
+    display: block;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.95),
+        0 -1px 0 rgba(255, 200, 80, 0.15);
+    transition:
+        color 0.1s,
+        text-shadow 0.1s,
+        box-shadow 0.1s,
+        transform 0.1s,
+        background-color 0.1s;
+    flex: 1 1;
+    image-rendering: pixelated;
+    /* faint noise texture via repeating-conic to suggest stone grain */
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.04) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+    width: 100%;
+}
+
+.menuItem:hover {
+    color: #fff8e8;
+    background-color: #585450;
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.04) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+    box-shadow:
+        inset 0 2px 0 0 #b0a89e,
+        inset 2px 0 0 0 #9a9288,
+        inset 0 -2px 0 0 #2a2724,
+        inset -2px 0 0 0 #302d2a,
+        inset 0 4px 10px rgba(0, 0, 0, 0.35),
+        inset 0 -2px 5px rgba(255, 255, 255, 0.05),
+        inset 0 0 18px rgba(248, 168, 26, 0.08),
+        0 4px 0 0 #1a1816,
+        0 5px 12px rgba(0, 0, 0, 0.7);
+    text-shadow:
+        0 0 24px rgba(212, 148, 10, 0.9),
+        0 0 8px rgba(255, 220, 100, 0.5),
+        0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* ── Settings overlay ────────────────────────────────────────────────────── */
+
+.settingsOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.settingsPanel {
+    background-color: #2e2c29;
+    outline: 1px solid #1e1c1a;
+    box-shadow:
+        inset 0 2px 0 0 #5a5450,
+        inset 2px 0 0 0 #504a46,
+        inset 0 -2px 0 0 #1a1816,
+        inset -2px 0 0 0 #1e1c1a,
+        inset 0 6px 20px rgba(0, 0, 0, 0.5),
+        0 8px 32px rgba(0, 0, 0, 0.85);
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.03) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+    width: 480px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.settingsPanelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6em 1em;
+    border-bottom: 2px solid #1e1c1a;
+    box-shadow: 0 2px 0 0 #3a3530;
+    flex-shrink: 0;
+}
+
+.settingsPanelTitle {
+    color: #f8a81a;
+    font-family: "Metamorphous", serif;
+    font-size: 1rem;
+    letter-spacing: 0.15em;
+    text-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.9),
+        0 0 12px rgba(248, 168, 26, 0.3);
+}
+
+.settingsPanelClose {
+    background-color: #3a3835;
+    border: none;
+    outline: 1px solid #252220;
+    box-shadow:
+        inset 0 1px 0 0 #6a6258,
+        inset 1px 0 0 0 #5a5450,
+        inset 0 -1px 0 0 #1e1c1a,
+        inset -1px 0 0 0 #252220,
+        inset 0 2px 5px rgba(0, 0, 0, 0.4);
+    color: #9a8060;
+    font-size: 0.85rem;
+    font-family: "Metamorphous", serif;
+    padding: 0.2em 0.6em;
+    cursor: pointer;
+    transition:
+        color 0.1s,
+        background-color 0.1s;
+}
+
+.settingsPanelClose:hover {
+    color: #f8a81a;
+    background-color: #444240;
+}
+
+.settingsPanelClose:active {
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 1px 0 0 #1e1c1a,
+        inset 1px 0 0 0 #252220,
+        inset 0 -1px 0 0 #6a6258,
+        inset -1px 0 0 0 #5a5450,
+        inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.settingsPanelBody {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 1em;
+    display: flex;
+    flex-direction: column;
+}
+
+.menuItem:active {
+    /* pressed: sink the button — invert the bevel */
+    background-color: #3a3835;
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.06) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+    box-shadow:
+        inset 0 2px 0 0 #2a2724,
+        inset 2px 0 0 0 #302d2a,
+        inset 0 -2px 0 0 #908880,
+        inset -2px 0 0 0 #807870,
+        inset 0 3px 8px rgba(0, 0, 0, 0.6),
+        0 1px 0 0 #1a1816;
+    transform: translateY(3px);
+    color: #e8901a;
+    text-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.9),
+        0 0 6px rgba(212, 148, 10, 0.4);
+}
