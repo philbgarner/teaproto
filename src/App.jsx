@@ -36,7 +36,7 @@ import { THEMES, THEME_KEYS } from "./themes";
 import { useMusic } from "./hooks/useMusic";
 import { useMessage } from "./hooks/useMessage";
 import { useMinimapData } from "./hooks/useMinimapData";
-import { useKeybindings } from "./hooks/useKeybindings";
+import { useSettings } from "./SettingsContext";
 import hotkeys from "hotkeys-js";
 import { GameHeader } from "./components/GameHeader";
 import { StatusBar } from "./components/StatusBar";
@@ -684,13 +684,27 @@ console.log("[App module] all top-level defs done");
 // ---------------------------------------------------------------------------
 export default function App() {
   console.log("[App] render start");
-  const [dungeonSeed, setDungeonSeed] = useState(DUNGEON_SEED);
-  const [dungeonWidth, setDungeonWidth] = useState(DUNGEON_W);
-  const [dungeonHeight, setDungeonHeight] = useState(DUNGEON_H);
-  const [minLeafSize, setMinLeafSize] = useState(6);
-  const [maxLeafSize, setMaxLeafSize] = useState(14);
-  const [minRoomSize, setMinRoomSize] = useState(3);
-  const [maxRoomSize, setMaxRoomSize] = useState(7);
+  const {
+    dungeonSeed, setDungeonSeed,
+    dungeonWidth, setDungeonWidth,
+    dungeonHeight, setDungeonHeight,
+    minLeafSize, setMinLeafSize,
+    maxLeafSize, setMaxLeafSize,
+    minRoomSize, setMinRoomSize,
+    maxRoomSize, setMaxRoomSize,
+    maxDoors, setMaxDoors,
+    tempDropPerStep, setTempDropPerStep,
+    heatingPerStep, setHeatingPerStep,
+    satiationDropPerStep, setSatiationDropPerStep,
+    supersatiationBonus, setSupersatiationBonus,
+    turnsPerWave, setTurnsPerWave,
+    traversalFactor, setTraversalFactor,
+    adventurerDreadRate, setAdventurerDreadRate,
+    adventurerLootPerChest, setAdventurerLootPerChest,
+    torchColor, setTorchColor,
+    torchIntensity, setTorchIntensity,
+    keybindings, setKeybindings,
+  } = useSettings();
 
   const dungeon = useMemo(() => {
     console.log("[App] useMemo: generateBspDungeon start");
@@ -804,8 +818,6 @@ export default function App() {
     return [{ x: cx, z: cz, type: "stove" }];
   }, [dungeon]);
 
-  const [maxDoors, setMaxDoors] = useState(3);
-
   // Door placements — disabled pending rework
   const doorPlacements = useMemo(() => {
     const W = dungeon.width;
@@ -917,25 +929,6 @@ export default function App() {
     dungeon.textures.wallType.needsUpdate = true;
     return placements;
   }, [dungeon, maxDoors]);
-
-  // Additive torch colour
-  const [torchColor, setTorchColor] = useState(() => {
-    try {
-      return localStorage.getItem("torchColor") ?? DEFAULT_TORCH_HEX;
-    } catch {
-      return DEFAULT_TORCH_HEX;
-    }
-  });
-
-  // Additive torch intensity
-  const [torchIntensity, setTorchIntensity] = useState(() => {
-    try {
-      const stored = localStorage.getItem("torchIntensity");
-      return stored !== null ? parseFloat(stored) : DEFAULT_TORCH_INTENSITY;
-    } catch {
-      return DEFAULT_TORCH_INTENSITY;
-    }
-  });
 
   // Object registry and world placements
   const objects = useMemo(() => {
@@ -1185,8 +1178,6 @@ export default function App() {
       delete speechBubbleTimersRef.current[entityId];
     }, duration);
   }, []);
-  const [tempDropPerStep, setTempDropPerStep] = useState(0.5);
-  const [heatingPerStep, setHeatingPerStep] = useState(2.0);
   // Map<regionId, cumulativeRise> — only regions containing cozy objects heat up
   const [roomTempRise, setRoomTempRise] = useState(() => new Map());
   const regionIdData = useMemo(() => dungeon.fullRegionIds, [dungeon]);
@@ -1260,13 +1251,7 @@ export default function App() {
     }
     return out;
   }, [temperatureData, solidData, regionIdData, roomTempRise]);
-  const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.5);
-  const [supersatiationBonus, setSupersatiationBonus] = useState(50);
-  const [adventurerDreadRate, setAdventurerDreadRate] = useState(1.0);
-  const [adventurerLootPerChest, setAdventurerLootPerChest] = useState(10);
-  const [turnsPerWave, setTurnsPerWave] = useState(TURNS_PER_WAVE);
   const [showSettings, setShowSettings] = useState(false);
-  const [keybindings, setKeybindings] = useKeybindings();
 
   // Chests state
   const [chests, setChests] = useState([]);
@@ -1337,8 +1322,8 @@ export default function App() {
     passageTraversalRef.current = s;
     _setPassageTraversal(s);
   }
-  const [traversalFactor, setTraversalFactor] = useState(2.0);
   const traversalFactorRef = useRef(2.0);
+  useEffect(() => { traversalFactorRef.current = traversalFactor; }, [traversalFactor]);
   const traversalStartRef = useRef({ totalSteps: 0, factor: 2.0 });
 
   const { play: playMainTheme } = useMusic(
@@ -3133,10 +3118,7 @@ export default function App() {
             supersatiationBonus,
             setSupersatiationBonus,
             traversalFactor,
-            setTraversalFactor: (v) => {
-              traversalFactorRef.current = v;
-              setTraversalFactor(v);
-            },
+            setTraversalFactor,
             dungeonSeed,
             setDungeonSeed,
             dungeonWidth,

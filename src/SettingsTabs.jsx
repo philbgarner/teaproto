@@ -1,21 +1,10 @@
 import { useState } from "react";
 import { KeybindingsPanel } from "./components/KeybindingsPanel";
-
-const tabStyle = (active) => ({
-  flex: 1,
-  padding: "4px 0",
-  background: active ? "#222" : "transparent",
-  border: "none",
-  borderBottom: active ? "2px solid #aaa" : "2px solid transparent",
-  color: active ? "#eee" : "#666",
-  fontSize: 11,
-  cursor: "pointer",
-  fontFamily: "'Metamorphous', serif",
-});
+import styles from "./components/styles/SettingsTabs.module.css";
 
 const SliderRow = ({ label, value, min, max, step, onChange, format }) => (
-  <div style={{ fontSize: 11, color: "#888" }}>
-    <div style={{ marginBottom: 2 }}>
+  <div className={styles.sliderRow}>
+    <div className={styles.sliderLabel}>
       {label}: {format ? format(value) : value}
     </div>
     <input
@@ -25,7 +14,7 @@ const SliderRow = ({ label, value, min, max, step, onChange, format }) => (
       step={step}
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      style={{ width: "100%" }}
+      className={styles.slider}
     />
   </div>
 );
@@ -86,51 +75,25 @@ export default function SettingsTabs({
     setSeedInput(String(n));
   };
 
+  const tab = (id, label) => (
+    <button
+      className={`${styles.tab} ${activeTab === id ? styles.tabActive : ""}`}
+      onClick={() => setActiveTab(id)}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-      {/* Tab bar */}
-      <div
-        style={{
-          display: "flex",
-          borderBottom: "1px solid #333",
-          flexShrink: 0,
-        }}
-      >
-        <button
-          style={tabStyle(activeTab === "difficulty")}
-          onClick={() => setActiveTab("difficulty")}
-        >
-          difficulty
-        </button>
-        <button
-          style={tabStyle(activeTab === "world")}
-          onClick={() => setActiveTab("world")}
-        >
-          world
-        </button>
-        <button
-          style={tabStyle(activeTab === "lighting")}
-          onClick={() => setActiveTab("lighting")}
-        >
-          lighting
-        </button>
-        <button
-          style={tabStyle(activeTab === "keys")}
-          onClick={() => setActiveTab("keys")}
-        >
-          keys
-        </button>
+    <div className={styles.root}>
+      <div className={styles.tabBar}>
+        {tab("difficulty", "difficulty")}
+        {tab("world", "world")}
+        {tab("lighting", "lighting")}
+        {tab("keys", "keys")}
       </div>
 
-      <div
-        style={{
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          padding: "8px 0",
-        }}
-      >
+      <div className={styles.content}>
         {activeTab === "difficulty" && (
           <>
             <SliderRow
@@ -208,40 +171,18 @@ export default function SettingsTabs({
 
         {activeTab === "world" && (
           <>
-            {/* Seed row */}
-            <div style={{ fontSize: 11, color: "#888" }}>
-              <div style={{ marginBottom: 4 }}>Seed</div>
-              <div style={{ display: "flex", gap: 4 }}>
+            <div>
+              <div className={styles.seedHeader}>Seed</div>
+              <div className={styles.seedRow}>
                 <input
                   type="text"
                   value={seedInput}
                   onChange={(e) => setSeedInput(e.target.value)}
                   onBlur={commitSeed}
                   onKeyDown={(e) => e.key === "Enter" && commitSeed()}
-                  style={{
-                    flex: 1,
-                    background: "#111",
-                    border: "1px solid #444",
-                    color: "#ccc",
-                    fontSize: 11,
-                    padding: "2px 4px",
-                    fontFamily: "'Metamorphous', serif",
-                    minWidth: 0,
-                  }}
+                  className={styles.seedInput}
                 />
-                <button
-                  onClick={randomizeSeed}
-                  style={{
-                    background: "#333",
-                    border: "1px solid #555",
-                    color: "#ccc",
-                    fontSize: 11,
-                    padding: "2px 6px",
-                    cursor: "pointer",
-                    fontFamily: "'Metamorphous', serif",
-                    flexShrink: 0,
-                  }}
-                >
+                <button onClick={randomizeSeed} className={styles.seedBtn}>
                   rng
                 </button>
               </div>
@@ -310,44 +251,40 @@ export default function SettingsTabs({
 
         {activeTab === "lighting" && (
           <>
-          <SliderRow
-            label="Torch intensity"
-            value={torchIntensity}
-            min={0}
-            max={2}
-            step={0.05}
-            onChange={(v) => {
-              setTorchIntensity(v);
-              try { localStorage.setItem("torchIntensity", String(v)); } catch { /* */ }
-            }}
-            format={(v) => v.toFixed(2)}
-          />
-          <div style={{ fontSize: 11, color: "#888" }}>
-            <div style={{ marginBottom: 2 }}>Torch colour</div>
-            <input
-              type="color"
-              value={torchColor}
-              onChange={(e) => {
-                setTorchColor(e.target.value);
+            <SliderRow
+              label="Torch intensity"
+              value={torchIntensity}
+              min={0}
+              max={2}
+              step={0.05}
+              onChange={(v) => {
+                setTorchIntensity(v);
                 try {
-                  localStorage.setItem("torchColor", e.target.value);
+                  localStorage.setItem("torchIntensity", String(v));
                 } catch {
-                  // No empty.
+                  /* */
                 }
               }}
-              onFocus={() => onPickerFocus?.()}
-              onBlur={() => onPickerBlur?.()}
-              style={{
-                width: "100%",
-                height: 28,
-                padding: 2,
-                border: "1px solid #444",
-                background: "#111",
-                cursor: "pointer",
-                boxSizing: "border-box",
-              }}
+              format={(v) => v.toFixed(2)}
             />
-          </div>
+            <div>
+              <div className={styles.colorLabel}>Torch colour</div>
+              <input
+                type="color"
+                value={torchColor}
+                onChange={(e) => {
+                  setTorchColor(e.target.value);
+                  try {
+                    localStorage.setItem("torchColor", e.target.value);
+                  } catch {
+                    /* */
+                  }
+                }}
+                onFocus={() => onPickerFocus?.()}
+                onBlur={() => onPickerBlur?.()}
+                className={styles.colorPicker}
+              />
+            </div>
           </>
         )}
       </div>
