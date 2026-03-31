@@ -1,41 +1,59 @@
 import { useState, useEffect } from "react";
 import { DEFAULT_KEYBINDINGS } from "../hooks/useKeybindings";
+import styles from "./styles/KeybindingsPanel.module.css";
+import { formatKey } from "./formatKey";
 
 const ACTION_LABELS = {
-  moveForward:   "Move forward",
-  moveBackward:  "Move backward",
-  strafeLeft:    "Strafe left",
-  strafeRight:   "Strafe right",
-  turnLeft:      "Turn left",
-  turnRight:     "Turn right",
-  interact:      "Interact",
-  wait:          "Wait",
-  discardLeft:   "Discard left hand",
-  discardRight:  "Discard right hand",
+  moveForward: "Move forward",
+  moveBackward: "Move backward",
+  strafeLeft: "Strafe left",
+  strafeRight: "Strafe right",
+  turnLeft: "Turn left",
+  turnRight: "Turn right",
+  interact: "Interact",
+  wait: "Wait",
+  discardLeft: "Discard left hand",
+  discardRight: "Discard right hand",
   togglePassage: "Toggle passage",
-  optionNext:    "Menu: next option",
-  optionPrev:    "Menu: prev option",
-  optionSelect:  "Menu: select option",
+  optionNext: "Menu: next option",
+  optionPrev: "Menu: prev option",
+  optionSelect: "Menu: select option",
 };
 
 const KEY_DISPLAY = {
-  " ": "space", "space": "space",
-  "up": "↑", "down": "↓", "left": "←", "right": "→",
-  "escape": "esc", "enter": "enter", "backspace": "bksp",
-  "tab": "tab", "delete": "del", "home": "home", "end": "end",
-  "pageup": "pgup", "pagedown": "pgdn",
+  " ": "space",
+  space: "space",
+  up: "↑",
+  down: "↓",
+  left: "←",
+  right: "→",
+  escape: "esc",
+  enter: "enter",
+  backspace: "bksp",
+  tab: "tab",
+  delete: "del",
+  home: "home",
+  end: "end",
+  pageup: "pgup",
+  pagedown: "pgdn",
 };
-
-export function formatKey(k) {
-  return KEY_DISPLAY[k] ?? KEY_DISPLAY[k.toLowerCase()] ?? k;
-}
 
 function keyEventToHotkey(e) {
   const map = {
-    ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
-    Escape: "escape", Enter: "enter", " ": "space", Backspace: "backspace",
-    Tab: "tab", Delete: "delete", Home: "home", End: "end",
-    PageUp: "pageup", PageDown: "pagedown",
+    ArrowUp: "up",
+    ArrowDown: "down",
+    ArrowLeft: "left",
+    ArrowRight: "right",
+    Escape: "escape",
+    Enter: "enter",
+    " ": "space",
+    Backspace: "backspace",
+    Tab: "tab",
+    Delete: "delete",
+    Home: "home",
+    End: "end",
+    PageUp: "pageup",
+    PageDown: "pagedown",
   };
   if (map[e.key]) return map[e.key];
   if (e.key.length === 1) return e.key.toLowerCase();
@@ -62,16 +80,20 @@ export function KeybindingsPanel({ keybindings, setKeybindings }) {
       const current = keybindings[action] ?? [];
       let next;
       if (index === "new") {
-        if (current.includes(hotkey)) { setCapturing(null); return; }
+        if (current.includes(hotkey)) {
+          setCapturing(null);
+          return;
+        }
         next = [...current, hotkey];
       } else {
-        next = current.map((k, i) => i === index ? hotkey : k);
+        next = current.map((k, i) => (i === index ? hotkey : k));
       }
       setKeybindings({ ...keybindings, [action]: next });
       setCapturing(null);
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
-    return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", onKeyDown, { capture: true });
   }, [capturing, keybindings, setKeybindings]);
 
   const removeKey = (action, index) => {
@@ -79,39 +101,32 @@ export function KeybindingsPanel({ keybindings, setKeybindings }) {
     setKeybindings({ ...keybindings, [action]: next });
   };
 
-  const chipStyle = (isCapturing) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 2,
-    background: isCapturing ? "#334" : "#222",
-    border: `1px solid ${isCapturing ? "#558" : "#444"}`,
-    color: isCapturing ? "#aaf" : "#ccc",
-    fontSize: 10,
-    padding: "1px 5px",
-    cursor: "pointer",
-    fontFamily: "'Metamorphous', serif",
-    borderRadius: 2,
-    userSelect: "none",
-  });
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className={styles.panel}>
       {Object.entries(ACTION_LABELS).map(([action, label]) => {
         const keys = keybindings[action] ?? [];
         return (
-          <div key={action} style={{ fontSize: 11, color: "#888" }}>
-            <div style={{ marginBottom: 3 }}>{label}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 3, alignItems: "center" }}>
+          <div key={action} className={styles.actionRow}>
+            <div className={styles.actionLabel}>{label}</div>
+            <div className={styles.keysRow}>
               {keys.map((key, i) => {
-                const isCapturing = capturing?.action === action && capturing?.index === i;
+                const isCapturing =
+                  capturing?.action === action && capturing?.index === i;
                 return (
-                  <span key={i} style={chipStyle(isCapturing)}>
-                    <span onClick={() => setCapturing(isCapturing ? null : { action, index: i })}>
-                      {isCapturing ? "..." : formatKey(key)}
+                  <span
+                    key={i}
+                    className={`${styles.chip} ${isCapturing ? styles.chipCapturing : ""}`}
+                  >
+                    <span
+                      onClick={() =>
+                        setCapturing(isCapturing ? null : { action, index: i })
+                      }
+                    >
+                      {isCapturing ? "..." : formatKey(key, KEY_DISPLAY)}
                     </span>
                     <span
+                      className={styles.chipRemove}
                       onClick={() => removeKey(action, i)}
-                      style={{ color: "#555", marginLeft: 3, lineHeight: 1 }}
                     >
                       ✕
                     </span>
@@ -119,33 +134,32 @@ export function KeybindingsPanel({ keybindings, setKeybindings }) {
                 );
               })}
               <span
-                style={chipStyle(capturing?.action === action && capturing?.index === "new")}
+                className={`${styles.chip} ${styles.chipAdd} ${
+                  capturing?.action === action && capturing?.index === "new"
+                    ? styles.chipCapturing
+                    : ""
+                }`}
                 onClick={() =>
                   setCapturing(
                     capturing?.action === action && capturing?.index === "new"
                       ? null
-                      : { action, index: "new" }
+                      : { action, index: "new" },
                   )
                 }
               >
-                {capturing?.action === action && capturing?.index === "new" ? "..." : "+"}
+                {capturing?.action === action && capturing?.index === "new"
+                  ? "..."
+                  : "+"}
               </span>
             </div>
           </div>
         );
       })}
       <button
-        onClick={() => { setKeybindings({ ...DEFAULT_KEYBINDINGS }); setCapturing(null); }}
-        style={{
-          marginTop: 4,
-          background: "#222",
-          border: "1px solid #444",
-          color: "#666",
-          fontSize: 10,
-          padding: "3px 6px",
-          cursor: "pointer",
-          fontFamily: "'Metamorphous', serif",
-          alignSelf: "flex-start",
+        className={styles.resetBtn}
+        onClick={() => {
+          setKeybindings({ ...DEFAULT_KEYBINDINGS });
+          setCapturing(null);
         }}
       >
         Reset to defaults

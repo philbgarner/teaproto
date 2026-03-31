@@ -1,0 +1,61 @@
+.hud {
+    position: fixed;
+    bottom: 2.25rem;
+    left: 80px;
+    right: 400px;
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 20px;
+    background-color: #2a2724;
+    border-top: 2px solid #1e1c1a;
+    box-shadow:
+        0 -2px 0 0 #3a3530,
+        inset 0 2px 0 0 #5a5450,
+        inset 0 4px 12px rgba(0, 0, 0, 0.5);
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.03) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+    font-family: "Metamorphous", serif;
+    font-size: 0.78rem;
+    pointer-events: none;
+}
+
+.handLabel {
+    color: #7a6a50;
+    letter-spacing: 0.04em;
+}
+
+.handEmpty {
+    color: #4a4038;
+}
+
+.teaName {
+    letter-spacing: 0.04em;
+}
+
+.teaNameNormal {
+    color: #f8a81a;
+}
+
+.teaNameRuined {
+    color: #e05050;
+}
+
+.tempNormal {
+    color: #6abf6a;
+}
+
+.tempHot {
+    color: #f88030;
+}
+
+.tempRuined {
+    color: #e05050;
+}
+
+.tempRange {
+    color: #4a4038;
+    font-size: 0.65rem;
+}

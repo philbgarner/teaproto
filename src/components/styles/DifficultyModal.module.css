@@ -1,0 +1,216 @@
+.layout {
+    display: flex;
+    gap: 16px;
+    height: calc(80vh - 5rem);
+    min-height: 0;
+    font-family: "Metamorphous", serif;
+}
+
+/* ── Left sidebar ─────────────────────────────────────────────────────────── */
+
+.sidebar {
+    width: 180px;
+    flex-shrink: 0;
+    border-right: 2px solid #1e1c1a;
+    box-shadow: 2px 0 0 0 #3a3530;
+    padding-right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+}
+
+.sidebarLabel {
+    font-size: 0.72rem;
+    color: #9a8060;
+    letter-spacing: 0.08em;
+}
+
+.presetList {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #5a5450 #2a2724;
+}
+
+.presetRow {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.presetBtn {
+    flex: 1;
+    background-color: #3a3835;
+    border: none;
+    outline: 1px solid #252220;
+    box-shadow:
+        inset 0 1px 0 0 #6a6258,
+        inset 1px 0 0 0 #5a5450,
+        inset 0 -1px 0 0 #1e1c1a,
+        inset -1px 0 0 0 #252220,
+        inset 0 2px 5px rgba(0, 0, 0, 0.4);
+    color: #c8a060;
+    font-size: 0.72rem;
+    font-family: "Metamorphous", serif;
+    padding: 0.3em 0.5em;
+    cursor: pointer;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.1s, background-color 0.1s;
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.04) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+}
+
+.presetBtn:hover {
+    background-color: #444240;
+    color: #f8a81a;
+}
+
+.presetBtn:active {
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 1px 0 0 #1e1c1a,
+        inset 1px 0 0 0 #252220,
+        inset 0 -1px 0 0 #6a6258,
+        inset -1px 0 0 0 #5a5450,
+        inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.deleteBtn {
+    background: transparent;
+    border: none;
+    color: #555;
+    font-size: 0.72rem;
+    cursor: pointer;
+    padding: 0 2px;
+    font-family: "Metamorphous", serif;
+    flex-shrink: 0;
+    transition: color 0.1s;
+}
+
+.deleteBtn:hover {
+    color: #f8a81a;
+}
+
+/* ── Shared button ────────────────────────────────────────────────────────── */
+
+.btn {
+    background-color: #3a3835;
+    border: none;
+    outline: 1px solid #252220;
+    box-shadow:
+        inset 0 1px 0 0 #6a6258,
+        inset 1px 0 0 0 #5a5450,
+        inset 0 -1px 0 0 #1e1c1a,
+        inset -1px 0 0 0 #252220,
+        inset 0 2px 5px rgba(0, 0, 0, 0.4);
+    color: #9a8060;
+    font-size: 0.72rem;
+    font-family: "Metamorphous", serif;
+    letter-spacing: 0.05em;
+    padding: 0.3em 0.7em;
+    cursor: pointer;
+    width: 100%;
+    transition: color 0.1s, background-color 0.1s;
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.04) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+}
+
+.btn:hover {
+    background-color: #444240;
+    color: #f8a81a;
+}
+
+.btn:active {
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 1px 0 0 #1e1c1a,
+        inset 1px 0 0 0 #252220,
+        inset 0 -1px 0 0 #6a6258,
+        inset -1px 0 0 0 #5a5450,
+        inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Text inputs / textareas ─────────────────────────────────────────────── */
+
+.input {
+    background-color: #2a2724;
+    border: none;
+    outline: 1px solid #3a3530;
+    box-shadow:
+        inset 0 1px 0 0 #1a1816,
+        inset 0 2px 5px rgba(0, 0, 0, 0.55);
+    color: #c8a060;
+    font-size: 0.72rem;
+    font-family: "Metamorphous", serif;
+    padding: 0.3em 0.5em;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.input::placeholder {
+    color: #5a5040;
+}
+
+.textarea {
+    background-color: #2a2724;
+    border: none;
+    outline: 1px solid #3a3530;
+    box-shadow:
+        inset 0 1px 0 0 #1a1816,
+        inset 0 2px 5px rgba(0, 0, 0, 0.55);
+    color: #9a8060;
+    font-size: 0.68rem;
+    font-family: "Metamorphous", serif;
+    height: 80px;
+    resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.3em 0.5em;
+    scrollbar-width: thin;
+    scrollbar-color: #5a5450 #2a2724;
+}
+
+.textarea::placeholder {
+    color: #5a5040;
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+
+.divider {
+    border-top: 2px solid #1e1c1a;
+    box-shadow: 0 -1px 0 0 #3a3530;
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.error {
+    color: #e05050;
+    font-size: 0.68rem;
+    font-family: "Metamorphous", serif;
+    letter-spacing: 0.04em;
+}
+
+/* ── Right content ───────────────────────────────────────────────────────── */
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #5a5450 #2a2724;
+}

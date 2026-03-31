@@ -1,0 +1,129 @@
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: "Metamorphous", serif;
+}
+
+.actionRow {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.actionLabel {
+    font-size: 0.72rem;
+    color: #9a8060;
+    letter-spacing: 0.05em;
+}
+
+.keysRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    align-items: center;
+}
+
+/* ── Key chip ─────────────────────────────────────────────────────────────── */
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background-color: #3a3835;
+    outline: 1px solid #252220;
+    box-shadow:
+        inset 0 1px 0 0 #6a6258,
+        inset 1px 0 0 0 #5a5450,
+        inset 0 -1px 0 0 #1e1c1a,
+        inset -1px 0 0 0 #252220,
+        inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    color: #c8a060;
+    font-size: 0.65rem;
+    font-family: "Metamorphous", serif;
+    padding: 1px 5px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.1s, background-color 0.1s;
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.04) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+    letter-spacing: 0.04em;
+}
+
+.chip:hover {
+    color: #f8a81a;
+    background-color: #444240;
+}
+
+.chipCapturing {
+    background-color: #2e2c40;
+    outline: 1px solid #4a4870;
+    box-shadow:
+        inset 0 1px 0 0 #6a6888,
+        inset 1px 0 0 0 #5a5870,
+        inset 0 -1px 0 0 #1e1c2a,
+        inset -1px 0 0 0 #2a283a,
+        inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    color: #a8a8e0;
+}
+
+.chipRemove {
+    color: #5a5040;
+    margin-left: 3px;
+    line-height: 1;
+    transition: color 0.1s;
+}
+
+.chipRemove:hover {
+    color: #f8a81a;
+}
+
+.chipAdd {
+    color: #7a6a50;
+}
+
+/* ── Reset button ─────────────────────────────────────────────────────────── */
+
+.resetBtn {
+    margin-top: 4px;
+    background-color: #3a3835;
+    border: none;
+    outline: 1px solid #252220;
+    box-shadow:
+        inset 0 1px 0 0 #6a6258,
+        inset 1px 0 0 0 #5a5450,
+        inset 0 -1px 0 0 #1e1c1a,
+        inset -1px 0 0 0 #252220,
+        inset 0 2px 5px rgba(0, 0, 0, 0.4);
+    color: #7a6a50;
+    font-size: 0.65rem;
+    font-family: "Metamorphous", serif;
+    letter-spacing: 0.05em;
+    padding: 0.25em 0.6em;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: color 0.1s, background-color 0.1s;
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.04) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+}
+
+.resetBtn:hover {
+    color: #f8a81a;
+    background-color: #444240;
+}
+
+.resetBtn:active {
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 1px 0 0 #1e1c1a,
+        inset 1px 0 0 0 #252220,
+        inset 0 -1px 0 0 #6a6258,
+        inset -1px 0 0 0 #5a5450,
+        inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}

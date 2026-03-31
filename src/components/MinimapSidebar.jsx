@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { drawMinimap } from "../utils/minimap";
+import styles from "./styles/MinimapSidebar.module.css";
 
 /**
  * Right sidebar containing the minimap canvas with hover tooltips, the
@@ -55,61 +56,39 @@ export function MinimapSidebar({
   }, [solidData, camera, minimapMobs, showTempTint, temperatureData]);
 
   return (
-    <div
-      style={{
-        width: 220,
-        borderLeft: "1px solid #333",
-        padding: 12,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        flexShrink: 0,
-      }}
-    >
-      <span style={{ fontSize: 11, color: "#888" }}>Minimap</span>
-      <div style={{ position: "relative", display: "inline-block" }}>
+    <div className={styles.sidebar}>
+      <span className={styles.label}>Minimap</span>
+      <div className={styles.canvasWrap}>
         <canvas
           ref={minimapRef}
           width={196}
           height={196}
-          style={{
-            imageRendering: "pixelated",
-            border: "1px solid #444",
-            display: "block",
-          }}
+          className={styles.canvas}
           onMouseMove={onMinimapMouseMove}
           onMouseLeave={() => setMinimapTooltip(null)}
         />
         {minimapTooltip && (
           <div
+            className={styles.tooltip}
             style={{
-              position: "absolute",
               ...(minimapTooltip.canvasX > 98
                 ? { right: 196 - minimapTooltip.canvasX + 8, left: "auto" }
                 : { left: minimapTooltip.canvasX + 8 }),
               top: minimapTooltip.canvasY - 8,
-              background: "rgba(0,0,0,0.88)",
-              border: `1px solid ${minimapTooltip.mob.cssColor}`,
-              borderRadius: 4,
-              padding: "4px 8px",
-              fontSize: 11,
-              color: "#eee",
-              pointerEvents: "none",
-              whiteSpace: "nowrap",
-              zIndex: 10,
             }}
           >
             <div
-              style={{ fontWeight: "bold", color: minimapTooltip.mob.cssColor }}
+              className={styles.tooltipName}
+              style={{ color: minimapTooltip.mob.cssColor }}
             >
               {minimapTooltip.mob.name}
             </div>
             {minimapTooltip.mob.isXp || minimapTooltip.mob.isIngredient ? (
-              <div style={{ color: minimapTooltip.mob.cssColor }}>
+              <div className={styles.tooltipRow} style={{ color: minimapTooltip.mob.cssColor }}>
                 Walk here to collect
               </div>
             ) : minimapTooltip.mob.isAdventurer ? (
-              <div>
+              <div className={styles.tooltipRow}>
                 HP:{" "}
                 <span style={{ color: minimapTooltip.mob.cssColor }}>
                   {minimapTooltip.mob.hp}/{minimapTooltip.mob.maxHp}
@@ -117,13 +96,13 @@ export function MinimapSidebar({
               </div>
             ) : (
               <>
-                <div>
+                <div className={styles.tooltipRow}>
                   Status:{" "}
                   <span style={{ color: minimapTooltip.mob.cssColor }}>
                     {minimapTooltip.mob.status}
                   </span>
                 </div>
-                <div>
+                <div className={styles.tooltipRow}>
                   Satiation: {Math.round(minimapTooltip.mob.satiation)}
                 </div>
               </>
@@ -131,16 +110,15 @@ export function MinimapSidebar({
           </div>
         )}
       </div>
-      <label style={{ fontSize: 11, color: "#aaa", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+      <label className={styles.checkboxLabel}>
         <input
           type="checkbox"
           checked={showTempTint}
           onChange={(e) => setShowTempTint(e.target.checked)}
-          style={{ cursor: "pointer" }}
         />
         Temperature tint
       </label>
-      <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
+      <div className={styles.controls}>
         <div>W / ↑ - move forward</div>
         <div>S / ↓ - move back</div>
         <div>A / D - strafe</div>

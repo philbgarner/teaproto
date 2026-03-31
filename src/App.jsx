@@ -2959,7 +2959,16 @@ export default function App() {
         {/* Main area */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           {/* 3D view */}
-          <div style={{ flex: 1, position: "relative" }}>
+          <div style={{ flex: 1, position: "relative", outline: "1px solid #1a1816" }}>
+            {/* Inset bevel overlay — sits above the WebGL canvas */}
+            <div style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              zIndex: 10,
+              boxShadow:
+                "inset 0 6px 0 0 #1a1816, inset 6px 0 0 0 #1e1c1a, inset 0 -6px 0 0 #7a7268, inset -6px 0 0 0 #6a6258, inset 0 18px 40px rgba(0,0,0,0.7), inset 0 -6px 12px rgba(255,255,255,0.03)",
+            }} />
             {texture && (
               <PerspectiveDungeonView
                 solidData={solidData}
@@ -3015,12 +3024,16 @@ export default function App() {
                   bottom: 70,
                   left: "50%",
                   transform: "translateX(-50%)",
-                  background: "rgba(0,0,0,0.75)",
-                  border: "1px solid #888",
+                  backgroundColor: "#2e2c29",
+                  outline: "1px solid #1e1c1a",
+                  boxShadow: "inset 0 2px 0 0 #5a5450, inset 2px 0 0 0 #504a46, inset 0 -2px 0 0 #1a1816, inset -2px 0 0 0 #1e1c1a, inset 0 4px 12px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.8)",
+                  backgroundImage: "repeating-conic-gradient(rgba(0,0,0,0.03) 0% 25%, transparent 0% 50%)",
+                  backgroundSize: "4px 4px",
                   padding: "6px 14px",
-                  borderRadius: 4,
                   fontSize: 13,
-                  color: "#ffd",
+                  color: "#c8a060",
+                  fontFamily: '"Metamorphous", serif',
+                  letterSpacing: "0.05em",
                   pointerEvents: "none",
                   whiteSpace: "nowrap",
                 }}
@@ -3074,12 +3087,16 @@ export default function App() {
                   top: 16,
                   left: "50%",
                   transform: "translateX(-50%)",
-                  background: "rgba(0,0,0,0.82)",
-                  border: "1px solid #555",
+                  backgroundColor: "#2e2c29",
+                  outline: "1px solid #1e1c1a",
+                  boxShadow: "inset 0 2px 0 0 #5a5450, inset 2px 0 0 0 #504a46, inset 0 -2px 0 0 #1a1816, inset -2px 0 0 0 #1e1c1a, inset 0 4px 12px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.8)",
+                  backgroundImage: "repeating-conic-gradient(rgba(0,0,0,0.03) 0% 25%, transparent 0% 50%)",
+                  backgroundSize: "4px 4px",
                   padding: "8px 18px",
-                  borderRadius: 4,
                   fontSize: 13,
-                  color: "#fff",
+                  color: "#c8a060",
+                  fontFamily: '"Metamorphous", serif',
+                  letterSpacing: "0.04em",
                   maxWidth: 480,
                   textAlign: "center",
                   pointerEvents: "none",
