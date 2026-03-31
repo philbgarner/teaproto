@@ -24,5 +24,8 @@ dist-ssr
 *.sw?
 *.gitmodules
 
+# Exclude submodule folder, dev can link it and pull.
+roguelike-mazetools
+
 # Exclude Licensed Music from Repo
 public/music/MUS_*.ogg
