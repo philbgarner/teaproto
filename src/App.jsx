@@ -117,6 +117,11 @@ const ARCH_BRICK_UV = atlasIndex.architecture.byName("archBrick")?.uv ?? [
   0, 64,
 ];
 const COBBLESTONE_WALL_ID = atlasIndex.wallTypes.idByName("Cobblestone");
+const PASSAGE_OVERLAY_IDS = [
+  _atlasUvToId(atlasIndex.wallOverlays.byName("buttonUnpressed")?.uv ?? [256, 256]),
+  _atlasUvToId(atlasIndex.wallOverlays.byName("buttonPressed")?.uv ?? [192, 256]),
+  _atlasUvToId(atlasIndex.wallOverlays.byName("openEmptyDoorDark")?.uv ?? [192, 0]),
+];
 
 function loadAtlasTexture() {
   return new Promise((resolve, reject) => {
@@ -2995,6 +3000,7 @@ export default function App() {
                 spriteAtlas={characterSpriteAtlas}
                 adventurerSpriteAtlas={characterSpriteAtlas}
                 passageMask={passageMask ?? undefined}
+                passageOverlayIds={PASSAGE_OVERLAY_IDS}
                 speechBubbles={activeSpeechBubbles}
                 torchColor={torchColor}
                 torchIntensity={torchIntensity}
