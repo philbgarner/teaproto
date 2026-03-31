@@ -33,5 +33,11 @@ export function useSfx(src, { volume = 1.0 } = {}) {
     howlRef.current.stop();
   }
 
-  return { play, stop };
+  function fadeOut(duration = 500) {
+    const h = howlRef.current;
+    h.fade(h.volume(), 0, duration);
+    setTimeout(() => h.stop(), duration);
+  }
+
+  return { play, stop, fadeOut };
 }

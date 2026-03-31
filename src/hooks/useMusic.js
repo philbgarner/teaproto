@@ -43,5 +43,19 @@ export function useMusic(src, { volume = 1.0, loop = false } = {}) {
     howlRef.current.stop();
   }
 
-  return { play, stop };
+  function fadeOut(duration = 500) {
+    const h = howlRef.current;
+    h.fade(h.volume(), 0, duration);
+    setTimeout(() => h.stop(), duration);
+  }
+
+  function fadeIn(duration = 500) {
+    const h = howlRef.current;
+    h.stop();
+    h.volume(0);
+    h.play();
+    h.fade(0, volume, duration);
+  }
+
+  return { play, stop, fadeOut, fadeIn };
 }

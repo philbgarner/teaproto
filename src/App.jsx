@@ -328,23 +328,30 @@ function useEotBCamera(
   height,
   startX,
   startZ,
-  { onStep, blocked, onBlockedMove, canPhaseWalls, keybindings } = {},
+  {
+    onStep,
+    blocked,
+    onBlockedMove,
+    canPhaseWalls,
+    keybindings,
+    startYaw = 0,
+  } = {},
 ) {
-  const logicalRef = useRef({ x: startX, z: startZ, yaw: 0 });
+  const logicalRef = useRef({ x: startX, z: startZ, yaw: startYaw });
   const animRef = useRef({
     fromX: startX,
     fromZ: startZ,
-    fromYaw: 0,
+    fromYaw: startYaw,
     toX: startX,
     toZ: startZ,
-    toYaw: 0,
+    toYaw: startYaw,
     startTime: 0,
     animating: false,
   });
   const [camera, setCamera] = useState(() => ({
     x: startX,
     z: startZ,
-    yaw: 0,
+    yaw: startYaw,
   }));
   const [prevStartX, setPrevStartX] = useState(startX);
   const [prevStartZ, setPrevStartZ] = useState(startZ);
@@ -357,18 +364,18 @@ function useEotBCamera(
   if (prevStartX !== startX || prevStartZ !== startZ) {
     setPrevStartX(startX);
     setPrevStartZ(startZ);
-    setCamera({ x: startX, z: startZ, yaw: 0 });
+    setCamera({ x: startX, z: startZ, yaw: startYaw });
   }
 
   useEffect(() => {
-    logicalRef.current = { x: startX, z: startZ, yaw: 0 };
+    logicalRef.current = { x: startX, z: startZ, yaw: startYaw };
     animRef.current = {
       fromX: startX,
       fromZ: startZ,
-      fromYaw: 0,
+      fromYaw: startYaw,
       toX: startX,
       toZ: startZ,
-      toYaw: 0,
+      toYaw: startYaw,
       startTime: 0,
       animating: false,
     };
@@ -728,12 +735,13 @@ export default function App() {
   );
   const [showTempTint, setShowTempTint] = useState(false);
 
-  const { spawnX, spawnZ } = useMemo(() => {
+  const { spawnX, spawnZ, spawnYaw } = useMemo(() => {
     const room = dungeon.rooms.get(dungeon.endRoomId);
-    if (!room) return { spawnX: 1.5, spawnZ: 1.5 };
+    if (!room) return { spawnX: 1.5, spawnZ: 1.5, spawnYaw: 0 };
     return {
       spawnX: room.rect.x + Math.floor(room.rect.w / 2) + 0.5,
-      spawnZ: room.rect.y + Math.floor(room.rect.h / 2) + 0.5,
+      spawnZ: room.rect.y + Math.floor(room.rect.h / 2) + 1.5, // one cell south of stove
+      spawnYaw: Math.PI, // face north toward the stove
     };
   }, [dungeon]);
 
@@ -1336,7 +1344,7 @@ export default function App() {
   const { play: playMainTheme } = useMusic(
     `${import.meta.env.BASE_URL}music/MUS_1_MainTheme_Cozy.ogg`,
     {
-      volume: 0.6,
+      volume: 1.0,
       loop: true,
     },
   );
@@ -2414,6 +2422,7 @@ export default function App() {
       onBlockedMove,
       canPhaseWalls: !playerHands.left && !playerHands.right,
       keybindings,
+      startYaw: spawnYaw,
     },
   );
 

@@ -180,6 +180,7 @@ function SceneContent({
   playThunderStrike,
   playMusic,
   playBirds,
+  skipRef,
 }) {
   const { viewport } = useThree();
   const refs        = useRef({});
@@ -192,6 +193,9 @@ function SceneContent({
   useFrame(({ clock }) => {
     const now = clock.getElapsedTime();
     if (startT.current === null) startT.current = now;
+    if (skipRef?.current && !menuFired.current) {
+      startT.current = now - MENU_SHOW_T;
+    }
     const t = now - startT.current;
     const { width: W, height: H } = viewport;
 
@@ -350,7 +354,7 @@ function SceneContent({
   );
 }
 
-function PreloadedScene({ onMenuReady }) {
+function PreloadedScene({ onMenuReady, onMusicReady, skipRef }) {
   const textures = useTexture(ALL_TEXTURE_PATHS);
   const { play: playLightningStrike } = useSfx(
     `${BASE}sfx/dragon-studio-lightning-strike-386161.mp3`,
@@ -358,13 +362,22 @@ function PreloadedScene({ onMenuReady }) {
   const { play: playThunderStrike } = useSfx(
     `${BASE}sfx/tanweraman-thunder-strike-wav-321628.mp3`,
   );
-  const { play: playMusic } = useMusic(
+  const { play: playMusic, fadeOut: fadeOutMusic } = useMusic(
     `${BASE}music/juliush-awakening-chill-out-music-1295.mp3`,
     { loop: true },
   );
-  const { play: playBirds } = useSfx(
+  const { play: playBirds, fadeOut: fadeOutBirds } = useSfx(
     `${BASE}sfx/loswin23-morning-birds-499429.mp3`,
   );
+  const { fadeIn: fadeInSafeZone } = useMusic(
+    `${BASE}music/MUS_8_SafeZone_Cozy.ogg`,
+    { loop: true },
+  );
+
+  useEffect(() => {
+    onMusicReady({ fadeOutMusic, fadeOutBirds, fadeInSafeZone });
+  }, []);
+
   return (
     <SceneContent
       textures={textures}
@@ -373,6 +386,7 @@ function PreloadedScene({ onMenuReady }) {
       playThunderStrike={playThunderStrike}
       playMusic={playMusic}
       playBirds={playBirds}
+      skipRef={skipRef}
     />
   );
 }
@@ -392,6 +406,8 @@ function MenuItem({ label, onClick }) {
 export function TitleScreen({ onNewGame }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuFading,  setMenuFading]  = useState(false);
+  const musicRef = useRef({});
+  const skipRef  = useRef(false);
 
   useEffect(() => {
     const face = new FontFace(
@@ -404,11 +420,19 @@ export function TitleScreen({ onNewGame }) {
   function handleNewGame() {
     if (menuFading) return;
     setMenuFading(true);
-    setTimeout(onNewGame, 480);
+    const FADE = 600;
+    musicRef.current.fadeOutMusic?.(FADE);
+    musicRef.current.fadeOutBirds?.(FADE);
+    setTimeout(() => musicRef.current.fadeInSafeZone?.(FADE), FADE);
+    setTimeout(onNewGame, FADE * 2);
+  }
+
+  function handleSkip() {
+    if (!menuVisible) skipRef.current = true;
   }
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} onClick={handleSkip}>
       <Canvas
         orthographic
         camera={{ zoom: 1, position: [0, 0, 100] }}
@@ -416,7 +440,11 @@ export function TitleScreen({ onNewGame }) {
         gl={{ antialias: true, alpha: true }}
       >
         <Suspense fallback={null}>
-          <PreloadedScene onMenuReady={() => setMenuVisible(true)} />
+          <PreloadedScene
+            onMenuReady={() => setMenuVisible(true)}
+            onMusicReady={(fns) => { musicRef.current = fns; }}
+            skipRef={skipRef}
+          />
         </Suspense>
       </Canvas>
 
