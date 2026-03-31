@@ -583,17 +583,6 @@ export function TitleScreen({ onNewGame }) {
   const skipRef = useRef(false);
   const settings = useSettings();
 
-  useEffect(() => {
-    const face = new FontFace(
-      "Maison Neue",
-      `url('${BASE}fonts/MaisonNeue.ttf') format('truetype')`,
-    );
-    face
-      .load()
-      .then((loaded) => document.fonts.add(loaded))
-      .catch(() => {});
-  }, []);
-
   function handleNewGame() {
     if (menuFading) return;
     setMenuFading(true);
