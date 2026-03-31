@@ -1,18 +1,12 @@
-import React, { useEffect } from "react";
-import BorderPanel from "./BorderPanel";
-import Button from "./Button";
+import React from "react";
 import styles from "./styles/ModalPanelBackdrop.module.css";
 
 export interface ModalPanelProps {
   children: React.ReactNode;
-
   title?: string;
-
   closeButton?: boolean;
   scrollContents?: boolean;
-
   onClose?: () => void;
-
   visible?: boolean;
   maxHeight?: string;
   width?: string;
@@ -29,48 +23,36 @@ export default function ModalPanel({
   maxHeight,
   scrollContents,
   width,
-  top,
-  bottom,
   opacity,
 }: ModalPanelProps) {
-  useEffect(() => {
-    if (!visible && onClose) {
-      onClose();
-    }
-  }, [visible]);
+  if (!visible) return null;
 
-  const w = width || "40vw";
-  const wNum = parseFloat(w);
-  const wUnit = w.replace(/[\d.]/g, "");
-
-  return visible ? (
-    <div className={styles.modalPanelBackdrop} style={{ opacity, transition: "opacity 0.15s" }}>
-      <BorderPanel
-        background="#191919"
-        width={w}
-        height={maxHeight || "40vh"}
-        top={top ?? "calc(50vh - 20vh)"}
-        left={`calc(50vw - ${wNum / 2}${wUnit})`}
-        hidden={!visible}
-        title={title}
-        flexMode="Column"
+  return (
+    <div
+      className={styles.backdrop}
+      style={{ opacity, transition: "opacity 0.15s" }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
+    >
+      <div
+        className={styles.panel}
+        style={{ width: width ?? "40vw", maxHeight: maxHeight ?? "40vh" }}
       >
-        {closeButton && (
-          <div className={styles.closeButton}>
-            <Button background="#191919" onClick={onClose} maxWidth="4rem">
-              ✕
-            </Button>
+        {(title || closeButton) && (
+          <div className={styles.header}>
+            {title && <span className={styles.title}>{title}</span>}
+            {closeButton && (
+              <button className={styles.closeBtn} onClick={onClose}>
+                ✕
+              </button>
+            )}
           </div>
         )}
-        <div
-          style={{
-            padding: "1rem",
-            overflowY: scrollContents ? "scroll" : "hidden",
-          }}
-        >
+        <div className={`${styles.body} ${scrollContents ? styles.bodyScroll : ""}`}>
           {children}
         </div>
-      </BorderPanel>
+      </div>
     </div>
-  ) : null;
+  );
 }

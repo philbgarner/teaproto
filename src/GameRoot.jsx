@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TitleScreen } from "./components/TitleScreen";
 import App from "./App.jsx";
+import { SettingsProvider } from "./SettingsContext";
 
 export function GameRoot() {
   console.log("[GameRoot] render");
@@ -20,6 +21,7 @@ export function GameRoot() {
   }
 
   return (
+    <SettingsProvider>
     <div
       style={{
         position: "relative",
@@ -56,5 +58,6 @@ export function GameRoot() {
         </div>
       )}
     </div>
+    </SettingsProvider>
   );
 }
