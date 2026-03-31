@@ -1,36 +1,36 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { aStar8 } from "../mazetools/src/astar";
+import { aStar8 } from "../roguelike-mazetools/src/astar";
 import * as THREE from "three";
-import { generateBspDungeon } from "../mazetools/src/bsp";
+import { generateBspDungeon } from "../roguelike-mazetools/src/bsp";
 import {
   generateHiddenPassages,
   generateThemedRooms,
   makeContentRng,
-} from "../mazetools/src/content";
-import { buildAtlasIndex } from "../mazetools/src/atlas";
+} from "../roguelike-mazetools/src/content";
+import { buildAtlasIndex } from "../roguelike-mazetools/src/atlas";
 import atlasJson from "./assets/atlas.json";
 import {
   buildTileAtlas,
   uvToTileId,
-} from "../mazetools/src/rendering/tileAtlas";
+} from "../roguelike-mazetools/src/rendering/tileAtlas";
 import {
   TORCH_OBJECT_VERT,
   TORCH_OBJECT_FRAG,
   makeTorchUniforms,
   DEFAULT_TORCH_HEX,
   DEFAULT_TORCH_INTENSITY,
-} from "../mazetools/src/rendering/torchLighting";
-import { PerspectiveDungeonView } from "../mazetools/src/rendering/PerspectiveDungeonView";
+} from "../roguelike-mazetools/src/rendering/torchLighting";
+import { PerspectiveDungeonView } from "../roguelike-mazetools/src/rendering/PerspectiveDungeonView";
 import {
   buildPassageMask,
   enablePassageInMask,
   disablePassageInMask,
-} from "../mazetools/src/rendering/hiddenPassagesMask";
+} from "../roguelike-mazetools/src/rendering/hiddenPassagesMask";
 import {
   startPassageTraversal,
   consumePassageStep,
   cancelPassageTraversal,
-} from "../mazetools/src/turn/passageTraversal";
+} from "../roguelike-mazetools/src/turn/passageTraversal";
 import { RECIPES } from "./tea";
 import { THEMES, THEME_KEYS } from "./themes";
 import { useMusic } from "./hooks/useMusic";

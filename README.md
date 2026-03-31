@@ -22,7 +22,7 @@ A first-person dungeon crawler where you brew and serve tea to keep friendly mob
 
 ### Clone and Install
 
-This project uses a git submodule (`mazetools`) for dungeon generation and rendering. Make sure to clone with submodules:
+This project uses a git submodule (`roguelike-mazetools`) for dungeon generation and rendering. Make sure to clone with submodules:
 
 ```bash
 git clone --recurse-submodules git@github.com:philbgarner/teaproto.git

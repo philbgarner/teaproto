@@ -283,7 +283,7 @@ Shown in the status bar: `Rations: X · Herbs: Y · Dust: Z`
 
 ## Dungeon Generation
 
-Uses a binary-space-partition (BSP) algorithm from the `mazetools` submodule.
+Uses a binary-space-partition (BSP) algorithm from the `roguelike-mazetools` submodule.
 
 ### Default Values
 
