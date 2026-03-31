@@ -3,7 +3,7 @@ import { useKeybindings } from "./hooks/useKeybindings";
 import {
   DEFAULT_TORCH_HEX,
   DEFAULT_TORCH_INTENSITY,
-} from "../mazetools/src/rendering/torchLighting";
+} from "../roguelike-mazetools/src/rendering/torchLighting";
 
 const SettingsContext = createContext(null);
 
