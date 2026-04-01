@@ -1,0 +1,45 @@
+.credits {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4em;
+    font-family: "Metamorphous", serif;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+}
+
+.role {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #f8a81a;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.9),
+        0 0 10px rgba(248, 168, 26, 0.2);
+    margin-bottom: 0.1em;
+}
+
+.names {
+    font-size: 0.85rem;
+    color: #c8a060;
+    letter-spacing: 0.05em;
+    padding-left: 0.5em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+}
+
+.link {
+    color: #9a7840;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    transition: color 0.1s;
+}
+
+.link:hover {
+    color: #f8a81a;
+}

@@ -6,6 +6,7 @@ import { useSfx } from "../hooks/useSfx";
 import { useMusic } from "../hooks/useMusic";
 import { useSettings } from "../SettingsContext";
 import SettingsTabs from "../SettingsTabs";
+import Credits from "./Credits";
 import styles from "./styles/TitleScreen.module.css";
 
 const BASE = import.meta.env.BASE_URL;
@@ -768,6 +769,7 @@ export function TitleScreen({ onNewGame }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuFading, setMenuFading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showCredits, setShowCredits] = useState(false);
   const [choosingDifficulty, setChoosingDifficulty] = useState(false);
   const musicRef = useRef({});
   const skipRef = useRef(false);
@@ -832,7 +834,7 @@ export function TitleScreen({ onNewGame }) {
           <>
             <MenuItem label="New Game" onClick={handleNewGame} />
             <MenuItem label="Settings" onClick={() => setShowSettings(true)} />
-            <MenuItem label="Credits" />
+            <MenuItem label="Credits" onClick={() => setShowCredits(true)} />
           </>
         ) : (
           <>
@@ -869,6 +871,8 @@ export function TitleScreen({ onNewGame }) {
           </div>
         </div>
       )}
+
+      <Credits visible={showCredits} onClose={() => setShowCredits(false)} />
     </div>
   );
 }
