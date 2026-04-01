@@ -106,7 +106,7 @@ function SpikeFloors({
   });
 
   const step = tileSize / 3;
-  const y = 0.02; // slight offset to prevent z-fighting with floor
+  const halfH = tileSize / 2; // center planes so bottom edge sits at floor
 
   return (
     <>
@@ -114,24 +114,24 @@ function SpikeFloors({
         const wx = (x + 0.5) * tileSize;
         const wz = (z + 0.5) * tileSize;
         return [
-          // 3 planes along the Z axis (spikes face one direction)
+          // 3 planes spaced along Z, standing vertical facing N/S
           ...[-step, 0, step].map((dz, i) => (
             <mesh
               key={`spike_${x}_${z}_ns_${i}`}
               geometry={geo}
               material={mat}
-              position={[wx, y, wz + dz]}
-              rotation={[-Math.PI / 2, 0, 0]}
+              position={[wx, halfH, wz + dz]}
+              rotation={[0, 0, 0]}
             />
           )),
-          // 3 planes along the X axis, rotated 90° (spikes face perpendicular)
+          // 3 planes spaced along X, standing vertical facing E/W
           ...[-step, 0, step].map((dx, i) => (
             <mesh
               key={`spike_${x}_${z}_ew_${i}`}
               geometry={geo}
               material={mat}
-              position={[wx + dx, y, wz]}
-              rotation={[-Math.PI / 2, Math.PI / 2, 0]}
+              position={[wx + dx, halfH, wz]}
+              rotation={[0, Math.PI / 2, 0]}
             />
           )),
         ];

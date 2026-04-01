@@ -221,7 +221,7 @@ export function makeTeaomaticProto(atlasTex: THREE.Texture): THREE.Mesh {
   const vMax = 1 - uvY / ATLAS_SHEET_H;
 
   const bW = TILE_SIZE * 0.65;
-  const bH = CEILING_H * 0.85;
+  const bH = TILE_SIZE * 0.65;
   const bD = TILE_SIZE * 0.65;
   const geo = new THREE.BoxGeometry(bW, bH, bD);
 

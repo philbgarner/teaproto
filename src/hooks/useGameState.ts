@@ -760,17 +760,6 @@ export function useGameState({
     }
     newIngredientDrops = remainingIngDrops;
 
-    // --- Player spike trap ---
-    {
-      const pidx = pgz * dungeonWidth + pgx;
-      const hazVal = hazardTexData[pidx];
-      if ((hazVal & SPIKE_HAZARD) !== 0 && (hazVal & SPIKE_HAZARD_ACTIVE) === 0) {
-        hazardTexData[pidx] = hazVal | SPIKE_HAZARD_ACTIVE;
-        newPlayerHp = Math.max(0, newPlayerHp - SPIKE_DAMAGE);
-        stepMessage = `You triggered a spike trap! (-${SPIKE_DAMAGE} HP)`;
-        hazardChanged = true;
-      }
-    }
 
     // --- Adventurer AI ---
     function isWalkable(x: number, z: number): boolean {
