@@ -57,12 +57,11 @@ export function MinimapSidebar({
 
   return (
     <div className={styles.sidebar}>
-      <span className={styles.label}>Minimap</span>
       <div className={styles.canvasWrap}>
         <canvas
           ref={minimapRef}
-          width={196}
-          height={196}
+          width={"100%"}
+          height={"100%"}
           className={styles.canvas}
           onMouseMove={onMinimapMouseMove}
           onMouseLeave={() => setMinimapTooltip(null)}
