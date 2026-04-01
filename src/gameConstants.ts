@@ -5,7 +5,9 @@ import {
   uvToTileId,
 } from "../roguelike-mazetools/src/rendering/tileAtlas";
 
+console.log("[App module] top-level eval start");
 export const atlasIndex = buildAtlasIndex(atlasJson);
+console.log("[App module] atlasIndex built");
 
 // ---------------------------------------------------------------------------
 // Tile atlas
@@ -49,9 +51,10 @@ export const FLOOR_TILE_MAP: number[] = (
 ).map((ft: any) =>
   "uv" in ft ? _atlasUvToId(ft.uv as [number, number]) : TILE_FLOOR,
 );
-export const WALL_TILE_MAP: number[] = (atlasIndex.data.wallTypes as any[]).map(
-  (wt: any) =>
-    "uv" in wt ? _atlasUvToId(wt.uv as [number, number]) : TILE_WALL,
+export const WALL_TILE_MAP: number[] = (
+  atlasIndex.data.wallTypes as any[]
+).map((wt: any) =>
+  "uv" in wt ? _atlasUvToId(wt.uv as [number, number]) : TILE_WALL,
 );
 export const CEILING_TILE_MAP: number[] = (
   atlasIndex.data.ceilingTypes as any[]
@@ -59,12 +62,14 @@ export const CEILING_TILE_MAP: number[] = (
   "uv" in ct ? _atlasUvToId(ct.uv as [number, number]) : TILE_CEILING,
 );
 
-export const ARCH_COBBLE_UV: [number, number] = (atlasIndex.architecture.byName(
-  "archCobble",
-)?.uv as [number, number]) ?? [64, 0];
-export const ARCH_BRICK_UV: [number, number] = (atlasIndex.architecture.byName(
-  "archBrick",
-)?.uv as [number, number]) ?? [0, 64];
+export const ARCH_COBBLE_UV: [number, number] =
+  (atlasIndex.architecture.byName("archCobble")?.uv as [number, number]) ?? [
+    64, 0,
+  ];
+export const ARCH_BRICK_UV: [number, number] =
+  (atlasIndex.architecture.byName("archBrick")?.uv as [number, number]) ?? [
+    0, 64,
+  ];
 export const COBBLESTONE_WALL_ID: number =
   atlasIndex.wallTypes.idByName("Cobblestone");
 export const PASSAGE_OVERLAY_IDS: number[] = [
@@ -120,30 +125,6 @@ export const MOB_TYPES: MobType[] = [
     name: "Bat",
     geometrySize: [2, 1],
     uvRect: { x: 0, y: 448, w: 128, h: 64 },
-  },
-  {
-    type: "dragon",
-    name: "Dragon",
-    geometrySize: [2, 1],
-    uvRect: { x: 384, y: 320, w: 128, h: 64 },
-  },
-  {
-    type: "goblin",
-    name: "Goblin",
-    geometrySize: [1, 1],
-    uvRect: { x: 0, y: 320, w: 64, h: 64 },
-  },
-  {
-    type: "troll",
-    name: "Troll",
-    geometrySize: [1, 1],
-    uvRect: { x: 0, y: 192, w: 64, h: 64 },
-  },
-  {
-    type: "skeleton",
-    name: "Skeleton",
-    geometrySize: [1, 1],
-    uvRect: { x: 0, y: 64, w: 64, h: 64 },
   },
 ];
 export const MOB_TYPE_MAP: Record<string, MobType> = Object.fromEntries(
@@ -220,7 +201,7 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     colorRgb: [1.0, 0.15, 0.15],
     drop: { id: "rations", name: "Iron Rations" },
     geometrySize: [1, 1],
-    uvRect: { x: 192, y: 64, w: 64, h: 64 },
+    uvRect: { x: 192, y: 0, w: 64, h: 64 },
   },
   {
     type: "rogue",
@@ -266,18 +247,6 @@ export const STATUS_CSS: Record<string, string> = {
   sated: "#08f",
   refreshed: "#3f5",
 };
-
-// ---------------------------------------------------------------------------
-// Spike traps
-// ---------------------------------------------------------------------------
-/** Bit 0 of the hazard byte: cell contains a spike trap. */
-export const SPIKE_HAZARD = 1;
-/** Bit 1 of the hazard byte: spikes are currently extended/active. */
-export const SPIKE_HAZARD_ACTIVE = 2;
-/** Damage dealt when triggering a spike trap. */
-export const SPIKE_DAMAGE = 5;
-/** Tile ID for the trap-grid floor decoration overlay (atlas UV 256, 192). */
-export const FLOOR_TRAP_OVERLAY_TILE_ID: number = _atlasUvToId([256, 192]);
 
 // Re-export buildTileAtlas for use in useGameState
 export { buildTileAtlas };

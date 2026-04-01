@@ -50,9 +50,6 @@ import {
   STATUS_CSS,
   LOS_RADIUS,
   MOB_DEFENSE,
-  SPIKE_HAZARD,
-  SPIKE_HAZARD_ACTIVE,
-  SPIKE_DAMAGE,
 } from "../gameConstants";
 import {
   normalizeUvRect,
@@ -252,7 +249,6 @@ export function useGameState({
     () => new Map(),
   );
   const regionIdData = useMemo(() => dungeon.fullRegionIds, [dungeon]);
-  const hazardTexData = dungeon.textures.hazards.image.data as Uint8Array;
 
   // Precompute unique adjacent region pairs for temperature flow.
   const regionAdjacency = useMemo(() => {
@@ -393,7 +389,6 @@ export function useGameState({
   // Hidden passages
   const passagesRef = useRef<any[]>([]);
   const [passageMask, setPassageMask] = useState<Uint8Array | null>(null);
-  const [hazardMask, setHazardMask] = useState<Uint8Array | null>(null);
   const [passageTraversal, _setPassageTraversal] = useState<any>({
     kind: "idle",
   });
@@ -480,7 +475,6 @@ export function useGameState({
       buildPassageMask(dungeon.width, dungeon.height, { passages }),
     );
     setPassageTraversal({ kind: "idle" });
-    setHazardMask(new Uint8Array(dungeon.textures.hazards.image.data));
 
     playMainTheme();
     showMsg(
@@ -700,7 +694,6 @@ export function useGameState({
     let newIngredientDrops = [...ingredientDropsRef.current];
     let newChests = [...chestsRef.current];
     let stepMessage: string | null = null;
-    let hazardChanged = false;
     const pendingSpeechBubbles: { entityId: string; text: string }[] = []; // collected during processing
 
     // --- Wave spawning ---
@@ -759,7 +752,6 @@ export function useGameState({
       }
     }
     newIngredientDrops = remainingIngDrops;
-
 
     // --- Adventurer AI ---
     function isWalkable(x: number, z: number): boolean {
@@ -1242,27 +1234,6 @@ export function useGameState({
       });
     }
 
-    // --- Adventurer spike traps ---
-    for (let j = 0; j < newAdventurers.length; j++) {
-      const adv = newAdventurers[j];
-      if (!adv.alive) continue;
-      const aidx = adv.z * dungeonWidth + adv.x;
-      const hazVal = hazardTexData[aidx];
-      if ((hazVal & SPIKE_HAZARD) !== 0 && (hazVal & SPIKE_HAZARD_ACTIVE) === 0) {
-        hazardTexData[aidx] = hazVal | SPIKE_HAZARD_ACTIVE;
-        hazardChanged = true;
-        const damage = Math.max(0, SPIKE_DAMAGE - (adv.defense ?? 0));
-        const newHp = adv.hp - damage;
-        if (newHp <= 0) {
-          newAdventurers[j] = { ...adv, alive: false, hp: 0 };
-          stepMessage = `A spike trap slew the ${adv.name}!`;
-        } else {
-          newAdventurers[j] = { ...adv, hp: newHp };
-          stepMessage = `The ${adv.name} triggered a spike trap! (-${damage} HP)`;
-        }
-      }
-    }
-
     // --- Adventurers pick up loot they've walked onto ---
     for (const adv of newAdventurers) {
       if (!adv.alive) continue;
@@ -1413,7 +1384,6 @@ export function useGameState({
     mobSatiationsRef.current = newMobSatiations;
     mobPositionsRef.current = newMobPositions;
 
-    if (hazardChanged) setHazardMask(new Uint8Array(hazardTexData));
     setTurnCount(newTurnCount);
     setWaveCountdown(newWaveCountdown);
     setCurrentWave(newWave);
@@ -1609,24 +1579,8 @@ export function useGameState({
     const facingTarget = facingTargetRef.current;
 
     function doInteract() {
-      if (gameState !== "playing") return;
-
-      // Retract active spikes under the player's feet
-      {
-        const { x: px, z: pz } = logicalRef.current;
-        const pgx = Math.floor(px);
-        const pgz = Math.floor(pz);
-        const pidx = pgz * dungeonWidth + pgx;
-        const hazVal = hazardTexData[pidx];
-        if ((hazVal & SPIKE_HAZARD) !== 0 && (hazVal & SPIKE_HAZARD_ACTIVE) !== 0) {
-          hazardTexData[pidx] = hazVal & ~SPIKE_HAZARD_ACTIVE;
-          setHazardMask(new Uint8Array(hazardTexData));
-          showMsg("You pull the lever, retracting the spike trap.");
-          return;
-        }
-      }
-
       if (!facingTarget) return;
+      if (gameState !== "playing") return;
 
       if (facingTarget.type === "stove") {
         const state = stoveStates.get(facingTarget.stoveKey);
@@ -2033,9 +1987,6 @@ export function useGameState({
     // passage state
     passageMask,
     setPassageMask,
-    // hazard state
-    hazardMask,
-    setHazardMask,
     passageTraversal,
     passageTraversalRef,
     setPassageTraversal,

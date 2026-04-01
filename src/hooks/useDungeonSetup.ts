@@ -10,7 +10,6 @@ import {
   MOB_DEFENSE,
   MOB_NAMES,
   MOB_TYPES,
-  SPIKE_HAZARD,
 } from "../gameConstants";
 import { makeRng } from "../gameUtils";
 import { RECIPES } from "../tea";
@@ -141,28 +140,6 @@ export function useDungeonSetup({
     dungeon.textures.wallType.needsUpdate = true;
     dungeon.textures.ceilingType.needsUpdate = true;
   }, [dungeon]);
-
-  // Place spike traps on corridor cells
-  const hazardData = useMemo(() => {
-    const hazards = dungeon.textures.hazards.image.data as Uint8Array;
-    const W = dungeon.width;
-    const rng = makeRng(dungeonSeed ^ 0x5a5a5a5a);
-    for (const [, room] of dungeon.rooms) {
-      if ((room as any).type !== "corridor") continue;
-      const rect = (room as any).rect;
-      for (let rz = rect.y; rz < rect.y + rect.h; rz++) {
-        for (let rx = rect.x; rx < rect.x + rect.w; rx++) {
-          const idx = rz * W + rx;
-          if (solidData[idx] !== 0) continue;
-          if (rng() < 0.2) {
-            hazards[idx] = SPIKE_HAZARD;
-          }
-        }
-      }
-    }
-    dungeon.textures.hazards.needsUpdate = true;
-    return hazards;
-  }, [dungeon, dungeonSeed, solidData]);
 
   // Stove placements via generateContent — 2 stoves in end room at distanceToWall === 1
   const stovePlacements = useMemo(() => {
@@ -425,7 +402,6 @@ export function useDungeonSetup({
     wallData,
     ceilingData,
     temperatureData,
-    hazardData,
     spawnX,
     spawnZ,
     spawnYaw,
