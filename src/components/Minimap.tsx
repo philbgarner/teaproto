@@ -20,17 +20,27 @@ const YAW_LERP_K = 5;
 /** Orthographic camera height above the dungeon floor. */
 const CAM_Y = 200;
 
-/** Flat white tint bands – disables distance-based darkening. */
-const WHITE = new THREE.Color(1, 1, 1);
-const FLAT_TINTS: [THREE.Color, THREE.Color, THREE.Color, THREE.Color] = [
-  WHITE,
-  WHITE,
-  WHITE,
-  WHITE,
+/**
+ * Torchlight bands for the minimap.
+ * Band 0 (near player, "visible")  → bright white
+ * Band 1                           → dimmed
+ * Band 2                           → gray-purple transition
+ * Band 3 ("explored, not visible") → desaturated dark purple
+ * Fog (beyond fogFar)              → near-black purple
+ */
+const MINIMAP_TINTS: [THREE.Color, THREE.Color, THREE.Color, THREE.Color] = [
+  new THREE.Color(1.0,  1.0,  1.0 ),
+  new THREE.Color(0.60, 0.60, 0.60),
+  new THREE.Color(0.28, 0.18, 0.38),
+  new THREE.Color(0.15, 0.07, 0.22),
 ];
-
-/** Black torch colour eliminates the additive warm-yellow torch overlay. */
-const BLACK_TORCH = new THREE.Color(0, 0, 0);
+const MINIMAP_FOG_COLOR       = new THREE.Color(0.05, 0.02, 0.08);
+const MINIMAP_TORCH_COLOR     = new THREE.Color(1.0,  0.85, 0.4 );
+const MINIMAP_TORCH_INTENSITY = 0.2;
+/** Full-brightness radius in tiles (world units = tileSize × this). */
+const MINIMAP_BAND_NEAR_TILES = 5;
+/** Fog starts at this many tiles from the player. */
+const MINIMAP_FOG_FAR_TILES   = 18;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Floor instance builder
@@ -161,6 +171,12 @@ function MinimapScene({
   const propsRef = useRef({ playerX, playerZ, targetYaw });
   propsRef.current = { playerX, playerZ, targetYaw };
 
+  // Player world-space XZ position — drives player-relative fog bands.
+  const playerWorldPos = useMemo(
+    () => new THREE.Vector2(playerX * tileSize, playerZ * tileSize),
+    [playerX, playerZ, tileSize],
+  );
+
   // Rebuild floor tiles when dungeon changes or the player moves (the latter
   // ensures we re-read the explored mask after each exploration step).
   const floorInstances = useMemo(
@@ -210,16 +226,18 @@ function MinimapScene({
 
   return (
     <>
-      <color attach="background" args={["#111111"]} />
+      <color attach="background" args={["#050208"]} />
       <InstancedTileMesh
         instances={floorInstances}
         atlas={atlas}
         texture={texture}
-        fogNear={9999}
-        fogFar={99999}
-        tintColors={FLAT_TINTS}
-        torchColor={BLACK_TORCH}
-        torchIntensity={0}
+        fogColor={MINIMAP_FOG_COLOR}
+        fogFar={tileSize * MINIMAP_FOG_FAR_TILES}
+        tintColors={MINIMAP_TINTS}
+        torchColor={MINIMAP_TORCH_COLOR}
+        torchIntensity={MINIMAP_TORCH_INTENSITY}
+        playerWorldPos={playerWorldPos}
+        bandNear={tileSize * MINIMAP_BAND_NEAR_TILES}
       />
       <PlayerArrow tileSize={tileSize} groupRef={arrowGroupRef} />
     </>
