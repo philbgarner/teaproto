@@ -1,11 +1,13 @@
 import styles from "./styles/GameHeader.module.css";
 
-/**
- * Top header bar showing the game title, dungeon seed, and current wave number.
- *
- * @param {{ dungeonSeed: number, currentWave: number, onSettingsClick: () => void }} props
- */
-export function GameHeader({ dungeonSeed, currentWave, onSettingsClick, onRandomizeSeed }) {
+interface GameHeaderProps {
+  dungeonSeed: number;
+  currentWave: number;
+  onSettingsClick: () => void;
+  onRandomizeSeed: () => void;
+}
+
+export function GameHeader({ dungeonSeed, currentWave, onSettingsClick, onRandomizeSeed }: GameHeaderProps) {
   return (
     <div className={styles.header}>
       <span className={styles.title}>Tea Dungeon</span>
