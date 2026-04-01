@@ -3,6 +3,10 @@
 Art: Imaya
 https://imayazing.itch.io/
 
+Programming: Clem
+
+Programming: Phil Garner
+
 ## References
 
 NOT AI ART!
