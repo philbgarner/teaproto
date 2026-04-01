@@ -24,12 +24,14 @@
 
 .canvasWrap {
     position: relative;
-    display: inline-block;
+    width: 100%;
 }
 
 .canvas {
     image-rendering: pixelated;
     display: block;
+    width: 100%;
+    height: auto;
     outline: 1px solid #3a3530;
     box-shadow:
         inset 0 1px 0 0 #1a1816,

@@ -82,7 +82,13 @@ const MENU_SHOW_T = T_WCLOUD2 + 0.6; // Updated to after white clouds
 const CASTLE_SLIDE_DUR = 0.9;
 
 // IDs of dark layers that fade OUT as lite fades IN
-const DARK_LAYER_IDS = new Set(["sky_d", "bhill_d", "fhill_d", "cast_d", "title_d"]);
+const DARK_LAYER_IDS = new Set([
+  "sky_d",
+  "bhill_d",
+  "fhill_d",
+  "cast_d",
+  "title_d",
+]);
 
 // ─── Static layer sequence ────────────────────────────────────────────────────
 // Render order: 0-1 sky, 2-3 storm clouds (behind hills), 4-5 back hill,
@@ -108,7 +114,14 @@ const SEQUENCE = [
     anim: "slideUp",
   },
   { id: "cast_d", ti: 14, ro: 9, start: T_FC, dur: SLIDE_DUR, anim: "slideUp" },
-  { id: "title_d", ti: 18, ro: 11, start: T_FC, dur: SLIDE_DUR, anim: "slideUp" },
+  {
+    id: "title_d",
+    ti: 18,
+    ro: 11,
+    start: T_FC,
+    dur: SLIDE_DUR,
+    anim: "slideUp",
+  },
   { id: "sky_l", ti: 1, ro: 1, start: T_LITE, dur: DUR_LITE, anim: "fadeIn" },
   { id: "bhill_l", ti: 5, ro: 5, start: T_LITE, dur: DUR_LITE, anim: "fadeIn" },
   {
@@ -151,20 +164,20 @@ function driftX(t, positions, W, loop = false) {
     if (period > 0 && t > t0) effectiveT = t0 + ((t - t0) % period);
   }
   if (effectiveT < positions[0][0]) return positions[0][1] * W;
-  
+
   for (let i = 1; i < positions.length; i++) {
     const [currT, currX] = positions[i];
     const [prevT, prevX] = positions[i - 1];
     const targetX = currX * W;
     const startX = prevX * W;
-    
+
     if (effectiveT < currT) {
       // Linear interpolation between previous and current position
       const p = (effectiveT - prevT) / (currT - prevT);
       return startX + (targetX - startX) * p;
     }
   }
-  
+
   // Return last position if beyond the sequence
   return positions[positions.length - 1][1] * W;
 }
@@ -451,19 +464,21 @@ function SceneContent({
       const fadeProgress = Math.min(1, (t - (T_LITE + DUR_LITE)) / 2.0);
       stormCloudOpacity = 0.8 * (1 - fadeProgress);
     }
-    
+
     for (const cloudDef of STORM_CLOUD_DEFS) {
       const mesh = refs.current[cloudDef.id];
       if (!mesh) continue;
       mesh.position.y = H * cloudDef.yFac;
-      
+
       if (cloudDef.positions) {
         // Dark cloud - moves independently
         mesh.position.x = driftX(t, cloudDef.positions, W);
         mesh.material.opacity = stormCloudOpacity;
       } else if (cloudDef.followTarget && cloudDef.followDelay) {
         // Gray cloud - follows dark clouzd with delay
-        const targetCloud = STORM_CLOUD_DEFS.find(c => c.id === cloudDef.followTarget);
+        const targetCloud = STORM_CLOUD_DEFS.find(
+          (c) => c.id === cloudDef.followTarget,
+        );
         if (targetCloud && targetCloud.positions) {
           const delayedT = Math.max(0, t - cloudDef.followDelay);
           mesh.position.x = driftX(delayedT, targetCloud.positions, W);
@@ -484,14 +499,14 @@ function SceneContent({
         if (darkMesh) darkMesh.material.opacity = 0;
         continue;
       }
-      
+
       // White clouds fade in faster over 1 second
       const fadeInProgress = Math.min(1, (t - st) / 1.0);
       const opacity = easeOut(fadeInProgress);
-      
+
       mesh.position.x = driftX(t, positions, W, loop);
       mesh.material.opacity = opacity;
-      
+
       // Dark underlayer evaluates the same sequence but LITE_FOLLOW_DELAY behind,
       // clamped to startT so it doesn't evaluate before the cloud exists.
       if (darkMesh) {
@@ -506,27 +521,38 @@ function SceneContent({
     }
 
     // ── Flowers — appear with white clouds and turn continuously ─────────────
-    for (const { id, xFac, yFac, scale, rotationSpeed, pulseFrequency, startDelay } of FLOWER_DEFS) {
+    for (const {
+      id,
+      xFac,
+      yFac,
+      scale,
+      rotationSpeed,
+      pulseFrequency,
+      startDelay,
+    } of FLOWER_DEFS) {
       const mesh = refs.current[id];
       if (!mesh) continue;
-      
+
       const flowerStartT = T_FLOWERS + startDelay;
       mesh.position.x = W * xFac;
       mesh.position.y = H * yFac;
-      
+
       // Scale pulsing between 0.9 and 1.1 at flower-specific frequency
       const pulseTime = t - flowerStartT;
-      const pulseFactor = 1.0 + 0.1 * Math.sin(2 * Math.PI * pulseFrequency * pulseTime);
+      const pulseFactor =
+        1.0 + 0.1 * Math.sin(2 * Math.PI * pulseFrequency * pulseTime);
       const actualScale = scale * pulseFactor;
       mesh.scale.set(actualScale * W, actualScale * W, 1);
-      
+
       if (t < flowerStartT) {
         mesh.material.opacity = 0;
         mesh.rotation.z = 0;
         continue;
       }
-      
-      const opacity = easeOut(Math.min(1, (t - flowerStartT) / DUR_FLOWER_FADE));
+
+      const opacity = easeOut(
+        Math.min(1, (t - flowerStartT) / DUR_FLOWER_FADE),
+      );
       mesh.material.opacity = opacity;
       mesh.rotation.z = (t - flowerStartT) * rotationSpeed;
     }
@@ -622,7 +648,7 @@ function SceneContent({
       />
     </mesh>
   );
-
+  console.log("Title Screen Mount");
   return (
     <>
       {/* Static sequence layers */}
@@ -811,7 +837,10 @@ export function TitleScreen({ onNewGame }) {
         ) : (
           <>
             <MenuItem label="Easy" onClick={() => handleDifficulty("easy")} />
-            <MenuItem label="Normal" onClick={() => handleDifficulty("normal")} />
+            <MenuItem
+              label="Normal"
+              onClick={() => handleDifficulty("normal")}
+            />
             <MenuItem label="Hard" onClick={() => handleDifficulty("hard")} />
           </>
         )}
