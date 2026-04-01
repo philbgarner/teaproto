@@ -116,7 +116,8 @@ export interface MobType {
   type: string;
   name: string;
   geometrySize: [number, number];
-  uvRect: { x: number; y: number; w: number; h: number };
+  uvRectBody: { x: number; y: number; w: number; h: number };
+  uvRectHead: { x: number; y: number; w: number; h: number };
 }
 
 export const MOB_TYPES: MobType[] = [
@@ -124,7 +125,36 @@ export const MOB_TYPES: MobType[] = [
     type: "bat",
     name: "Bat",
     geometrySize: [2, 1],
-    uvRect: { x: 0, y: 448, w: 128, h: 64 },
+    uvRectBody: { x: 128, y: 384, w: 128, h: 64 },
+    uvRectHead: { x: 256, y: 448, w: 128, h: 64 },
+  },
+  {
+    type: "dragon",
+    name: "Dragon",
+    geometrySize: [2, 1],
+    uvRectBody: { x: 384, y: 384, w: 128, h: 64 },
+    uvRectHead: { x: 384, y: 448, w: 128, h: 64 },
+  },
+  {
+    type: "goblin",
+    name: "Goblin",
+    geometrySize: [1, 1],
+    uvRectBody: { x: 64, y: 256, w: 64, h: 64 },
+    uvRectHead: { x: 0, y: 320, w: 64, h: 64 },
+  },
+  {
+    type: "troll",
+    name: "Troll",
+    geometrySize: [1, 1],
+    uvRectBody: { x: 64, y: 128, w: 64, h: 64 },
+    uvRectHead: { x: 128, y: 128, w: 64, h: 64 },
+  },
+  {
+    type: "skeleton",
+    name: "Skeleton",
+    geometrySize: [1, 1],
+    uvRectBody: { x: 64, y: 0, w: 64, h: 64 },
+    uvRectHead: { x: 128, y: 64, w: 64, h: 64 },
   },
 ];
 export const MOB_TYPE_MAP: Record<string, MobType> = Object.fromEntries(
@@ -186,7 +216,8 @@ export interface AdventurerType {
   colorRgb: [number, number, number];
   drop: { id: string; name: string };
   geometrySize: [number, number];
-  uvRect: { x: number; y: number; w: number; h: number };
+  uvRectBody: { x: number; y: number; w: number; h: number };
+  uvRectHead: { x: number; y: number; w: number; h: number };
 }
 
 // ingredientId matches RECIPES ingredientId
@@ -201,7 +232,8 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     colorRgb: [1.0, 0.15, 0.15],
     drop: { id: "rations", name: "Iron Rations" },
     geometrySize: [1, 1],
-    uvRect: { x: 192, y: 0, w: 64, h: 64 },
+    uvRectBody: { x: 192, y: 64, w: 64, h: 64 },
+    uvRectHead: { x: 192, y: 64, w: 64, h: 64 },
   },
   {
     type: "rogue",
@@ -213,7 +245,8 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     colorRgb: [0.9, 0.1, 0.9],
     drop: { id: "herbs", name: "Wild Herbs" },
     geometrySize: [1, 1],
-    uvRect: { x: 192, y: 0, w: 64, h: 64 },
+    uvRectBody: { x: 192, y: 0, w: 64, h: 64 },
+    uvRectHead: { x: 192, y: 0, w: 64, h: 64 },
   },
   {
     type: "mage",
@@ -225,7 +258,8 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     colorRgb: [0.2, 0.3, 1.0],
     drop: { id: "dust", name: "Arcane Dust" },
     geometrySize: [2, 2],
-    uvRect: { x: 192, y: 128, w: 128, h: 128 },
+    uvRectBody: { x: 192, y: 128, w: 128, h: 128 },
+    uvRectHead: { x: 192, y: 128, w: 128, h: 128 },
   },
 ];
 

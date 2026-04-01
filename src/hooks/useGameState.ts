@@ -503,7 +503,9 @@ export function useGameState({
               ? [0.25, 0.25, 0.25]
               : (STATUS_RGB[mobStatuses[i]] ?? STATUS_RGB.thirsty),
           geometrySize: tmpl?.geometrySize,
-          uvRect: normalizeUvRect(tmpl?.uvRect, CHAR_SHEET_W, CHAR_SHEET_H),
+          uvRectBody: normalizeUvRect(tmpl?.uvRectBody, CHAR_SHEET_W, CHAR_SHEET_H),
+          uvRectHead: normalizeUvRect(tmpl?.uvRectHead, CHAR_SHEET_W, CHAR_SHEET_H),
+          unconscious: mobSatiations[i] <= 0,
         };
       }),
       ...adventurers
@@ -517,7 +519,8 @@ export function useGameState({
             tileId: 1,
             color: a.colorRgb,
             geometrySize: tmpl?.geometrySize,
-            uvRect: normalizeUvRect(tmpl?.uvRect, CHAR_SHEET_W, CHAR_SHEET_H),
+            uvRectBody: normalizeUvRect(tmpl?.uvRectBody, CHAR_SHEET_W, CHAR_SHEET_H),
+            uvRectHead: normalizeUvRect(tmpl?.uvRectHead, CHAR_SHEET_W, CHAR_SHEET_H),
           };
         }),
     ];
