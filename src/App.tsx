@@ -7,7 +7,6 @@ import { useMinimapData } from "./hooks/useMinimapData";
 import { PerspectiveDungeonView } from "../roguelike-mazetools/src/rendering/PerspectiveDungeonView";
 import { GameHeader } from "./components/GameHeader";
 import { StatusBar } from "./components/StatusBar";
-import { HandsHUD } from "./components/HandsHUD";
 import { WaveCountdown } from "./components/WaveCountdown";
 import { RecipeMenu } from "./components/RecipeMenu";
 import { GameOverOverlay } from "./components/GameOverOverlay";
@@ -275,15 +274,6 @@ export default function App() {
           fontFamily: "'Metamorphous', serif",
         }}
       >
-        <GameHeader
-          dungeonSeed={dungeonSeed}
-          currentWave={gs.currentWave}
-          onSettingsClick={() => gs.setShowSettings(true)}
-          onRandomizeSeed={() =>
-            setDungeonSeed(Math.floor(Math.random() * 0xffffff))
-          }
-        />
-
         {/* Main area */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           {/* 3D view */}
@@ -529,8 +519,6 @@ export default function App() {
           })()}
         />
       </div>
-
-      <HandsHUD hands={gs.playerHands} />
 
       <GameOverOverlay
         gameState={gs.gameState}
