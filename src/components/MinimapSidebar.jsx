@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { drawMinimap } from "../utils/minimap";
+import GhostInventory from "./GhostInventory";
 import styles from "./styles/MinimapSidebar.module.css";
 
 /**
@@ -31,7 +32,6 @@ export function MinimapSidebar({
   solidData,
   temperatureData,
   showTempTint,
-  setShowTempTint,
   dungeonWidth,
   dungeonHeight,
   camera,
@@ -84,7 +84,10 @@ export function MinimapSidebar({
               {minimapTooltip.mob.name}
             </div>
             {minimapTooltip.mob.isXp || minimapTooltip.mob.isIngredient ? (
-              <div className={styles.tooltipRow} style={{ color: minimapTooltip.mob.cssColor }}>
+              <div
+                className={styles.tooltipRow}
+                style={{ color: minimapTooltip.mob.cssColor }}
+              >
                 Walk here to collect
               </div>
             ) : minimapTooltip.mob.isAdventurer ? (
@@ -110,25 +113,8 @@ export function MinimapSidebar({
           </div>
         )}
       </div>
-      <label className={styles.checkboxLabel}>
-        <input
-          type="checkbox"
-          checked={showTempTint}
-          onChange={(e) => setShowTempTint(e.target.checked)}
-        />
-        Temperature tint
-      </label>
-      <div className={styles.controls}>
-        <div>W / ↑ - move forward</div>
-        <div>S / ↓ - move back</div>
-        <div>A / D - strafe</div>
-        <div>Q / E - turn</div>
-        <div>I - interact</div>
-        <div>Z - drop left hand</div>
-        <div>X - drop right hand</div>
-        <div>F - toggle passage</div>
-        <div>. (period) - Wait a Turn</div>
-      </div>
+      <div className={styles.controls}></div>
+      <GhostInventory />
     </div>
   );
 }
