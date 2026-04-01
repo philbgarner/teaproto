@@ -3,7 +3,6 @@ import { useSettings } from "./SettingsContext";
 import { useDungeonSetup } from "./hooks/useDungeonSetup";
 import { useGameState } from "./hooks/useGameState";
 import { useEotBCamera } from "./hooks/useEotBCamera";
-import { useMinimapData } from "./hooks/useMinimapData";
 import { PerspectiveDungeonView } from "../roguelike-mazetools/src/rendering/PerspectiveDungeonView";
 import { GameHeader } from "./components/GameHeader";
 import { StatusBar } from "./components/StatusBar";
@@ -26,7 +25,6 @@ import {
   PLAYER_MAX_HP,
   WAVE_COUNTDOWN_THRESHOLD,
   WIN_WAVES,
-  STATUS_CSS,
 } from "./gameConstants";
 import { cardinalDir } from "./gameUtils";
 import "./App.css";
@@ -178,86 +176,6 @@ export default function App() {
     }
     return keys;
   }, [camera.x, camera.z, gs.mobPositions, gs.adventurers]);
-
-  // Minimap entity list
-  const minimapMobs = useMemo(() => {
-    if (gs.mobPositions.length !== ds.initialMobs.length) return [];
-    return [
-      ...ds.initialMobs.map((m: any, i: number) => ({
-        x: gs.mobPositions[i].x,
-        z: gs.mobPositions[i].z,
-        name: m.name,
-        status: gs.mobSatiations[i] <= 0 ? "unconscious" : gs.mobStatuses[i],
-        satiation: gs.mobSatiations[i],
-        cssColor:
-          gs.mobSatiations[i] <= 0
-            ? "#555"
-            : (STATUS_CSS[gs.mobStatuses[i] as keyof typeof STATUS_CSS] ??
-              STATUS_CSS.thirsty),
-        isAdventurer: false,
-        isXp: false,
-      })),
-      ...gs.adventurers
-        .filter((a: any) => a.alive)
-        .map((a: any) => ({
-          x: a.x,
-          z: a.z,
-          name: a.name,
-          hp: a.hp,
-          maxHp: a.maxHp,
-          cssColor:
-            a.template === "warrior"
-              ? "#e44"
-              : a.template === "rogue"
-                ? "#e4e"
-                : "#44e",
-          isAdventurer: true,
-          isXp: false,
-          debugPath: a.debugPath ?? [],
-        })),
-      ...gs.xpDrops.map((drop: any) => ({
-        x: drop.x,
-        z: drop.z,
-        name: `+${drop.amount} XP`,
-        amount: drop.amount,
-        cssColor: "#fd0",
-        isAdventurer: false,
-        isXp: true,
-        isIngredient: false,
-      })),
-      ...gs.ingredientDrops.map((drop: any) => ({
-        x: drop.x,
-        z: drop.z,
-        name: drop.name,
-        cssColor: "#0df",
-        isAdventurer: false,
-        isXp: false,
-        isIngredient: true,
-      })),
-      ...gs.chests.map((c: any) => ({
-        x: c.x,
-        z: c.z,
-        name: `Chest (${c.value} loot)`,
-        cssColor: "#b8860b",
-        isAdventurer: false,
-        isXp: false,
-        isIngredient: false,
-        isChest: true,
-      })),
-    ];
-  }, [
-    ds.initialMobs,
-    gs.mobPositions,
-    gs.mobStatuses,
-    gs.mobSatiations,
-    gs.adventurers,
-    gs.xpDrops,
-    gs.ingredientDrops,
-    gs.chests,
-  ]);
-
-  const { minimapRef, minimapTooltip, setMinimapTooltip, onMinimapMouseMove } =
-    useMinimapData(minimapMobs, dungeonWidth, dungeonHeight);
 
   console.log("playerData", playerData);
 
@@ -439,20 +357,17 @@ export default function App() {
           </div>
 
           <MinimapSidebar
-            minimapRef={minimapRef}
-            minimapMobs={minimapMobs}
-            minimapTooltip={minimapTooltip}
-            setMinimapTooltip={setMinimapTooltip}
-            onMinimapMouseMove={onMinimapMouseMove}
             solidData={ds.solidData}
-            temperatureData={gs.dynamicTempData}
-            showTempTint={gs.showTempTint}
-            setShowTempTint={gs.setShowTempTint}
             dungeonWidth={dungeonWidth}
             dungeonHeight={dungeonHeight}
             camera={camera}
-            passagesRef={gs.passagesRef}
             exploredMaskRef={gs.exploredMaskRef}
+            texture={gs.texture}
+            atlas={gs.atlas}
+            floorTile={TILE_FLOOR}
+            floorData={ds.floorData}
+            floorTileMap={FLOOR_TILE_MAP}
+            tileSize={TILE_SIZE}
           />
         </div>
 
