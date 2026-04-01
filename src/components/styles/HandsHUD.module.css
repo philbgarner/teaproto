@@ -22,6 +22,86 @@
     pointer-events: none;
 }
 
+.handImageLeft {
+    position: absolute;
+    bottom: 60px;
+    left: 140px;
+    width: 120px;
+    height: 120px;
+    pointer-events: none;
+    z-index: 5;
+    transform: scale(1.5);
+}
+
+.handImageRight {
+    position: absolute;
+    bottom: 60px;
+    right: 140px;
+    width: 120px;
+    height: 120px;
+    pointer-events: none;
+    z-index: 5;
+    transform: scale(1.5) scaleX(-1);
+}
+
+.handImg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+.temperatureImg {
+    position: absolute;
+    top: 50%;
+    width: 80px;
+    height: 100px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+    pointer-events: none;
+}
+
+.handImageLeft .temperatureImg {
+    right: 80%;
+    transform: translateY(-50%);
+    margin-right: 10px;
+}
+
+.handImageRight .temperatureImg {
+    right: 80%;
+    transform: translateY(-50%);
+    margin-left: 10px;
+}
+
+.cupImg {
+    position: absolute;
+    top: 20%;
+    left: 65%;
+    transform: translate(-50%, -50%);
+    width: 128px;
+    height: 128px;
+    object-fit: none;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+    pointer-events: none;    
+    /* Crop to show just the cup portion from icons_scaled_4x_pngcrushed.png - coordinates multiplied by 4 */
+    object-position: -128px -384px;
+    clip: auto;
+}
+
+/* Tea-specific positioning for 4x scaled icons */
+.cup-green-tea {
+    object-position: -384px -384px;
+}
+
+.cup-black-tea {
+    object-position: -256px -384px;
+}
+
+.cup-herbal-tea {
+    object-position: -384px -384px;
+}
+
+
 .handLabel {
     color: #7a6a50;
     letter-spacing: 0.04em;

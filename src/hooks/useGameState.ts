@@ -173,19 +173,19 @@ export function useGameState({
   // ---------------------------------------------------------------------------
   // Game state
   // ---------------------------------------------------------------------------
-  const startingGreenTea = {
+  const startingHerbalBrew = {
     id: crypto.randomUUID(),
-    name: "Green Tea",
-    recipe: RECIPES[0],
-    temperature: 90,
+    name: "Herbal Brew",
+    recipe: RECIPES[3],
+    temperature: 72,
     ruined: false,
   };
   const [playerHands, setPlayerHands] = useState<{
     left: any;
     right: any;
   }>({
-    left: startingGreenTea,
-    right: null,
+    left: null,
+    right: startingHerbalBrew,
   });
   const [mobSatiations, setMobSatiations] = useState<number[]>(() =>
     initialMobs.map(() => 40),
@@ -422,7 +422,13 @@ export function useGameState({
         temperature: 90,
         ruined: false,
       },
-      right: null,
+      right: {
+        id: crypto.randomUUID(),
+        name: "Herbal Brew",
+        recipe: RECIPES[3],
+        temperature: 72,
+        ruined: false,
+      },
     });
     setMobSatiations(freshSatiations);
     setStoveStates(new Map());

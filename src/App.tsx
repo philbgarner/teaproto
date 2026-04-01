@@ -345,6 +345,8 @@ export default function App() {
               />
             )}
 
+            <HandsHUD hands={gs.playerHands} />
+
             <WaveCountdown
               turnsLeft={gs.waveCountdown}
               visible={
@@ -529,8 +531,6 @@ export default function App() {
           })()}
         />
       </div>
-
-      <HandsHUD hands={gs.playerHands} />
 
       <GameOverOverlay
         gameState={gs.gameState}
