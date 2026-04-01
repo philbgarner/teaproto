@@ -267,6 +267,18 @@ export const STATUS_CSS: Record<string, string> = {
   refreshed: "#3f5",
 };
 
+// ---------------------------------------------------------------------------
+// Spike traps
+// ---------------------------------------------------------------------------
+/** Bit 0 of the hazard byte: cell contains a spike trap. */
+export const SPIKE_HAZARD = 1;
+/** Bit 1 of the hazard byte: spikes are currently extended/active. */
+export const SPIKE_HAZARD_ACTIVE = 2;
+/** Damage dealt when triggering a spike trap. */
+export const SPIKE_DAMAGE = 5;
+/** Tile ID for the trap-grid floor decoration overlay (atlas UV 256, 192). */
+export const FLOOR_TRAP_OVERLAY_TILE_ID: number = _atlasUvToId([256, 192]);
+
 // Re-export buildTileAtlas for use in useGameState
 export { buildTileAtlas };
 

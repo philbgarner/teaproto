@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import * as THREE from "three";
+import { useFrame } from "@react-three/fiber";
 import { useSettings } from "./SettingsContext";
 import { useDungeonSetup } from "./hooks/useDungeonSetup";
 import { useGameState } from "./hooks/useGameState";
@@ -20,17 +22,123 @@ import {
   TILE_WALL,
   CEILING_H,
   TILE_SIZE,
+  ATLAS_SHEET_W,
+  ATLAS_SHEET_H,
   FLOOR_TILE_MAP,
   WALL_TILE_MAP,
   CEILING_TILE_MAP,
   PASSAGE_OVERLAY_IDS,
+  FLOOR_TRAP_OVERLAY_TILE_ID,
+  SPIKE_HAZARD_ACTIVE,
   PLAYER_MAX_HP,
   WAVE_COUNTDOWN_THRESHOLD,
   WIN_WAVES,
   STATUS_CSS,
 } from "./gameConstants";
+import {
+  TORCH_OBJECT_VERT,
+  TORCH_OBJECT_FRAG,
+  makeTorchUniforms,
+} from "../roguelike-mazetools/src/rendering/torchLighting";
 import { cardinalDir } from "./gameUtils";
 import "./App.css";
+
+// ---------------------------------------------------------------------------
+// SpikeFloors — renders extended spike planes inside the dungeon Canvas.
+// Each active cell gets 3 planes along one axis + 3 rotated 90°, all laid flat
+// at floor level. The spike texture (atlas UV 320, 256) covers each plane.
+// ---------------------------------------------------------------------------
+const SPIKE_UV_MIN_X = 320 / ATLAS_SHEET_W;
+const SPIKE_UV_MAX_X = 384 / ATLAS_SHEET_W;
+const SPIKE_UV_MIN_Y = 1 - 320 / ATLAS_SHEET_H;
+const SPIKE_UV_MAX_Y = 1 - 256 / ATLAS_SHEET_H;
+
+function SpikeFloors({
+  activeCells,
+  tileSize,
+  texture,
+}: {
+  activeCells: { x: number; z: number }[];
+  tileSize: number;
+  texture: THREE.Texture;
+}) {
+  const geo = useMemo(() => {
+    const g = new THREE.PlaneGeometry(tileSize, tileSize);
+    // Remap UVs to the spike tile region in the atlas.
+    // PlaneGeometry vertex order: TL, TR, BL, BR
+    g.setAttribute(
+      "uv",
+      new THREE.BufferAttribute(
+        new Float32Array([
+          SPIKE_UV_MIN_X, SPIKE_UV_MAX_Y,
+          SPIKE_UV_MAX_X, SPIKE_UV_MAX_Y,
+          SPIKE_UV_MIN_X, SPIKE_UV_MIN_Y,
+          SPIKE_UV_MAX_X, SPIKE_UV_MIN_Y,
+        ]),
+        2,
+      ),
+    );
+    return g;
+  }, [tileSize]);
+
+  const mat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          uMap: { value: texture },
+          uFogColor: { value: new THREE.Color(0, 0, 0) },
+          uFogNear: { value: 4 },
+          uFogFar: { value: 28 },
+          uTime: { value: 0 },
+          ...makeTorchUniforms(),
+        },
+        vertexShader: TORCH_OBJECT_VERT,
+        fragmentShader: TORCH_OBJECT_FRAG,
+        side: THREE.DoubleSide,
+        transparent: true,
+        alphaTest: 0.01,
+      }),
+    [texture],
+  );
+
+  useFrame(({ clock }) => {
+    mat.uniforms.uTime.value = clock.getElapsedTime();
+  });
+
+  const step = tileSize / 3;
+  const y = 0.02; // slight offset to prevent z-fighting with floor
+
+  return (
+    <>
+      {activeCells.flatMap(({ x, z }) => {
+        const wx = (x + 0.5) * tileSize;
+        const wz = (z + 0.5) * tileSize;
+        return [
+          // 3 planes along the Z axis (spikes face one direction)
+          ...[-step, 0, step].map((dz, i) => (
+            <mesh
+              key={`spike_${x}_${z}_ns_${i}`}
+              geometry={geo}
+              material={mat}
+              position={[wx, y, wz + dz]}
+              rotation={[-Math.PI / 2, 0, 0]}
+            />
+          )),
+          // 3 planes along the X axis, rotated 90° (spikes face perpendicular)
+          ...[-step, 0, step].map((dx, i) => (
+            <mesh
+              key={`spike_${x}_${z}_ew_${i}`}
+              geometry={geo}
+              material={mat}
+              position={[wx + dx, y, wz]}
+              rotation={[-Math.PI / 2, Math.PI / 2, 0]}
+            />
+          )),
+        ];
+      })}
+    </>
+  );
+}
 
 export default function App() {
   const {
@@ -116,6 +224,18 @@ export default function App() {
     adventurerLootPerChest,
     keybindings,
   });
+
+  // Derive the list of cells where spikes are currently extended
+  const activeSpikeCells = useMemo(() => {
+    if (!gs.hazardMask) return [] as { x: number; z: number }[];
+    const cells: { x: number; z: number }[] = [];
+    for (let i = 0; i < gs.hazardMask.length; i++) {
+      if ((gs.hazardMask[i] & SPIKE_HAZARD_ACTIVE) !== 0) {
+        cells.push({ x: i % dungeonWidth, z: Math.floor(i / dungeonWidth) });
+      }
+    }
+    return cells;
+  }, [gs.hazardMask, dungeonWidth]);
 
   const {
     camera,
@@ -332,6 +452,8 @@ export default function App() {
                 adventurerSpriteAtlas={gs.characterSpriteAtlas}
                 passageMask={gs.passageMask ?? undefined}
                 passageOverlayIds={PASSAGE_OVERLAY_IDS}
+                hazardData={gs.hazardMask ?? undefined}
+                hazardOverlayId={FLOOR_TRAP_OVERLAY_TILE_ID}
                 speechBubbles={gs.activeSpeechBubbles}
                 torchColor={torchColor}
                 torchIntensity={torchIntensity}
@@ -342,7 +464,15 @@ export default function App() {
                 wallTileMap={WALL_TILE_MAP}
                 ceilingTileMap={CEILING_TILE_MAP}
                 style={{ width: "100%", height: "100%" }}
-              />
+              >
+                {gs.texture && activeSpikeCells.length > 0 && (
+                  <SpikeFloors
+                    activeCells={activeSpikeCells}
+                    tileSize={TILE_SIZE}
+                    texture={gs.texture}
+                  />
+                )}
+              </PerspectiveDungeonView>
             )}
 
             <WaveCountdown
