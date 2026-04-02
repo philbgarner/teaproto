@@ -457,7 +457,10 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
   // Lesson 2: player picks up tea from the Teaomatic
   useEffect(() => {
     if (lessonIndex !== 1 || lessonDoneRef.current) return;
-    if (gs.playerHands.left || gs.playerHands.right) {
+    // Read the ref so we see the synchronous clear written by the per-lesson
+    // init effect, not the stale state value from the previous render.
+    const hands = gs.playerHandsRef.current;
+    if (hands.left || hands.right) {
       lessonDoneRef.current = true;
       gs.showMsg("You almost feel like a person again.");
       setTimeout(() => setLessonIndex(2), 3000);
