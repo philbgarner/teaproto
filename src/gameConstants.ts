@@ -240,8 +240,8 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     colorRgb: [1.0, 0.15, 0.15],
     drop: { id: "rations", name: "Iron Rations" },
     geometrySize: [1, 1],
-    uvRectBody: { x: 192, y: 64, w: 64, h: 64 },
-    uvRectHead: { x: 192, y: 64, w: 64, h: 64 },
+    uvRectBody: { x: 256, y: 64, w: 64, h: 64 },
+    uvRectHead: { x: 320, y: 64, w: 64, h: 64 },
   },
   {
     type: "rogue",
@@ -253,8 +253,8 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     colorRgb: [0.9, 0.1, 0.9],
     drop: { id: "herbs", name: "Wild Herbs" },
     geometrySize: [1, 1],
-    uvRectBody: { x: 192, y: 0, w: 64, h: 64 },
-    uvRectHead: { x: 192, y: 0, w: 64, h: 64 },
+    uvRectBody: { x: 256, y: 0, w: 64, h: 64 },
+    uvRectHead: { x: 320, y: 0, w: 64, h: 64 },
   },
   {
     type: "mage",
@@ -266,8 +266,8 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     colorRgb: [0.2, 0.3, 1.0],
     drop: { id: "dust", name: "Arcane Dust" },
     geometrySize: [2, 2],
-    uvRectBody: { x: 192, y: 128, w: 128, h: 128 },
-    uvRectHead: { x: 192, y: 128, w: 128, h: 128 },
+    uvRectBody: { x: 320, y: 128, w: 128, h: 128 },
+    uvRectHead: { x: 192, y: 256, w: 128, h: 128 },
   },
 ];
 

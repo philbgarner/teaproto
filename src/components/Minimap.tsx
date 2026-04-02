@@ -29,18 +29,18 @@ const CAM_Y = 200;
  * Fog (beyond fogFar)              → near-black purple
  */
 const MINIMAP_TINTS: [THREE.Color, THREE.Color, THREE.Color, THREE.Color] = [
-  new THREE.Color(1.0,  1.0,  1.0 ),
-  new THREE.Color(0.60, 0.60, 0.60),
+  new THREE.Color(1.0, 1.0, 1.0),
+  new THREE.Color(0.6, 0.6, 0.6),
   new THREE.Color(0.28, 0.18, 0.38),
   new THREE.Color(0.15, 0.07, 0.22),
 ];
-const MINIMAP_FOG_COLOR       = new THREE.Color(0.05, 0.02, 0.08);
-const MINIMAP_TORCH_COLOR     = new THREE.Color(1.0,  0.85, 0.4 );
+const MINIMAP_FOG_COLOR = new THREE.Color(0.05, 0.02, 0.08);
+const MINIMAP_TORCH_COLOR = new THREE.Color(1.0, 0.85, 0.4);
 const MINIMAP_TORCH_INTENSITY = 0.2;
 /** Full-brightness radius in tiles (world units = tileSize × this). */
 const MINIMAP_BAND_NEAR_TILES = 5;
 /** Fog starts at this many tiles from the player. */
-const MINIMAP_FOG_FAR_TILES   = 18;
+const MINIMAP_FOG_FAR_TILES = 18;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Floor instance builder
@@ -56,7 +56,9 @@ function buildFloorInstances(
   floorTileMap: number[] | undefined,
   exploredMask: Uint8Array | null | undefined,
 ): TileInstance[] {
-  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-HALF_PI, 0, 0));
+  const q = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(-HALF_PI, 0, 0),
+  );
   const scale = new THREE.Vector3(tileSize, tileSize, 1);
   const instances: TileInstance[] = [];
 
@@ -192,7 +194,17 @@ function MinimapScene({
         exploredMaskRef?.current,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [solidData, width, height, floorTile, tileSize, floorData, floorTileMap, playerX, playerZ],
+    [
+      solidData,
+      width,
+      height,
+      floorTile,
+      tileSize,
+      floorData,
+      floorTileMap,
+      playerX,
+      playerZ,
+    ],
   );
 
   useFrame((_, delta) => {
@@ -281,7 +293,12 @@ export function Minimap({
   return (
     <div
       className={className}
-      style={{ width: "100%", aspectRatio: "1", position: "relative", backgroundColor: "#111" }}
+      style={{
+        width: "100%",
+        aspectRatio: "1",
+        position: "relative",
+        backgroundColor: "#111",
+      }}
     >
       <Canvas
         orthographic

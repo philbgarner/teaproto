@@ -63,6 +63,7 @@ import {
   buildInitialExploredMask,
   hasLineOfSight,
 } from "../gameUtils";
+import type { DamageNumberData } from "../../roguelike-mazetools/src/rendering/PerspectiveDungeonView";
 
 export interface UseGameStateParams {
   dungeon: any;
@@ -402,6 +403,14 @@ export function useGameState({
   const [xpDrops, setXpDrops] = useState<any[]>([]);
   const [playerHp, setPlayerHp] = useState(PLAYER_MAX_HP);
 
+  // Combat animation state
+  const [mobDamageFlash, setMobDamageFlash] = useState<boolean[]>(() => initialMobs.map(() => false));
+  const mobDamageFlashRef = useRef<boolean[]>(initialMobs.map(() => false));
+  const [advDamageFlash, setAdvDamageFlash] = useState<boolean[]>([]);
+  const [mobAttackDirs, setMobAttackDirs] = useState<Array<{ dx: number; dz: number } | null>>(() => initialMobs.map(() => null));
+  const [advAttackDirs, setAdvAttackDirs] = useState<Array<{ dx: number; dz: number } | null>>([]);
+  const [damageNumbers, setDamageNumbers] = useState<DamageNumberData[]>([]);
+
   // Ingredient inventory  { rations: 0, herbs: 0, dust: 0 }
   const [ingredients, setIngredients] = useState<Record<string, number>>({
     rations: 0,
@@ -500,6 +509,12 @@ export function useGameState({
     setPlayerXp(0);
     setXpDrops([]);
     setPlayerHp(PLAYER_MAX_HP);
+    setMobDamageFlash(initialMobs.map(() => false));
+    mobDamageFlashRef.current = initialMobs.map(() => false);
+    setAdvDamageFlash([]);
+    setMobAttackDirs(initialMobs.map(() => null));
+    setAdvAttackDirs([]);
+    setDamageNumbers([]);
     setIngredients({ rations: 0, herbs: 0, dust: 0 });
     setIngredientDrops([...initialIngredientDrops]);
     setChests([...initialChests]);
@@ -767,6 +782,11 @@ export function useGameState({
     let newChests = [...chestsRef.current];
     let stepMessage: string | null = null;
     const pendingSpeechBubbles: { entityId: string; text: string }[] = []; // collected during processing
+    // Combat animation event accumulators
+    const advAttackEvents: { advId: string; dx: number; dz: number }[] = [];
+    const mobHitEvents: { mobIdx: number; damage: number; x: number; z: number }[] = [];
+    const mobAttackEventsLocal: { mobIdx: number; dx: number; dz: number }[] = [];
+    const advHitEvents: { advId: string; damage: number; x: number; z: number }[] = [];
 
     // --- Wave spawning ---
     // The countdown to the next wave only ticks when all enemies are dead.
@@ -941,6 +961,8 @@ export function useGameState({
           if (newMobSatiations[combatTarget.idx] <= 0) {
             stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
           }
+          advAttackEvents.push({ advId: adv.id, dx: ddx, dz: ddz });
+          mobHitEvents.push({ mobIdx: combatTarget.idx, damage, x: combatTarget.x, z: combatTarget.z });
           return {
             adv,
             intendedX: adv.x,
@@ -1380,6 +1402,8 @@ export function useGameState({
         if (Math.abs(adv.x - mobPos.x) + Math.abs(adv.z - mobPos.z) === 1) {
           const damage = Math.max(1, mob.attack - adv.defense);
           const newHp = adv.hp - damage;
+          mobAttackEventsLocal.push({ mobIdx: i, dx: adv.x - mobPos.x, dz: adv.z - mobPos.z });
+          advHitEvents.push({ advId: adv.id, damage, x: adv.x, z: adv.z });
           if (newHp <= 0) {
             newAdventurers[j] = { ...adv, alive: false, hp: 0 };
             const dreadFactor =
@@ -1468,6 +1492,83 @@ export function useGameState({
     setChests([...newChests]);
     setMobSatiations(newMobSatiations);
     setMobPositions([...newMobPositions]);
+
+    // --- Combat animation events ---
+    {
+      const FLASH_MS = 500;
+      const ATTACK_MS = 450;
+      const NUM_MS = 1600;
+
+      // Mob damage flash
+      if (mobHitEvents.length > 0) {
+        const newFlash = mobDamageFlashRef.current.slice();
+        mobHitEvents.forEach((e) => { newFlash[e.mobIdx] = true; });
+        mobDamageFlashRef.current = newFlash;
+        setMobDamageFlash([...newFlash]);
+        mobHitEvents.forEach((e) =>
+          setTimeout(() => {
+            const arr = mobDamageFlashRef.current.slice();
+            arr[e.mobIdx] = false;
+            mobDamageFlashRef.current = arr;
+            setMobDamageFlash([...arr]);
+          }, FLASH_MS),
+        );
+      }
+
+      // Adventurer damage flash
+      if (advHitEvents.length > 0) {
+        const aliveAdvs = newAdventurers.filter((a) => a.alive);
+        const newAdvFlash = aliveAdvs.map((a) => advHitEvents.some((e) => e.advId === a.id));
+        setAdvDamageFlash(newAdvFlash);
+        if (newAdvFlash.some(Boolean)) setTimeout(() => setAdvDamageFlash([]), FLASH_MS);
+      }
+
+      // Mob attack lunge dirs
+      if (mobAttackEventsLocal.length > 0) {
+        const newMobDirs: Array<{ dx: number; dz: number } | null> = initialMobs.map((_, idx) => {
+          const e = mobAttackEventsLocal.find((ev) => ev.mobIdx === idx);
+          return e ? { dx: e.dx, dz: e.dz } : null;
+        });
+        setMobAttackDirs(newMobDirs);
+        setTimeout(() => setMobAttackDirs(initialMobs.map(() => null)), ATTACK_MS);
+      }
+
+      // Adventurer attack lunge dirs
+      if (advAttackEvents.length > 0) {
+        const aliveAdvs = newAdventurers.filter((a) => a.alive);
+        const newAdvDirs: Array<{ dx: number; dz: number } | null> = aliveAdvs.map((a) => {
+          const e = advAttackEvents.find((ev) => ev.advId === a.id);
+          return e ? { dx: e.dx, dz: e.dz } : null;
+        });
+        setAdvAttackDirs(newAdvDirs);
+        setTimeout(() => setAdvAttackDirs([]), ATTACK_MS);
+      }
+
+      // Floating damage numbers
+      const now = Date.now();
+      const allNums: DamageNumberData[] = [
+        ...mobHitEvents.map((e, ei) => ({
+          id: `dmg_m${e.mobIdx}_${now}_${ei}`,
+          x: e.x,
+          z: e.z,
+          amount: e.damage,
+          spawnedAt: now,
+        })),
+        ...advHitEvents.map((e, ei) => ({
+          id: `dmg_a${e.advId}_${now}_${ei}`,
+          x: e.x,
+          z: e.z,
+          amount: e.damage,
+          spawnedAt: now,
+        })),
+      ];
+      if (allNums.length > 0) {
+        setDamageNumbers((prev) => [...prev, ...allNums]);
+        allNums.forEach((n) =>
+          setTimeout(() => setDamageNumbers((prev) => prev.filter((x) => x.id !== n.id)), NUM_MS),
+        );
+      }
+    }
 
     // --- Room heating from cozy objects (stoves) + temperature flow between rooms ---
     const cozyByRegion = new Map<number, number>();
@@ -2083,5 +2184,11 @@ export function useGameState({
     // computed
     mobiles,
     activeSpeechBubbles,
+    // combat animations
+    mobDamageFlash,
+    advDamageFlash,
+    mobAttackDirs,
+    advAttackDirs,
+    damageNumbers,
   };
 }

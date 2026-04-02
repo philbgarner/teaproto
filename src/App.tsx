@@ -170,6 +170,16 @@ export default function App() {
     return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press [space] to offer tea`;
   }, [facingTarget, gs.stoveStates, ds.initialMobs, gs.mobSatiations]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Combined mobile flash + attack dirs (mobs first, then alive advs)
+  const mobileFlash = useMemo(
+    () => [...gs.mobDamageFlash, ...gs.advDamageFlash],
+    [gs.mobDamageFlash, gs.advDamageFlash],
+  );
+  const mobileAttackDirs = useMemo(
+    () => [...gs.mobAttackDirs, ...gs.advAttackDirs],
+    [gs.mobAttackDirs, gs.advAttackDirs],
+  );
+
   // Cells currently occupied by player or creatures — used to open doors.
   const doorOccupiedKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -240,6 +250,9 @@ export default function App() {
                 objectRegistry={gs.objectRegistry}
                 objectOccupiedKeys={doorOccupiedKeys}
                 mobiles={gs.mobiles}
+                mobileFlash={mobileFlash}
+                mobileAttackDirs={mobileAttackDirs}
+                damageNumbers={gs.damageNumbers}
                 spriteAtlas={gs.characterSpriteAtlas}
                 adventurerSpriteAtlas={gs.characterSpriteAtlas}
                 passageMask={gs.passageMask ?? undefined}
