@@ -132,6 +132,7 @@ export default function App() {
       blocked: gs.showRecipeMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
       canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
+      blockedPositions: ds.stovePlacements,
       keybindings,
       startYaw: ds.spawnYaw,
     },

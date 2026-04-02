@@ -13,6 +13,7 @@ export interface EotBCameraOptions {
   blocked?: boolean;
   onBlockedMove?: (dx: number, dz: number) => void;
   canPhaseWalls?: boolean;
+  blockedPositions?: { x: number; z: number }[];
   keybindings: {
     moveForward: string[];
     moveBackward: string[];
@@ -36,6 +37,7 @@ export function useEotBCamera(
     blocked,
     onBlockedMove,
     canPhaseWalls,
+    blockedPositions,
     keybindings,
     startYaw = 0,
   }: EotBCameraOptions,
@@ -69,6 +71,7 @@ export function useEotBCamera(
   const solidRef = useRef(solidData);
   const onStepRef = useRef(onStep);
   const blockedRef = useRef(blocked);
+  const blockedPositionsRef = useRef(blockedPositions ?? []);
   const onBlockedMoveRef = useRef(onBlockedMove);
   const canPhaseWallsRef = useRef(canPhaseWalls ?? false);
 
@@ -107,13 +110,17 @@ export function useEotBCamera(
   useEffect(() => {
     canPhaseWallsRef.current = canPhaseWalls ?? false;
   }, [canPhaseWalls]);
+  useEffect(() => {
+    blockedPositionsRef.current = blockedPositions ?? [];
+  }, [blockedPositions]);
 
   useEffect(() => {
     function walkable(cx: number, cz: number): boolean {
       if (cx < 0 || cz < 0 || cx >= width || cz >= height) return false;
       if (canPhaseWallsRef.current) return true; // ghost phases through walls with empty hands
       if (!solidRef.current) return false;
-      return solidRef.current[cz * width + cx] === 0;
+      if (solidRef.current[cz * width + cx] !== 0) return false;
+      return !blockedPositionsRef.current.some((p) => p.x === cx && p.z === cz);
     }
 
     function beginAnim(
