@@ -226,7 +226,7 @@ function LessonView({
               adventurerSpriteAtlas={gs.characterSpriteAtlas}
               passageMask={gs.passageMask ?? undefined}
               passageOverlayIds={PASSAGE_OVERLAY_IDS}
-              speechBubbles={gs.activeSpeechBubbles}
+              speechBubbles={gs.message ? gs.activeSpeechBubbles.map((b) => ({ ...b, inverted: true })) : gs.activeSpeechBubbles}
               torchColor={torchColor}
               torchIntensity={torchIntensity}
               floorData={ds.floorData}

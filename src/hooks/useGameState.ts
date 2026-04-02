@@ -226,10 +226,12 @@ export function useGameState({
     Record<string, { text: string }>
   >({}); // { [entityId]: { text } }
   const speechBubbleTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const speechBubblesRef = useRef<Record<string, { text: string }>>({});
 
   const showSpeechBubble = useCallback(
     (entityId: string, text: string, duration = 6000) => {
       setSpeechBubbles((prev) => ({ ...prev, [entityId]: { text } }));
+      speechBubblesRef.current = { ...speechBubblesRef.current, [entityId]: { text } };
       if (speechBubbleTimersRef.current[entityId]) {
         clearTimeout(speechBubbleTimersRef.current[entityId]);
       }
@@ -239,6 +241,9 @@ export function useGameState({
           delete next[entityId];
           return next;
         });
+        const nextRef = { ...speechBubblesRef.current };
+        delete nextRef[entityId];
+        speechBubblesRef.current = nextRef;
         delete speechBubbleTimersRef.current[entityId];
       }, duration);
     },
@@ -1433,8 +1438,23 @@ export function useGameState({
 
     console.log("[onStep] done, turn:", newTurnCount);
     if (stepMessage) showMsg(stepMessage);
-    for (const { entityId, text } of pendingSpeechBubbles) {
-      showSpeechBubble(entityId, text, 6000);
+
+    // Don't emit new auto speech bubbles if any active bubble entity is already within
+    // visible range of the player — prevents bubble spam when multiple NPCs are nearby.
+    const activeBubbleIds = Object.keys(speechBubblesRef.current);
+    const hasNearbyActiveBubble = activeBubbleIds.some((id) => {
+      if (id.startsWith("mob_")) {
+        const idx = parseInt(id.slice(4), 10);
+        const pos = newMobPositions[idx];
+        return pos ? Math.hypot(pos.x - pgx, pos.z - pgz) <= GHOST_SIGHT_RADIUS : false;
+      }
+      const adv = newAdventurers.find((a) => a.id === id && a.alive);
+      return adv ? Math.hypot(adv.x - pgx, adv.z - pgz) <= GHOST_SIGHT_RADIUS : false;
+    });
+    if (!hasNearbyActiveBubble) {
+      for (const { entityId, text } of pendingSpeechBubbles) {
+        showSpeechBubble(entityId, text, 6000);
+      }
     }
   }, [
     gameState,
