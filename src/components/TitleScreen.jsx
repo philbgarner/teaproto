@@ -730,7 +730,7 @@ function MenuItem({ label, onClick }) {
 
 // ─── Difficulty presets ───────────────────────────────────────────────────────
 
-const DIFFICULTY_PRESETS = {
+export const DIFFICULTY_PRESETS = {
   easy: {
     tempDropPerStep: 0.5,
     heatingPerStep: 6.0,
@@ -765,7 +765,7 @@ const DIFFICULTY_PRESETS = {
 
 // ─── Root component ───────────────────────────────────────────────────────────
 
-export function TitleScreen({ onNewGame }) {
+export function TitleScreen({ onNewGame, onTutorial }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuFading, setMenuFading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -838,6 +838,17 @@ export function TitleScreen({ onNewGame }) {
           </>
         ) : (
           <>
+            <MenuItem
+              label="Tutorial"
+              onClick={() => {
+                if (menuFading) return;
+                setMenuFading(true);
+                const FADE = 600;
+                musicRef.current.fadeOutMusic?.(FADE);
+                musicRef.current.fadeOutBirds?.(FADE);
+                setTimeout(() => onTutorial?.(), FADE * 2);
+              }}
+            />
             <MenuItem label="Easy" onClick={() => handleDifficulty("easy")} />
             <MenuItem
               label="Normal"
