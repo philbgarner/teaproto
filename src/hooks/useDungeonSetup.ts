@@ -5,6 +5,7 @@ import { THEMES, THEME_KEYS } from "../themes";
 import {
   atlasIndex,
   CEILING_H,
+  TILE_SIZE,
   COBBLESTONE_WALL_ID,
   MOB_ATTACK,
   MOB_DEFENSE,
@@ -81,12 +82,8 @@ export function useDungeonSetup({
     const room = dungeon.rooms.get(dungeon.endRoomId);
     if (!room) return { spawnX: 1.5, spawnZ: 1.5, spawnYaw: 0 };
     return {
-      spawnX:
-        (room as any).rect.x + Math.floor((room as any).rect.w / 2) + 0.5,
-      spawnZ:
-        (room as any).rect.y +
-        Math.floor((room as any).rect.h / 2) +
-        1.5, // one cell south of stove
+      spawnX: (room as any).rect.x + Math.floor((room as any).rect.w / 2) + 0.5,
+      spawnZ: (room as any).rect.y + Math.floor((room as any).rect.h / 2) + 1.5, // one cell south of stove
       spawnYaw: Math.PI, // face north toward the stove
     };
   }, [dungeon]);
@@ -170,7 +167,10 @@ export function useDungeonSetup({
     }
 
     // Find all threshold cells: corridor cells directly adjacent to a room cell
-    const groups = new Map<string, { x: number; z: number; dx: number; dz: number }[]>();
+    const groups = new Map<
+      string,
+      { x: number; z: number; dx: number; dz: number }[]
+    >();
     const DIRS4: [number, number][] = [
       [0, -1],
       [0, 1],
@@ -242,7 +242,9 @@ export function useDungeonSetup({
     candidates.sort(
       (a, b) => a.placement.z - b.placement.z || a.placement.x - b.placement.x,
     );
-    const selected = new Set(candidates.slice(0, maxDoors).map((_: any, i: number) => i));
+    const selected = new Set(
+      candidates.slice(0, maxDoors).map((_: any, i: number) => i),
+    );
 
     const placements: any[] = [];
     candidates.forEach((c: any, i: number) => {
@@ -300,9 +302,7 @@ export function useDungeonSetup({
     const chance = Math.min(1.0, trapDensity * 0.4);
 
     // Exclude the exact door cells from trap placement
-    const doorCellKeys = new Set(
-      doorPlacements.map((d: any) => d.z * W + d.x),
-    );
+    const doorCellKeys = new Set(doorPlacements.map((d: any) => d.z * W + d.x));
 
     // Collect eligible cells: walkable, within Manhattan distance 2 of a door, not a door cell itself
     const eligible = new Set<number>();
@@ -337,7 +337,7 @@ export function useDungeonSetup({
     return [
       ...stovePlacements.map((s) => ({
         ...s,
-        offsetY: (CEILING_H * 0.85) / 2,
+        offsetY: (TILE_SIZE * 0.65) / 2,
       })),
       ...doorPlacements,
     ];

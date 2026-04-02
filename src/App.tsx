@@ -153,7 +153,7 @@ export default function App() {
     if (!facingTarget) return null;
     if (facingTarget.type === "stove") {
       const state = gs.stoveStates.get(facingTarget.stoveKey);
-      if (!state?.brewing) return "Stove — Press [space] to brew tea";
+      if (!state?.brewing) return "Teaomatic — Press [space] to brew tea";
       if (state.brewing.ready)
         return `${state.brewing.recipe.name} is ready! — Press [space] to collect`;
       return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press [space] for status`;
@@ -245,7 +245,14 @@ export default function App() {
                 passageOverlayIds={PASSAGE_OVERLAY_IDS}
                 hazardData={ds.hazardData}
                 hazardOverlayId={SPIKE_TRAP_OVERLAY_ID}
-                speechBubbles={gs.message ? gs.activeSpeechBubbles.map((b) => ({ ...b, inverted: true })) : gs.activeSpeechBubbles}
+                speechBubbles={
+                  gs.message
+                    ? gs.activeSpeechBubbles.map((b) => ({
+                        ...b,
+                        inverted: true,
+                      }))
+                    : gs.activeSpeechBubbles
+                }
                 torchColor={torchColor}
                 torchIntensity={torchIntensity}
                 floorData={ds.floorData}
@@ -356,9 +363,23 @@ export default function App() {
                 }}
               >
                 {/* Invisible full text holds the final size */}
-                <span style={{ visibility: "hidden", userSelect: "none" }}>{gs.message}</span>
+                <span style={{ visibility: "hidden", userSelect: "none" }}>
+                  {gs.message}
+                </span>
                 {/* Typed text overlaid on top */}
-                <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#e0b870", padding: "12px 28px" }}>{gs.displayedText}</span>
+                <span
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#e0b870",
+                    padding: "12px 28px",
+                  }}
+                >
+                  {gs.displayedText}
+                </span>
               </div>
             )}
           </div>
