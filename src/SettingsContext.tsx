@@ -20,6 +20,8 @@ type EcsData = {
   registry: ComponentRegistry;
   playerEntity: Entity;
   playerInventory: Entity;
+  leftHand: Entity;
+  rightHand: Entity;
 };
 
 type PlayerData = PlayerActor & {
@@ -91,7 +93,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       registry.initializeRegistry();
       const playerEntity = createPlayerInstance(registry);
       const playerInventory = registry.getInventoriesByOwner(playerEntity)[0];
-      return { registry, playerEntity, playerInventory };
+      const leftHandEntity = registry.createEntity();
+      registry.createInventory(leftHandEntity, 1);
+      const leftHand = registry.getInventoriesByOwner(leftHandEntity)[0];
+      const rightHandEntity = registry.createEntity();
+      registry.createInventory(rightHandEntity, 1);
+      const rightHand = registry.getInventoriesByOwner(rightHandEntity)[0];
+      return { registry, playerEntity, playerInventory, leftHand, rightHand };
     })(),
   });
 
