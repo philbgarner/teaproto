@@ -216,7 +216,7 @@ export function useGameState({
   const [showRecipeMenu, setShowRecipeMenu] = useState(false);
   const [recipeMenuCursor, setRecipeMenuCursor] = useState(0);
   const [activeStoveKey, setActiveStoveKey] = useState<string | null>(null);
-  const { message, setMessage, showMsg } = useMessage();
+  const { message, displayedText, setMessage, showMsg } = useMessage();
   const ruinedNotifiedRef = useRef(new Set<string>());
 
   // ---------------------------------------------------------------------------
@@ -1932,6 +1932,7 @@ export function useGameState({
     activeStoveKey,
     setActiveStoveKey,
     message,
+    displayedText,
     setMessage,
     showMsg,
     speechBubbles,

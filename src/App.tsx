@@ -331,27 +331,29 @@ export default function App() {
               <div
                 style={{
                   position: "absolute",
-                  top: 16,
+                  top: 20,
                   left: "50%",
                   transform: "translateX(-50%)",
-                  backgroundColor: "#2e2c29",
-                  outline: "1px solid #1e1c1a",
+                  backgroundColor: "#2a2720",
+                  outline: "1px solid #1a1814",
                   boxShadow:
-                    "inset 0 2px 0 0 #5a5450, inset 2px 0 0 0 #504a46, inset 0 -2px 0 0 #1a1816, inset -2px 0 0 0 #1e1c1a, inset 0 4px 12px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.8)",
+                    "inset 0 2px 0 0 #6a6058, inset 2px 0 0 0 #5a5248, inset 0 -2px 0 0 #141210, inset -2px 0 0 0 #1a1814, inset 0 4px 16px rgba(0,0,0,0.6), 0 6px 24px rgba(0,0,0,0.9)",
                   backgroundImage:
-                    "repeating-conic-gradient(rgba(0,0,0,0.03) 0% 25%, transparent 0% 50%)",
+                    "repeating-conic-gradient(rgba(0,0,0,0.04) 0% 25%, transparent 0% 50%)",
                   backgroundSize: "4px 4px",
-                  padding: "8px 18px",
-                  fontSize: 13,
-                  color: "#c8a060",
+                  padding: "12px 28px",
+                  fontSize: 17,
                   fontFamily: '"Metamorphous", serif',
-                  letterSpacing: "0.04em",
-                  maxWidth: 480,
+                  letterSpacing: "0.06em",
+                  maxWidth: 560,
                   textAlign: "center",
                   pointerEvents: "none",
                 }}
               >
-                {gs.message}
+                {/* Invisible full text holds the final size */}
+                <span style={{ visibility: "hidden", userSelect: "none" }}>{gs.message}</span>
+                {/* Typed text overlaid on top */}
+                <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#e0b870", padding: "12px 28px" }}>{gs.displayedText}</span>
               </div>
             )}
           </div>
