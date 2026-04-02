@@ -8,6 +8,7 @@ import {
 import * as THREE from "three";
 import { aStar8 } from "../../roguelike-mazetools/src/astar";
 import { makeContentRng } from "../../roguelike-mazetools/src/content";
+import { useSoundHelper } from "./useSoundHelper";
 import {
   generateHiddenPassages,
 } from "../../roguelike-mazetools/src/content";
@@ -128,6 +129,9 @@ export function useGameState({
   adventurerLootPerChest,
   keybindings,
 }: UseGameStateParams) {
+  // Sound helper for door sounds
+  const { sounds } = useSoundHelper();
+  
   // Tile atlas + texture
   const atlas = useMemo(
     () => buildTileAtlas(ATLAS_SHEET_W, ATLAS_SHEET_H, TILE_PX, TILE_PX),
@@ -218,6 +222,7 @@ export function useGameState({
     temperature: number,
   ) {
     const handInventory = getHandInventory(hand);
+    sounds.teacup.play();
     const entity = registry.createEntity();
     registry.components.description.add(entity, { name: recipe.name });
     registry.components.temperature.add(entity, {
@@ -242,6 +247,7 @@ export function useGameState({
     registry.removeObjectFromSlot(inv.slots[0]);
     registry.removeEntity(entity);
     setHandsVersion((v) => v + 1);
+    sounds.teacup.play();
   }
 
   function clearHands() {
@@ -560,7 +566,7 @@ export function useGameState({
     );
     setPassageTraversal({ kind: "idle" });
 
-    playMainTheme();
+    sounds.mainTheme_2?.play();
     showMsg(
       "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
     );
@@ -699,6 +705,7 @@ export function useGameState({
   const onStep = useCallback(() => {
     console.log("[onStep] start, gameState:", gameState);
     if (gameState !== "playing") return;
+    
     // --- Tea cooling ---
     // Check if player is in a warm or cozy room (roomTemp > 127)
     {
@@ -758,6 +765,7 @@ export function useGameState({
           next.set(key, {
             brewing: { ...state.brewing, stepsRemaining: 0, ready: true },
           });
+          sounds.tea_ready.play();
         } else {
           next.set(key, {
             brewing: { ...state.brewing, stepsRemaining: steps },
@@ -843,6 +851,7 @@ export function useGameState({
           ...newIngredients,
           [drop.id]: (newIngredients[drop.id] ?? 0) + 1,
         };
+        sounds.twinkle.play();
         stepMessage = `Collected ${drop.name}!`;
       } else {
         remainingIngDrops.push(drop);
@@ -1804,9 +1813,11 @@ export function useGameState({
           const newMask = new Uint8Array(passageMask);
           if (p.enabled) {
             enablePassageInMask(newMask, dungeonWidth, p);
+            sounds.key_open.play();
             showMsg("Passage unlocked!");
           } else {
             disablePassageInMask(newMask, dungeonWidth, p);
+            sounds.key_close.play();
             showMsg("Passage locked.");
           }
           setPassageMask(newMask);
@@ -1820,7 +1831,7 @@ export function useGameState({
     return () => {
       if (keys) hotkeys.unbind(keys, handler as any);
     };
-  }, [passageTraversal, passageMask, dungeonWidth, showMsg, keybindings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [passageTraversal, passageMask, dungeonWidth, showMsg, keybindings, sounds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // interact / recipe menu navigation — needs facingTarget from camera
   // We accept a facingTarget parameter via a ref so the useEffect can pick it up
@@ -1901,8 +1912,7 @@ export function useGameState({
           );
           return;
         }
-        const [lo] = tea.recipe.idealTemperatureRange;
-        const [, hi] = tea.recipe.idealTemperatureRange;
+        const [lo, hi] = tea.recipe.idealTemperatureRange;
         const handInventory = getHandInventory(hand!);
         const itemEntity = registry.useItem(handInventory);
         if (itemEntity) registry.removeEntity(itemEntity);
