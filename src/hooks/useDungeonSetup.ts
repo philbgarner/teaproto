@@ -4,6 +4,7 @@ import { generateThemedRooms } from "../../roguelike-mazetools/src/content";
 import { THEMES, THEME_KEYS } from "../themes";
 import {
   atlasIndex,
+  TILE_PX,
   CEILING_H,
   COBBLESTONE_WALL_ID,
   MOB_ATTACK,
@@ -15,32 +16,20 @@ import { makeRng } from "../gameUtils";
 import { RECIPES } from "../tea";
 
 export interface DungeonSetupSettings {
-  dungeonSeed: number;
-  dungeonWidth: number;
-  dungeonHeight: number;
-  minLeafSize: number;
-  maxLeafSize: number;
+
   minRoomSize: number;
   maxRoomSize: number;
   maxDoors: number;
 }
 
 export function useDungeonSetup({
-  dungeonSeed,
-  dungeonWidth,
-  dungeonHeight,
-  minLeafSize,
-  maxLeafSize,
+
   minRoomSize,
   maxRoomSize,
   maxDoors,
 }: DungeonSetupSettings) {
   const dungeon = useMemo(() => {
-    const d = generateBspDungeon({
-      width: dungeonWidth,
-      height: dungeonHeight,
-      seed: dungeonSeed,
-      minLeafSize,
+
       maxLeafSize,
       minRoomSize,
       maxRoomSize,
@@ -48,11 +37,7 @@ export function useDungeonSetup({
     });
     return d;
   }, [
-    dungeonSeed,
-    dungeonWidth,
-    dungeonHeight,
-    minLeafSize,
-    maxLeafSize,
+
     minRoomSize,
     maxRoomSize,
   ]);
@@ -151,11 +136,7 @@ export function useDungeonSetup({
   }, [dungeon]);
 
   // Door placements — disabled pending rework
-  const doorPlacements = useMemo(() => {
-    const W = dungeon.width;
-    const H = dungeon.height;
-    const solidArr = dungeon.textures.solid.image.data;
-    const regionArr = dungeon.textures.regionId.image.data;
+
     const wallDataArr = dungeon.textures.wallType.image.data;
 
     function isCorridor(x: number, z: number): boolean {
@@ -267,7 +248,7 @@ export function useDungeonSetup({
     return [
       ...stovePlacements.map((s) => ({
         ...s,
-        offsetY: (CEILING_H * 0.85) / 2,
+        offsetY: TILE_PX / 2,
       })),
       ...doorPlacements,
     ];
