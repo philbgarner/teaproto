@@ -1,10 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import * as THREE from "three";
+import { useLoader, useFrame } from "@react-three/fiber";
 import { useSettings } from "./SettingsContext";
 import { useDungeonSetup } from "./hooks/useDungeonSetup";
 import { useGameState } from "./hooks/useGameState";
 import { useEotBCamera } from "./hooks/useEotBCamera";
 import { PerspectiveDungeonView } from "../roguelike-mazetools/src/rendering/PerspectiveDungeonView";
+import {
+  TORCH_UNIFORMS_GLSL,
+  TORCH_HASH_GLSL,
+  TORCH_FNS_GLSL,
+  makeTorchUniforms,
+} from "../roguelike-mazetools/src/rendering/torchLighting";
 import {
   InstancedTileMesh,
   type TileInstance,
@@ -137,6 +144,155 @@ function SpikeTrapMeshes({
       doubleSide
     />
   );
+}
+
+// ---------------------------------------------------------------------------
+// Coin drop 3D mesh — billboarded sprites using icons.png with torch lighting
+// ---------------------------------------------------------------------------
+
+// icons.png is 256×256 with 32-pixel tile grid.
+// coins1 sprite is at pixel origin (32, 128).
+const _ICONS_W = 256;
+const _ICONS_H = 256;
+const _ICON_PX = 32;
+const COIN_UV_RECT = new THREE.Vector4(
+  32 / _ICONS_W,
+  1 - (128 + _ICON_PX) / _ICONS_H, // WebGL: y=0 is bottom
+  _ICON_PX / _ICONS_W,
+  _ICON_PX / _ICONS_H,
+);
+
+const COIN_VERT = /* glsl */ `
+varying vec2 vUv;
+varying float vFogDist;
+varying vec2 vWorldPos;
+void main() {
+  vUv = uv;
+  vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);
+  vWorldPos = worldPos.xz;
+  vec4 eyePos = viewMatrix * worldPos;
+  vFogDist = length(eyePos.xyz);
+  gl_Position = projectionMatrix * eyePos;
+}
+`;
+
+const COIN_FRAG = /* glsl */ `
+uniform sampler2D uAtlas;
+uniform vec4 uUvRect;
+uniform vec3 uFogColor;
+${TORCH_UNIFORMS_GLSL}
+varying vec2 vUv;
+varying float vFogDist;
+varying vec2 vWorldPos;
+${TORCH_HASH_GLSL}
+${TORCH_FNS_GLSL}
+void main() {
+  vec4 color = texture2D(uAtlas, uUvRect.xy + vUv * uUvRect.zw);
+  if (color.a < 0.5) discard;
+  float band = torchBand(0.03);
+  vec3 lit = applyTorchLighting(color.rgb, band);
+  gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
+}
+`;
+
+const MAX_COIN_DROPS = 64;
+const _cMat4 = new THREE.Matrix4();
+const _cPos = new THREE.Vector3();
+const _cQuat = new THREE.Quaternion();
+const _cScale = new THREE.Vector3();
+const _cEuler = new THREE.Euler();
+
+function CoinDropMeshes({
+  drops,
+  tileSize = 1,
+  fogNear = 4,
+  fogFar = 28,
+  torchColor,
+  torchIntensity,
+}: {
+  drops: { x: number; z: number }[];
+  tileSize?: number;
+  fogNear?: number;
+  fogFar?: number;
+  torchColor?: string;
+  torchIntensity?: number;
+}) {
+  const texture = useLoader(
+    THREE.TextureLoader,
+    `${import.meta.env.BASE_URL}textures/icons.png`,
+  );
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dropsRef = useRef(drops);
+  dropsRef.current = drops;
+
+  const { geo, mat } = useMemo(() => {
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+
+    const geo = new THREE.PlaneGeometry(1, 1);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uAtlas: { value: texture },
+        uUvRect: { value: COIN_UV_RECT },
+        uFogColor: { value: new THREE.Color(0, 0, 0) },
+        uFogNear: { value: fogNear },
+        uFogFar: { value: fogFar },
+        uTime: { value: 0 },
+        ...makeTorchUniforms(),
+      },
+      vertexShader: COIN_VERT,
+      fragmentShader: COIN_FRAG,
+      transparent: true,
+      alphaTest: 0.5,
+      side: THREE.DoubleSide,
+    });
+    return { geo, mat };
+  }, [texture, fogNear, fogFar]);
+
+  const torchColorObj = useMemo(
+    () => (torchColor ? new THREE.Color(torchColor) : undefined),
+    [torchColor],
+  );
+
+  useEffect(() => {
+    if (torchColorObj) mat.uniforms.uTorchColor.value = torchColorObj;
+  }, [torchColorObj, mat]);
+
+  useEffect(() => {
+    if (torchIntensity !== undefined)
+      mat.uniforms.uTorchIntensity.value = torchIntensity;
+  }, [torchIntensity, mat]);
+
+  const coinSize = tileSize * 0.5;
+
+  useFrame(({ camera, clock }) => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    mat.uniforms.uTime.value = clock.getElapsedTime();
+
+    const currentDrops = dropsRef.current;
+    mesh.count = currentDrops.length;
+    if (currentDrops.length === 0) return;
+
+    const camPos = camera.position;
+    for (let i = 0; i < currentDrops.length; i++) {
+      const drop = currentDrops[i];
+      const wx = (drop.x + 0.5) * tileSize;
+      const wz = (drop.z + 0.5) * tileSize;
+      const wy = coinSize / 2;
+      _cPos.set(wx, wy, wz);
+      _cScale.set(coinSize, coinSize, 1);
+      _cEuler.set(0, Math.atan2(camPos.x - wx, camPos.z - wz), 0);
+      _cQuat.setFromEuler(_cEuler);
+      _cMat4.compose(_cPos, _cQuat, _cScale);
+      mesh.setMatrixAt(i, _cMat4);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+
+  return <instancedMesh ref={meshRef} args={[geo, mat, MAX_COIN_DROPS]} />;
 }
 
 export default function App() {
@@ -400,6 +556,14 @@ export default function App() {
                   texture={gs.texture}
                   tileSize={TILE_SIZE}
                   ceilingHeight={CEILING_H}
+                  fogNear={4}
+                  fogFar={28}
+                  torchColor={torchColor}
+                  torchIntensity={torchIntensity}
+                />
+                <CoinDropMeshes
+                  drops={gs.xpDrops}
+                  tileSize={TILE_SIZE}
                   fogNear={4}
                   fogFar={28}
                   torchColor={torchColor}

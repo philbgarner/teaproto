@@ -1,19 +1,9 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { aStar8 } from "../../roguelike-mazetools/src/astar";
 import { makeContentRng } from "../../roguelike-mazetools/src/content";
-import {
-  generateHiddenPassages,
-} from "../../roguelike-mazetools/src/content";
-import {
-  buildTileAtlas,
-} from "../../roguelike-mazetools/src/rendering/tileAtlas";
+import { generateHiddenPassages } from "../../roguelike-mazetools/src/content";
+import { buildTileAtlas } from "../../roguelike-mazetools/src/rendering/tileAtlas";
 import {
   buildPassageMask,
   enablePassageInMask,
@@ -182,8 +172,11 @@ export function useGameState({
   // ECS hand inventory
   // ---------------------------------------------------------------------------
   const { playerData } = useSettings();
-  const { registry, leftHand: leftHandInventory, rightHand: rightHandInventory } =
-    playerData.ecsData;
+  const {
+    registry,
+    leftHand: leftHandInventory,
+    rightHand: rightHandInventory,
+  } = playerData.ecsData;
 
   // Version counter — incremented whenever ECS hand state mutates so React re-renders.
   const [handsVersion, setHandsVersion] = useState(0);
@@ -252,9 +245,15 @@ export function useGameState({
 
   // Derived hand tea values (reactive via handsVersion)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const leftHandTea = useMemo(() => getTeaFromHandInventory(leftHandInventory), [leftHandInventory, handsVersion]);
+  const leftHandTea = useMemo(
+    () => getTeaFromHandInventory(leftHandInventory),
+    [leftHandInventory, handsVersion],
+  );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const rightHandTea = useMemo(() => getTeaFromHandInventory(rightHandInventory), [rightHandInventory, handsVersion]);
+  const rightHandTea = useMemo(
+    () => getTeaFromHandInventory(rightHandInventory),
+    [rightHandInventory, handsVersion],
+  );
 
   // ---------------------------------------------------------------------------
   // Game state
@@ -300,13 +299,18 @@ export function useGameState({
   const [speechBubbles, setSpeechBubbles] = useState<
     Record<string, { text: string }>
   >({}); // { [entityId]: { text } }
-  const speechBubbleTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const speechBubbleTimersRef = useRef<
+    Record<string, ReturnType<typeof setTimeout>>
+  >({});
   const speechBubblesRef = useRef<Record<string, { text: string }>>({});
 
   const showSpeechBubble = useCallback(
     (entityId: string, text: string, duration = 6000) => {
       setSpeechBubbles((prev) => ({ ...prev, [entityId]: { text } }));
-      speechBubblesRef.current = { ...speechBubblesRef.current, [entityId]: { text } };
+      speechBubblesRef.current = {
+        ...speechBubblesRef.current,
+        [entityId]: { text },
+      };
       if (speechBubbleTimersRef.current[entityId]) {
         clearTimeout(speechBubbleTimersRef.current[entityId]);
       }
@@ -411,13 +415,21 @@ export function useGameState({
   const [playerHp, setPlayerHp] = useState(PLAYER_MAX_HP);
 
   // Combat animation state
-  const [mobDamageFlash, setMobDamageFlash] = useState<boolean[]>(() => initialMobs.map(() => false));
+  const [mobDamageFlash, setMobDamageFlash] = useState<boolean[]>(() =>
+    initialMobs.map(() => false),
+  );
   const mobDamageFlashRef = useRef<boolean[]>(initialMobs.map(() => false));
   const [advDamageFlash, setAdvDamageFlash] = useState<boolean[]>([]);
-  const [mobAttackDirs, setMobAttackDirs] = useState<Array<{ dx: number; dz: number } | null>>(() => initialMobs.map(() => null));
-  const [advAttackDirs, setAdvAttackDirs] = useState<Array<{ dx: number; dz: number } | null>>([]);
+  const [mobAttackDirs, setMobAttackDirs] = useState<
+    Array<{ dx: number; dz: number } | null>
+  >(() => initialMobs.map(() => null));
+  const [advAttackDirs, setAdvAttackDirs] = useState<
+    Array<{ dx: number; dz: number } | null>
+  >([]);
   const [damageNumbers, setDamageNumbers] = useState<DamageNumberData[]>([]);
-  const [disarmedTraps, setDisarmedTraps] = useState<Set<string>>(() => new Set());
+  const [disarmedTraps, setDisarmedTraps] = useState<Set<string>>(
+    () => new Set(),
+  );
   const disarmedTrapsRef = useRef<Set<string>>(new Set());
 
   // Ingredient inventory  { rations: 0, herbs: 0, dust: 0 }
@@ -582,10 +594,9 @@ export function useGameState({
     chestsRef.current = [...initialChests];
   }, [initialChests]);
 
-  const mobiles = useMemo(
-    () => {
-      if (mobPositions.length !== initialMobs.length) return [];
-      return [
+  const mobiles = useMemo(() => {
+    if (mobPositions.length !== initialMobs.length) return [];
+    return [
       ...initialMobs.map((m, i) => {
         const tmpl = MOB_TYPE_MAP[m.type];
         return {
@@ -598,8 +609,16 @@ export function useGameState({
               ? [0.25, 0.25, 0.25]
               : (STATUS_RGB[mobStatuses[i]] ?? STATUS_RGB.thirsty),
           geometrySize: tmpl?.geometrySize,
-          uvRectBody: normalizeUvRect(tmpl?.uvRectBody, CHAR_SHEET_W, CHAR_SHEET_H),
-          uvRectHead: normalizeUvRect(tmpl?.uvRectHead, CHAR_SHEET_W, CHAR_SHEET_H),
+          uvRectBody: normalizeUvRect(
+            tmpl?.uvRectBody,
+            CHAR_SHEET_W,
+            CHAR_SHEET_H,
+          ),
+          uvRectHead: normalizeUvRect(
+            tmpl?.uvRectHead,
+            CHAR_SHEET_W,
+            CHAR_SHEET_H,
+          ),
           unconscious: mobHps[i] <= 0,
         };
       }),
@@ -614,14 +633,27 @@ export function useGameState({
             tileId: 1,
             color: a.colorRgb,
             geometrySize: tmpl?.geometrySize,
-            uvRectBody: normalizeUvRect(tmpl?.uvRectBody, CHAR_SHEET_W, CHAR_SHEET_H),
-            uvRectHead: normalizeUvRect(tmpl?.uvRectHead, CHAR_SHEET_W, CHAR_SHEET_H),
+            uvRectBody: normalizeUvRect(
+              tmpl?.uvRectBody,
+              CHAR_SHEET_W,
+              CHAR_SHEET_H,
+            ),
+            uvRectHead: normalizeUvRect(
+              tmpl?.uvRectHead,
+              CHAR_SHEET_W,
+              CHAR_SHEET_H,
+            ),
           };
         }),
     ];
-    },
-    [initialMobs, mobPositions, mobStatuses, mobSatiations, mobHps, adventurers],
-  );
+  }, [
+    initialMobs,
+    mobPositions,
+    mobStatuses,
+    mobSatiations,
+    mobHps,
+    adventurers,
+  ]);
 
   // Resolve speech bubbles: look up current entity positions so bubbles follow movers
   const activeSpeechBubbles = useMemo(() => {
@@ -747,7 +779,10 @@ export function useGameState({
           if (!tempComp || !teaComp) continue;
           const rawTemp = tempComp.currentTemperature - tempDropPerStep;
           const newTemp = inWarmRoom
-            ? Math.max(rawTemp, (tempComp.minTemperature + tempComp.maxTemperature) / 2)
+            ? Math.max(
+                rawTemp,
+                (tempComp.minTemperature + tempComp.maxTemperature) / 2,
+              )
             : rawTemp;
           tempComp.currentTemperature = newTemp;
           handsChanged = true;
@@ -799,9 +834,20 @@ export function useGameState({
     const pendingSpeechBubbles: { entityId: string; text: string }[] = []; // collected during processing
     // Combat animation event accumulators
     const advAttackEvents: { advId: string; dx: number; dz: number }[] = [];
-    const mobHitEvents: { mobIdx: number; damage: number; x: number; z: number }[] = [];
-    const mobAttackEventsLocal: { mobIdx: number; dx: number; dz: number }[] = [];
-    const advHitEvents: { advId: string; damage: number; x: number; z: number }[] = [];
+    const mobHitEvents: {
+      mobIdx: number;
+      damage: number;
+      x: number;
+      z: number;
+    }[] = [];
+    const mobAttackEventsLocal: { mobIdx: number; dx: number; dz: number }[] =
+      [];
+    const advHitEvents: {
+      advId: string;
+      damage: number;
+      x: number;
+      z: number;
+    }[] = [];
 
     // --- Wave spawning ---
     // The countdown to the next wave only ticks when all enemies are dead.
@@ -841,7 +887,7 @@ export function useGameState({
     }
     if (xpGained > 0) {
       newPlayerXp += xpGained;
-      stepMessage = `Collected ${xpGained} XP! (Total: ${newPlayerXp})`;
+      stepMessage = `Collected ${xpGained} gold! (Total: ${newPlayerXp})`;
     }
     newXpDrops = remainingDrops;
 
@@ -947,8 +993,12 @@ export function useGameState({
       // Priority: fight any conscious monster in line of sight; otherwise use state machine.
 
       // Find nearest visible (line-of-sight) conscious monster
-      let combatTarget: { x: number; z: number; type: string; idx: number } | null =
-        null;
+      let combatTarget: {
+        x: number;
+        z: number;
+        type: string;
+        idx: number;
+      } | null = null;
       let combatDist = Infinity;
       for (let i = 0; i < initialMobs.length; i++) {
         if (newMobHps[i] <= 0) continue; // unconscious
@@ -984,7 +1034,12 @@ export function useGameState({
             }
           }
           advAttackEvents.push({ advId: adv.id, dx: ddx, dz: ddz });
-          mobHitEvents.push({ mobIdx: combatTarget.idx, damage, x: combatTarget.x, z: combatTarget.z });
+          mobHitEvents.push({
+            mobIdx: combatTarget.idx,
+            damage,
+            x: combatTarget.x,
+            z: combatTarget.z,
+          });
           return {
             adv,
             intendedX: adv.x,
@@ -1151,10 +1206,8 @@ export function useGameState({
             const roomPickIdx =
               (adv.id.charCodeAt(4) ?? 0) % nonEndRoomsArray.length;
             const [, wanderRoom] = nonEndRoomsArray[roomPickIdx] as [any, any];
-            const wx =
-              wanderRoom.rect.x + Math.floor(wanderRoom.rect.w / 2);
-            const wz =
-              wanderRoom.rect.y + Math.floor(wanderRoom.rect.h / 2);
+            const wx = wanderRoom.rect.x + Math.floor(wanderRoom.rect.w / 2);
+            const wz = wanderRoom.rect.y + Math.floor(wanderRoom.rect.h / 2);
             const wanderAstar = aStar8(
               { width: dungeonWidth, height: dungeonHeight },
               (x: number, y: number) => isWalkable(x, y),
@@ -1368,7 +1421,8 @@ export function useGameState({
       if (!adv.alive) continue;
       const trapIdx = adv.z * dungeonWidth + adv.x;
       const key = `${adv.x}_${adv.z}`;
-      if (hazardData[trapIdx] !== 1 || disarmedTrapsRef.current.has(key)) continue;
+      if (hazardData[trapIdx] !== 1 || disarmedTrapsRef.current.has(key))
+        continue;
 
       // Armed trap — trigger it
       const newDisarmed = new Set(disarmedTrapsRef.current);
@@ -1376,7 +1430,12 @@ export function useGameState({
       disarmedTrapsRef.current = newDisarmed;
 
       const newHp = adv.hp - SPIKE_TRAP_DAMAGE;
-      advHitEvents.push({ advId: adv.id, damage: SPIKE_TRAP_DAMAGE, x: adv.x, z: adv.z });
+      advHitEvents.push({
+        advId: adv.id,
+        damage: SPIKE_TRAP_DAMAGE,
+        x: adv.x,
+        z: adv.z,
+      });
       if (newHp <= 0) {
         newAdventurers[i] = { ...adv, alive: false, hp: 0 };
         const dreadFactor =
@@ -1404,7 +1463,7 @@ export function useGameState({
             dropKey: `ing_trap_${Date.now()}_${i}`,
           });
         }
-        stepMessage = `The ${adv.name} was slain by a spike trap! (+${xpReward} XP)`;
+        stepMessage = `The ${adv.name} was slain by a spike trap! (+${xpReward} gold)`;
       } else {
         newAdventurers[i] = { ...adv, hp: newHp };
         stepMessage = `A spike trap strikes the ${adv.name}!`;
@@ -1453,8 +1512,7 @@ export function useGameState({
         const step = mobAstar.path[1];
         // Don't step onto another mob's cell
         const blockedByMob = newMobPositions.some(
-          (p: any, j: number) =>
-            j !== i && p.x === step.x && p.z === step.y,
+          (p: any, j: number) => j !== i && p.x === step.x && p.z === step.y,
         );
         const blockedByAdventurer = newAdventurers.some(
           (a) => a.alive && a.x === step.x && a.z === step.y,
@@ -1476,7 +1534,11 @@ export function useGameState({
         if (Math.abs(adv.x - mobPos.x) + Math.abs(adv.z - mobPos.z) === 1) {
           const damage = Math.max(1, mob.attack - adv.defense);
           const newHp = adv.hp - damage;
-          mobAttackEventsLocal.push({ mobIdx: i, dx: adv.x - mobPos.x, dz: adv.z - mobPos.z });
+          mobAttackEventsLocal.push({
+            mobIdx: i,
+            dx: adv.x - mobPos.x,
+            dz: adv.z - mobPos.z,
+          });
           advHitEvents.push({ advId: adv.id, damage, x: adv.x, z: adv.z });
           if (newHp <= 0) {
             newAdventurers[j] = { ...adv, alive: false, hp: 0 };
@@ -1508,7 +1570,7 @@ export function useGameState({
                 dropKey: `ing_${Date.now()}_${j}`,
               });
             }
-            stepMessage = `${mob.name} slew the ${adv.name}! (+${xpReward} XP, ${tmpl?.drop?.name ?? "?"} dropped)`;
+            stepMessage = `${mob.name} slew the ${adv.name}! (+${xpReward} gold, ${tmpl?.drop?.name ?? "?"} dropped)`;
           } else {
             newAdventurers[j] = { ...adv, hp: newHp };
           }
@@ -1579,7 +1641,9 @@ export function useGameState({
       // Mob damage flash
       if (mobHitEvents.length > 0) {
         const newFlash = mobDamageFlashRef.current.slice();
-        mobHitEvents.forEach((e) => { newFlash[e.mobIdx] = true; });
+        mobHitEvents.forEach((e) => {
+          newFlash[e.mobIdx] = true;
+        });
         mobDamageFlashRef.current = newFlash;
         setMobDamageFlash([...newFlash]);
         mobHitEvents.forEach((e) =>
@@ -1595,28 +1659,36 @@ export function useGameState({
       // Adventurer damage flash
       if (advHitEvents.length > 0) {
         const aliveAdvs = newAdventurers.filter((a) => a.alive);
-        const newAdvFlash = aliveAdvs.map((a) => advHitEvents.some((e) => e.advId === a.id));
+        const newAdvFlash = aliveAdvs.map((a) =>
+          advHitEvents.some((e) => e.advId === a.id),
+        );
         setAdvDamageFlash(newAdvFlash);
-        if (newAdvFlash.some(Boolean)) setTimeout(() => setAdvDamageFlash([]), FLASH_MS);
+        if (newAdvFlash.some(Boolean))
+          setTimeout(() => setAdvDamageFlash([]), FLASH_MS);
       }
 
       // Mob attack lunge dirs
       if (mobAttackEventsLocal.length > 0) {
-        const newMobDirs: Array<{ dx: number; dz: number } | null> = initialMobs.map((_, idx) => {
-          const e = mobAttackEventsLocal.find((ev) => ev.mobIdx === idx);
-          return e ? { dx: e.dx, dz: e.dz } : null;
-        });
+        const newMobDirs: Array<{ dx: number; dz: number } | null> =
+          initialMobs.map((_, idx) => {
+            const e = mobAttackEventsLocal.find((ev) => ev.mobIdx === idx);
+            return e ? { dx: e.dx, dz: e.dz } : null;
+          });
         setMobAttackDirs(newMobDirs);
-        setTimeout(() => setMobAttackDirs(initialMobs.map(() => null)), ATTACK_MS);
+        setTimeout(
+          () => setMobAttackDirs(initialMobs.map(() => null)),
+          ATTACK_MS,
+        );
       }
 
       // Adventurer attack lunge dirs
       if (advAttackEvents.length > 0) {
         const aliveAdvs = newAdventurers.filter((a) => a.alive);
-        const newAdvDirs: Array<{ dx: number; dz: number } | null> = aliveAdvs.map((a) => {
-          const e = advAttackEvents.find((ev) => ev.advId === a.id);
-          return e ? { dx: e.dx, dz: e.dz } : null;
-        });
+        const newAdvDirs: Array<{ dx: number; dz: number } | null> =
+          aliveAdvs.map((a) => {
+            const e = advAttackEvents.find((ev) => ev.advId === a.id);
+            return e ? { dx: e.dx, dz: e.dz } : null;
+          });
         setAdvAttackDirs(newAdvDirs);
         setTimeout(() => setAdvAttackDirs([]), ATTACK_MS);
       }
@@ -1642,7 +1714,10 @@ export function useGameState({
       if (allNums.length > 0) {
         setDamageNumbers((prev) => [...prev, ...allNums]);
         allNums.forEach((n) =>
-          setTimeout(() => setDamageNumbers((prev) => prev.filter((x) => x.id !== n.id)), NUM_MS),
+          setTimeout(
+            () => setDamageNumbers((prev) => prev.filter((x) => x.id !== n.id)),
+            NUM_MS,
+          ),
         );
       }
     }
@@ -1688,10 +1763,14 @@ export function useGameState({
       if (id.startsWith("mob_")) {
         const idx = parseInt(id.slice(4), 10);
         const pos = newMobPositions[idx];
-        return pos ? Math.hypot(pos.x - pgx, pos.z - pgz) <= GHOST_SIGHT_RADIUS : false;
+        return pos
+          ? Math.hypot(pos.x - pgx, pos.z - pgz) <= GHOST_SIGHT_RADIUS
+          : false;
       }
       const adv = newAdventurers.find((a) => a.id === id && a.alive);
-      return adv ? Math.hypot(adv.x - pgx, adv.z - pgz) <= GHOST_SIGHT_RADIUS : false;
+      return adv
+        ? Math.hypot(adv.x - pgx, adv.z - pgz) <= GHOST_SIGHT_RADIUS
+        : false;
     });
     if (!hasNearbyActiveBubble) {
       for (const { entityId, text } of pendingSpeechBubbles) {
@@ -1718,7 +1797,6 @@ export function useGameState({
     stovePlacements,
     doorPlacements,
   ]);
-
 
   const onBlockedMove = useCallback((dx: number, dz: number) => {
     const passages = passagesRef.current;
@@ -1753,7 +1831,10 @@ export function useGameState({
       // Check if player is standing on a disarmed trap (interact to rearm)
       const playerKey = `${gx}_${gz}`;
       const playerTrapIdx = gz * dungeonWidth + gx;
-      if (hazardData[playerTrapIdx] === 1 && disarmedTrapsRef.current.has(playerKey)) {
+      if (
+        hazardData[playerTrapIdx] === 1 &&
+        disarmedTrapsRef.current.has(playerKey)
+      ) {
         return { type: "trap" as const, x: gx, z: gz };
       }
       const fdx = Math.round(-Math.sin(yaw));
@@ -1823,7 +1904,7 @@ export function useGameState({
           return;
         }
       }
-      showMsg("Nothing to interact with here.");
+      // showMsg("Nothing to interact with here.");
     };
     const keys = keybindings.togglePassage.join(",");
     if (keys) hotkeys(keys, handler as any);
@@ -1879,7 +1960,12 @@ export function useGameState({
       } else if (facingTarget.type === "mob") {
         const mob = initialMobs[facingTarget.mobIdx];
         const hand = leftHandTea ? "left" : rightHandTea ? "right" : null;
-        const tea = hand === "left" ? leftHandTea : hand === "right" ? rightHandTea : null;
+        const tea =
+          hand === "left"
+            ? leftHandTea
+            : hand === "right"
+              ? rightHandTea
+              : null;
         const mobStatus = mobStatuses[facingTarget.mobIdx];
         const isUnconscious = mobSatiations[facingTarget.mobIdx] <= 0;
         const mobBubbleId = `mob_${facingTarget.mobIdx}`;

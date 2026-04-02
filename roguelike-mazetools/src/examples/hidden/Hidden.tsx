@@ -504,7 +504,7 @@ export default function Hidden() {
     if (!game || !passageMask) return;
     const p = passageAtPlayer(player);
     if (!p) {
-      pushLog({ text: "Nothing to interact with here." });
+      // pushLog({ text: "Nothing to interact with here." });
       return;
     }
     p.enabled = !p.enabled;
