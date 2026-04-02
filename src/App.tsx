@@ -22,6 +22,7 @@ import {
   WALL_TILE_MAP,
   CEILING_TILE_MAP,
   PASSAGE_OVERLAY_IDS,
+  SPIKE_TRAP_OVERLAY_ID,
   PLAYER_MAX_HP,
   WAVE_COUNTDOWN_THRESHOLD,
   WIN_WAVES,
@@ -69,6 +70,7 @@ export default function App() {
     setTorchColor,
     torchIntensity,
     setTorchIntensity,
+    trapDensity,
     keybindings,
     setKeybindings,
   } = useSettings();
@@ -82,6 +84,7 @@ export default function App() {
     minRoomSize,
     maxRoomSize,
     maxDoors,
+    trapDensity,
   });
 
   const gs = useGameState({
@@ -240,6 +243,8 @@ export default function App() {
                 adventurerSpriteAtlas={gs.characterSpriteAtlas}
                 passageMask={gs.passageMask ?? undefined}
                 passageOverlayIds={PASSAGE_OVERLAY_IDS}
+                hazardData={ds.hazardData}
+                hazardOverlayId={SPIKE_TRAP_OVERLAY_ID}
                 speechBubbles={gs.message ? gs.activeSpeechBubbles.map((b) => ({ ...b, inverted: true })) : gs.activeSpeechBubbles}
                 torchColor={torchColor}
                 torchIntensity={torchIntensity}

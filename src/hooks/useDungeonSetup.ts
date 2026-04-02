@@ -4,7 +4,6 @@ import { generateThemedRooms } from "../../roguelike-mazetools/src/content";
 import { THEMES, THEME_KEYS } from "../themes";
 import {
   atlasIndex,
-  TILE_PX,
   CEILING_H,
   COBBLESTONE_WALL_ID,
   MOB_ATTACK,
@@ -16,20 +15,34 @@ import { makeRng } from "../gameUtils";
 import { RECIPES } from "../tea";
 
 export interface DungeonSetupSettings {
-
+  dungeonSeed: number;
+  dungeonWidth: number;
+  dungeonHeight: number;
+  minLeafSize: number;
+  maxLeafSize: number;
   minRoomSize: number;
   maxRoomSize: number;
   maxDoors: number;
+  trapDensity: number;
 }
 
 export function useDungeonSetup({
-
+  dungeonSeed,
+  dungeonWidth,
+  dungeonHeight,
+  minLeafSize,
+  maxLeafSize,
   minRoomSize,
   maxRoomSize,
   maxDoors,
+  trapDensity,
 }: DungeonSetupSettings) {
   const dungeon = useMemo(() => {
-
+    const d = generateBspDungeon({
+      width: dungeonWidth,
+      height: dungeonHeight,
+      seed: dungeonSeed,
+      minLeafSize,
       maxLeafSize,
       minRoomSize,
       maxRoomSize,
@@ -37,7 +50,11 @@ export function useDungeonSetup({
     });
     return d;
   }, [
-
+    dungeonSeed,
+    dungeonWidth,
+    dungeonHeight,
+    minLeafSize,
+    maxLeafSize,
     minRoomSize,
     maxRoomSize,
   ]);
@@ -76,10 +93,10 @@ export function useDungeonSetup({
 
   // Assign floor/wall/ceiling types to every room and corridor by theme
   useMemo(() => {
-    const floorData = dungeon.textures.floorType.image.data;
-    const wallData = dungeon.textures.wallType.image.data;
-    const ceilingData = dungeon.textures.ceilingType.image.data;
-    const solidData = dungeon.textures.solid.image.data;
+    const floorDataArr = dungeon.textures.floorType.image.data;
+    const wallDataArr = dungeon.textures.wallType.image.data;
+    const ceilingDataArr = dungeon.textures.ceilingType.image.data;
+    const solidDataArr = dungeon.textures.solid.image.data;
     const rng = makeRng(dungeon.seed);
     const themes: Record<any, any> = {};
     for (const [roomId, room] of dungeon.rooms) {
@@ -112,11 +129,11 @@ export function useDungeonSetup({
         ctx: { width: number },
       ) => {
         const i = y * ctx.width + x;
-        if (solidData[i] === 0) {
-          floorData[i] = floorId;
-          ceilingData[i] = ceilingId;
+        if (solidDataArr[i] === 0) {
+          floorDataArr[i] = floorId;
+          ceilingDataArr[i] = ceilingId;
         } else {
-          wallData[i] = wallId;
+          wallDataArr[i] = wallId;
         }
       };
     }
@@ -126,7 +143,7 @@ export function useDungeonSetup({
     dungeon.textures.ceilingType.needsUpdate = true;
   }, [dungeon]);
 
-  // Stove placements via generateContent — 2 stoves in end room at distanceToWall === 1
+  // Stove placements — 1 stove in end room at centre
   const stovePlacements = useMemo(() => {
     const room = dungeon.rooms.get(dungeon.endRoomId);
     if (!room) return [];
@@ -135,8 +152,12 @@ export function useDungeonSetup({
     return [{ x: cx, z: cz, type: "stove" }];
   }, [dungeon]);
 
-  // Door placements — disabled pending rework
-
+  // Door placements
+  const doorPlacements = useMemo(() => {
+    const W = dungeon.width;
+    const H = dungeon.height;
+    const solidArr = dungeon.textures.solid.image.data;
+    const regionArr = dungeon.textures.regionId.image.data;
     const wallDataArr = dungeon.textures.wallType.image.data;
 
     function isCorridor(x: number, z: number): boolean {
@@ -233,6 +254,25 @@ export function useDungeonSetup({
             wallDataArr[cell.z * W + cell.x] = c.roomWallId;
           }
         });
+
+        // Wall off perpendicular flanking corridor cells to prevent floating doors.
+        // For a door at (x, z) facing (dx, dz), flanking cells are at (x±dz, z∓dx).
+        const { x: doorX, z: doorZ } = c.placement;
+        const bdx: number = c.placement.meta.blockDx;
+        const bdz: number = c.placement.meta.blockDz;
+        for (const [fx, fz] of [
+          [doorX - bdz, doorZ + bdx],
+          [doorX + bdz, doorZ - bdx],
+        ]) {
+          if (fx >= 0 && fx < W && fz >= 0 && fz < H) {
+            const fi = fz * W + fx;
+            if (solidArr[fi] === 0 && regionArr[fz * W + fx] === 0) {
+              solidArr[fi] = 255;
+              wallDataArr[fi] = c.roomWallId;
+            }
+          }
+        }
+
         placements.push(c.placement);
       }
       // else: leave corridor open with no door
@@ -243,12 +283,61 @@ export function useDungeonSetup({
     return placements;
   }, [dungeon, maxDoors]);
 
+  // Spike trap placement — within Manhattan distance 2 of any door cell
+  const hazardData = useMemo(() => {
+    const hazArr = dungeon.textures.hazards.image.data as Uint8Array;
+    hazArr.fill(0);
+
+    if (trapDensity <= 0 || doorPlacements.length === 0) {
+      dungeon.textures.hazards.needsUpdate = true;
+      return hazArr;
+    }
+
+    const W = dungeon.width;
+    const H = dungeon.height;
+    const solidArr = dungeon.textures.solid.image.data;
+    const rng = makeRng(dungeonSeed ^ 0xf00dbabe);
+    const chance = Math.min(1.0, trapDensity * 0.4);
+
+    // Exclude the exact door cells from trap placement
+    const doorCellKeys = new Set(
+      doorPlacements.map((d: any) => d.z * W + d.x),
+    );
+
+    // Collect eligible cells: walkable, within Manhattan distance 2 of a door, not a door cell itself
+    const eligible = new Set<number>();
+    for (const door of doorPlacements) {
+      const { x: doorX, z: doorZ } = door;
+      for (let rowDiff = -2; rowDiff <= 2; rowDiff++) {
+        const colRange = 2 - Math.abs(rowDiff);
+        for (let colDiff = -colRange; colDiff <= colRange; colDiff++) {
+          const cx = doorX + colDiff;
+          const cz = doorZ + rowDiff;
+          if (cx < 0 || cz < 0 || cx >= W || cz >= H) continue;
+          const idx = cz * W + cx;
+          if (solidArr[idx] !== 0) continue;
+          if (doorCellKeys.has(idx)) continue;
+          eligible.add(idx);
+        }
+      }
+    }
+
+    for (const idx of eligible) {
+      if (rng() < chance) {
+        hazArr[idx] = 1;
+      }
+    }
+
+    dungeon.textures.hazards.needsUpdate = true;
+    return hazArr;
+  }, [dungeon, dungeonSeed, doorPlacements, trapDensity]);
+
   // Object registry and world placements
   const objects = useMemo(() => {
     return [
       ...stovePlacements.map((s) => ({
         ...s,
-        offsetY: TILE_PX / 2,
+        offsetY: (CEILING_H * 0.85) / 2,
       })),
       ...doorPlacements,
     ];
@@ -388,6 +477,7 @@ export function useDungeonSetup({
     spawnYaw,
     stovePlacements,
     doorPlacements,
+    hazardData,
     objects,
     initialMobs,
     adventurerSpawnRooms,

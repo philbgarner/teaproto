@@ -72,6 +72,10 @@ export const ARCH_BRICK_UV: [number, number] =
   ];
 export const COBBLESTONE_WALL_ID: number =
   atlasIndex.wallTypes.idByName("Cobblestone");
+export const SPIKE_TRAP_OVERLAY_ID: number = _atlasUvToId(
+  (atlasIndex.overlays.byName("spikeTrap")?.uv as [number, number]) ?? [320, 256],
+);
+
 export const PASSAGE_OVERLAY_IDS: number[] = [
   _atlasUvToId(
     (atlasIndex.wallOverlays.byName("buttonUnpressed")?.uv as [
