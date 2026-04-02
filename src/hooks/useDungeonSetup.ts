@@ -84,7 +84,7 @@ export function useDungeonSetup({
     return {
       spawnX: (room as any).rect.x + Math.floor((room as any).rect.w / 2) + 0.5,
       spawnZ: (room as any).rect.y + Math.floor((room as any).rect.h / 2) + 1.5, // one cell south of stove
-      spawnYaw: Math.PI, // face north toward the stove
+      spawnYaw: 0, // face north toward the stove
     };
   }, [dungeon]);
 

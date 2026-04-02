@@ -51,10 +51,9 @@ export const FLOOR_TILE_MAP: number[] = (
 ).map((ft: any) =>
   "uv" in ft ? _atlasUvToId(ft.uv as [number, number]) : TILE_FLOOR,
 );
-export const WALL_TILE_MAP: number[] = (
-  atlasIndex.data.wallTypes as any[]
-).map((wt: any) =>
-  "uv" in wt ? _atlasUvToId(wt.uv as [number, number]) : TILE_WALL,
+export const WALL_TILE_MAP: number[] = (atlasIndex.data.wallTypes as any[]).map(
+  (wt: any) =>
+    "uv" in wt ? _atlasUvToId(wt.uv as [number, number]) : TILE_WALL,
 );
 export const CEILING_TILE_MAP: number[] = (
   atlasIndex.data.ceilingTypes as any[]
@@ -62,21 +61,23 @@ export const CEILING_TILE_MAP: number[] = (
   "uv" in ct ? _atlasUvToId(ct.uv as [number, number]) : TILE_CEILING,
 );
 
-export const ARCH_COBBLE_UV: [number, number] =
-  (atlasIndex.architecture.byName("archCobble")?.uv as [number, number]) ?? [
-    64, 0,
-  ];
-export const ARCH_BRICK_UV: [number, number] =
-  (atlasIndex.architecture.byName("archBrick")?.uv as [number, number]) ?? [
-    0, 64,
-  ];
+export const ARCH_COBBLE_UV: [number, number] = (atlasIndex.architecture.byName(
+  "archCobble",
+)?.uv as [number, number]) ?? [64, 0];
+export const ARCH_BRICK_UV: [number, number] = (atlasIndex.architecture.byName(
+  "archBrick",
+)?.uv as [number, number]) ?? [0, 64];
 export const COBBLESTONE_WALL_ID: number =
   atlasIndex.wallTypes.idByName("Cobblestone");
 export const SPIKE_TRAP_OVERLAY_ID: number = _atlasUvToId(
-  (atlasIndex.overlays.byName("spikeTrap")?.uv as [number, number]) ?? [320, 256],
+  (atlasIndex.overlays.byName("spikeTrap")?.uv as [number, number]) ?? [
+    320, 256,
+  ],
 );
 export const TRAP_GRID_OVERLAY_ID: number = _atlasUvToId(
-  (atlasIndex.overlays.byName("trapGrid")?.uv as [number, number]) ?? [256, 192],
+  (atlasIndex.overlays.byName("trapGrid")?.uv as [number, number]) ?? [
+    256, 192,
+  ],
 );
 
 export const PASSAGE_OVERLAY_IDS: number[] = [
@@ -147,7 +148,7 @@ export const MOB_TYPES: MobType[] = [
     name: "Goblin",
     geometrySize: [1, 1],
     uvRectBody: { x: 64, y: 256, w: 64, h: 64 },
-    uvRectHead: { x: 0, y: 320, w: 64, h: 64 },
+    uvRectHead: { x: 128, y: 320, w: 64, h: 64 },
   },
   {
     type: "troll",
