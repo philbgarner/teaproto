@@ -459,7 +459,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       gs.showMsg("You almost feel like a person again.");
       setTimeout(() => setLessonIndex(2), 3000);
     }
-  }, [gs.leftHandTea, gs.rightHandTea, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gs.leftHandTea, gs.rightHandTea]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Lesson 3: unconscious traveller has been revived
   useEffect(() => {
