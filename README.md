@@ -13,7 +13,7 @@ NOT AI ART!
 
 # Tea Proto
 
-A first-person dungeon crawler where you brew and serve tea to keep friendly mobs alive against the inviding adventurers.
+A first-person dungeon crawler where you brew and serve tea to keep friendly mobs alive against the invading adventurers.
 
 ---
 
