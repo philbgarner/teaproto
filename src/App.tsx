@@ -22,6 +22,7 @@ import {
   WALL_TILE_MAP,
   CEILING_TILE_MAP,
   PASSAGE_OVERLAY_IDS,
+  TRAP_GRID_OVERLAY_ID,
   PLAYER_MAX_HP,
   WAVE_COUNTDOWN_THRESHOLD,
   WIN_WAVES,
@@ -69,6 +70,7 @@ export default function App() {
     setTorchColor,
     torchIntensity,
     setTorchIntensity,
+    trapDensity,
     keybindings,
     setKeybindings,
   } = useSettings();
@@ -82,6 +84,7 @@ export default function App() {
     minRoomSize,
     maxRoomSize,
     maxDoors,
+    trapDensity,
   });
 
   const gs = useGameState({
@@ -128,7 +131,8 @@ export default function App() {
       onStep: gs.onStep,
       blocked: gs.showRecipeMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
-      canPhaseWalls: !gs.playerHands.left && !gs.playerHands.right,
+      canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
+      blockedPositions: ds.stovePlacements,
       keybindings,
       startYaw: ds.spawnYaw,
     },
@@ -150,7 +154,7 @@ export default function App() {
     if (!facingTarget) return null;
     if (facingTarget.type === "stove") {
       const state = gs.stoveStates.get(facingTarget.stoveKey);
-      if (!state?.brewing) return "Stove — Press [space] to brew tea";
+      if (!state?.brewing) return "Teaomatic — Press [space] to brew tea";
       if (state.brewing.ready)
         return `${state.brewing.recipe.name} is ready! — Press [space] to collect`;
       return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press [space] for status`;
@@ -240,7 +244,16 @@ export default function App() {
                 adventurerSpriteAtlas={gs.characterSpriteAtlas}
                 passageMask={gs.passageMask ?? undefined}
                 passageOverlayIds={PASSAGE_OVERLAY_IDS}
-                speechBubbles={gs.message ? gs.activeSpeechBubbles.map((b) => ({ ...b, inverted: true })) : gs.activeSpeechBubbles}
+                hazardData={ds.hazardData}
+                hazardOverlayId={TRAP_GRID_OVERLAY_ID}
+                speechBubbles={
+                  gs.message
+                    ? gs.activeSpeechBubbles.map((b) => ({
+                        ...b,
+                        inverted: true,
+                      }))
+                    : gs.activeSpeechBubbles
+                }
                 torchColor={torchColor}
                 torchIntensity={torchIntensity}
                 floorData={ds.floorData}
@@ -351,9 +364,23 @@ export default function App() {
                 }}
               >
                 {/* Invisible full text holds the final size */}
-                <span style={{ visibility: "hidden", userSelect: "none" }}>{gs.message}</span>
+                <span style={{ visibility: "hidden", userSelect: "none" }}>
+                  {gs.message}
+                </span>
                 {/* Typed text overlaid on top */}
-                <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#e0b870", padding: "12px 28px" }}>{gs.displayedText}</span>
+                <span
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#e0b870",
+                    padding: "12px 28px",
+                  }}
+                >
+                  {gs.displayedText}
+                </span>
               </div>
             )}
           </div>
@@ -446,7 +473,7 @@ export default function App() {
         onPlayAgain={() => {
           setDungeonSeed((s) => s);
           const freshSatiations = ds.initialMobs.map(() => 40);
-          gs.setPlayerHands({ left: null, right: null });
+          gs.clearHands();
           gs.setMobSatiations(freshSatiations);
           gs.setRoomTempRise(new Map());
           gs.setStoveStates(new Map());

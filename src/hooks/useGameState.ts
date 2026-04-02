@@ -26,6 +26,9 @@ import {
 } from "../../roguelike-mazetools/src/turn/passageTraversal";
 import hotkeys from "hotkeys-js";
 import { RECIPES } from "../tea";
+import type { Tea } from "../tea";
+import { useSettings } from "../SettingsContext";
+import type { Entity } from "../../roguelike-mazetools/src/examples/ECS/Components";
 import { useMusic } from "./useMusic";
 import { useMessage } from "./useMessage";
 import {
@@ -171,22 +174,86 @@ export function useGameState({
   );
 
   // ---------------------------------------------------------------------------
+  // ECS hand inventory
+  // ---------------------------------------------------------------------------
+  const { playerData } = useSettings();
+  const { registry, leftHand: leftHandInventory, rightHand: rightHandInventory } =
+    playerData.ecsData;
+
+  // Version counter — incremented whenever ECS hand state mutates so React re-renders.
+  const [handsVersion, setHandsVersion] = useState(0);
+
+  function getHandInventory(hand: "left" | "right"): Entity {
+    return hand === "left" ? leftHandInventory : rightHandInventory;
+  }
+
+  function getTeaFromHandInventory(handInventory: Entity): Tea | null {
+    const inv = registry.components.inventory.get(handInventory);
+    if (!inv?.slots[0]) return null;
+    const slot = registry.components.inventorySlot.get(inv.slots[0]);
+    if (!slot?.object) return null;
+    const entity = slot.object;
+    const teaComp = registry.components.tea.get(entity);
+    const tempComp = registry.components.temperature.get(entity);
+    const descComp = registry.components.description.get(entity);
+    if (!teaComp || !tempComp || !descComp) return null;
+    const recipe = RECIPES.find((r) => r.id === teaComp.recipeId);
+    if (!recipe) return null;
+    return {
+      id: String(entity),
+      name: descComp.name,
+      recipe,
+      temperature: tempComp.currentTemperature,
+      ruined: teaComp.ruined,
+    };
+  }
+
+  function addTeaToHand(
+    hand: "left" | "right",
+    recipe: (typeof RECIPES)[number],
+    temperature: number,
+  ) {
+    const handInventory = getHandInventory(hand);
+    const entity = registry.createEntity();
+    registry.components.description.add(entity, { name: recipe.name });
+    registry.components.temperature.add(entity, {
+      currentTemperature: temperature,
+      minTemperature: recipe.idealTemperatureRange[0],
+      maxTemperature: recipe.idealTemperatureRange[1],
+    });
+    registry.components.tea.add(entity, { recipeId: recipe.id, ruined: false });
+    // Mark as instance so it won't stack with other tea entities
+    registry.components.objectInstance.add(entity, { definition: entity });
+    registry.addObjectToInventory(handInventory, entity, 1);
+    setHandsVersion((v) => v + 1);
+  }
+
+  function removeTeaFromHand(hand: "left" | "right") {
+    const handInventory = getHandInventory(hand);
+    const inv = registry.components.inventory.get(handInventory);
+    if (!inv?.slots[0]) return;
+    const slot = registry.components.inventorySlot.get(inv.slots[0]);
+    if (!slot?.object) return;
+    const entity = slot.object;
+    registry.removeObjectFromSlot(inv.slots[0]);
+    registry.removeEntity(entity);
+    setHandsVersion((v) => v + 1);
+  }
+
+  function clearHands() {
+    removeTeaFromHand("left");
+    removeTeaFromHand("right");
+  }
+
+  // Derived hand tea values (reactive via handsVersion)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const leftHandTea = useMemo(() => getTeaFromHandInventory(leftHandInventory), [leftHandInventory, handsVersion]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const rightHandTea = useMemo(() => getTeaFromHandInventory(rightHandInventory), [rightHandInventory, handsVersion]);
+
+  // ---------------------------------------------------------------------------
   // Game state
   // ---------------------------------------------------------------------------
-  const startingGreenTea = {
-    id: crypto.randomUUID(),
-    name: "Green Tea",
-    recipe: RECIPES[0],
-    temperature: 90,
-    ruined: false,
-  };
-  const [playerHands, setPlayerHands] = useState<{
-    left: any;
-    right: any;
-  }>({
-    left: startingGreenTea,
-    right: null,
-  });
   const [mobSatiations, setMobSatiations] = useState<number[]>(() =>
     initialMobs.map(() => 40),
   );
@@ -363,12 +430,12 @@ export function useGameState({
     dust: 0,
   });
   const ingredientDropsRef = useRef<any[]>([]);
-  // Sync ref for playerHands so onStep can read current value without a dep
-  const playerHandsRef = useRef<{ left: any; right: any }>({
+  // Sync ref kept in step with ECS hand state so onStep can read without a dep
+  const playerHandsRef = useRef<{ left: Tea | null; right: Tea | null }>({
     left: null,
     right: null,
   });
-  playerHandsRef.current = playerHands;
+  playerHandsRef.current = { left: leftHandTea, right: rightHandTea };
 
   const adventurerDreadRateRef = useRef(1.0);
   adventurerDreadRateRef.current = adventurerDreadRate;
@@ -419,16 +486,8 @@ export function useGameState({
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
     const freshSatiations = initialMobs.map(() => 40);
-    setPlayerHands({
-      left: {
-        id: crypto.randomUUID(),
-        name: "Green Tea",
-        recipe: RECIPES[0],
-        temperature: 90,
-        ruined: false,
-      },
-      right: null,
-    });
+    clearHands();
+    addTeaToHand("left", RECIPES[0], 90);
     setMobSatiations(freshSatiations);
     setStoveStates(new Map());
     setShowRecipeMenu(false);
@@ -644,23 +703,28 @@ export function useGameState({
         );
       }
 
-      setPlayerHands((prev) => {
-        let changed = false;
-        const next = { left: prev.left, right: prev.right };
-        for (const hand of ["left", "right"] as const) {
-          const tea = next[hand];
-          if (!tea || tea.ruined) continue;
-          const [lo, hi] = tea.recipe.idealTemperatureRange;
-          const rawTemp = tea.temperature - tempDropPerStep;
+      {
+        let handsChanged = false;
+        for (const handInventory of [leftHandInventory, rightHandInventory]) {
+          const inv = registry.components.inventory.get(handInventory);
+          if (!inv?.slots[0]) continue;
+          const slot = registry.components.inventorySlot.get(inv.slots[0]);
+          if (!slot?.object) continue;
+          const entity = slot.object;
+          const tempComp = registry.components.temperature.get(entity);
+          const teaComp = registry.components.tea.get(entity);
+          if (!tempComp || !teaComp || teaComp.ruined) continue;
+          const rawTemp = tempComp.currentTemperature - tempDropPerStep;
           const newTemp = inWarmRoom
-            ? Math.max(rawTemp, (lo + hi) / 2)
+            ? Math.max(rawTemp, (tempComp.minTemperature + tempComp.maxTemperature) / 2)
             : rawTemp;
-          const ruined = newTemp < lo;
-          next[hand] = { ...tea, temperature: newTemp, ruined };
-          changed = true;
+          const ruined = newTemp < tempComp.minTemperature;
+          tempComp.currentTemperature = newTemp;
+          teaComp.ruined = ruined;
+          handsChanged = true;
         }
-        return changed ? next : prev;
-      });
+        if (handsChanged) setHandsVersion((v) => v + 1);
+      }
     }
 
     // --- Stove brewing countdown ---
@@ -835,7 +899,7 @@ export function useGameState({
           adventurerSightingsRef.current.add(adv.id);
           const hasTeaInHand = !!(
             playerHandsRef.current.left || playerHandsRef.current.right
-          );
+          ); // playerHandsRef is kept in sync with ECS each render
           const pool = hasTeaInHand ? GHOST_DIALOG_WITH_TEA : GHOST_DIALOG;
           pendingSpeechBubbles.push({
             entityId: adv.id,
@@ -1479,14 +1543,13 @@ export function useGameState({
 
   // Show message when tea becomes ruined
   useEffect(() => {
-    for (const hand of ["left", "right"] as const) {
-      const tea = playerHands[hand];
+    for (const tea of [leftHandTea, rightHandTea]) {
       if (tea?.ruined && !ruinedNotifiedRef.current.has(tea.id)) {
         ruinedNotifiedRef.current.add(tea.id);
         showMsg(`Your ${tea.name} has gone cold and is ruined!`);
       }
     }
-  }, [playerHands, showMsg]);
+  }, [leftHandTea, rightHandTea, showMsg]);
 
   const onBlockedMove = useCallback((dx: number, dz: number) => {
     const passages = passagesRef.current;
@@ -1613,23 +1676,13 @@ export function useGameState({
           setShowRecipeMenu(true);
         } else if (state.brewing.ready) {
           const recipe = state.brewing.recipe;
-          const tea = {
-            id: crypto.randomUUID(),
-            name: recipe.name,
-            recipe,
-            temperature: recipe.idealTemperatureRange[1] + 15,
-            ruined: false,
-          };
-          const hand = !playerHands.left
-            ? "left"
-            : !playerHands.right
-              ? "right"
-              : null;
+          const startTemp = recipe.idealTemperatureRange[1] + 15;
+          const hand = !leftHandTea ? "left" : !rightHandTea ? "right" : null;
           if (!hand) {
             showMsg("Your hands are full!");
             return;
           }
-          setPlayerHands((prev) => ({ ...prev, [hand]: tea }));
+          addTeaToHand(hand, recipe, startTemp);
           setStoveStates((prev) => {
             const next = new Map(prev);
             next.delete(facingTarget.stoveKey);
@@ -1643,12 +1696,8 @@ export function useGameState({
         }
       } else if (facingTarget.type === "mob") {
         const mob = initialMobs[facingTarget.mobIdx];
-        const hand = playerHands.left
-          ? "left"
-          : playerHands.right
-            ? "right"
-            : null;
-        const tea = hand ? playerHands[hand as "left" | "right"] : null;
+        const hand = leftHandTea ? "left" : rightHandTea ? "right" : null;
+        const tea = hand === "left" ? leftHandTea : hand === "right" ? rightHandTea : null;
         const mobStatus = mobStatuses[facingTarget.mobIdx];
         const isUnconscious = mobSatiations[facingTarget.mobIdx] <= 0;
         const mobBubbleId = `mob_${facingTarget.mobIdx}`;
@@ -1682,7 +1731,10 @@ export function useGameState({
         }
         const [lo] = tea.recipe.idealTemperatureRange;
         const [, hi] = tea.recipe.idealTemperatureRange;
-        setPlayerHands((prev) => ({ ...prev, [hand!]: null }));
+        const handInventory = getHandInventory(hand!);
+        const itemEntity = registry.useItem(handInventory);
+        if (itemEntity) registry.removeEntity(itemEntity);
+        setHandsVersion((v) => v + 1);
         if (!firstTeaDeliveredRef.current) {
           firstTeaDeliveredRef.current = true;
           showMsg(
@@ -1748,9 +1800,9 @@ export function useGameState({
       if (showRecipeMenu) return;
       e.preventDefault();
       if (gameState !== "playing") return;
-      if (playerHands.left) {
-        showMsg(`You discard your ${playerHands.left.name}.`);
-        setPlayerHands((prev) => ({ ...prev, left: null }));
+      if (leftHandTea) {
+        showMsg(`You discard your ${leftHandTea.name}.`);
+        removeTeaFromHand("left");
         if (!firstTeaDeliveredRef.current) {
           firstTeaDeliveredRef.current = true;
           setTimeout(() => {
@@ -1767,9 +1819,9 @@ export function useGameState({
       if (showRecipeMenu) return;
       e.preventDefault();
       if (gameState !== "playing") return;
-      if (playerHands.right) {
-        showMsg(`You discard your ${playerHands.right.name}.`);
-        setPlayerHands((prev) => ({ ...prev, right: null }));
+      if (rightHandTea) {
+        showMsg(`You discard your ${rightHandTea.name}.`);
+        removeTeaFromHand("right");
         if (!firstTeaDeliveredRef.current) {
           firstTeaDeliveredRef.current = true;
           setTimeout(() => {
@@ -1913,7 +1965,8 @@ export function useGameState({
   }, [
     showRecipeMenu,
     stoveStates,
-    playerHands,
+    leftHandTea,
+    rightHandTea,
     initialMobs,
     mobStatuses,
     mobSatiations,
@@ -1934,9 +1987,11 @@ export function useGameState({
     texture,
     characterSpriteAtlas,
     objectRegistry,
-    // game state
-    playerHands,
-    setPlayerHands,
+    // game state — hand items via ECS
+    leftHandTea,
+    rightHandTea,
+    clearHands,
+    addTeaToHand,
     mobSatiations,
     setMobSatiations,
     mobPositions,
@@ -2005,7 +2060,7 @@ export function useGameState({
     adventurerSightingsRef,
     mobSatiationsRef,
     ruinedNotifiedRef,
-    playerHandsRef,
+    playerHandsRef, // { left: Tea|null, right: Tea|null } kept in sync with ECS
     exploredMaskRef,
     passagesRef,
     // passage state

@@ -49,6 +49,8 @@ interface SettingsContextValue {
   setMaxRoomSize: Dispatch<SetStateAction<number>>;
   maxDoors: number;
   setMaxDoors: Dispatch<SetStateAction<number>>;
+  trapDensity: number;
+  setTrapDensity: Dispatch<SetStateAction<number>>;
   tempDropPerStep: number;
   setTempDropPerStep: Dispatch<SetStateAction<number>>;
   heatingPerStep: number;
@@ -111,6 +113,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [minRoomSize, setMinRoomSize] = useState(3);
   const [maxRoomSize, setMaxRoomSize] = useState(7);
   const [maxDoors, setMaxDoors] = useState(3);
+  const [trapDensity, setTrapDensity] = useState(1.0);
   const [tempDropPerStep, setTempDropPerStep] = useState(0.5);
   const [heatingPerStep, setHeatingPerStep] = useState(2.0);
   const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.5);
@@ -157,6 +160,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setMaxRoomSize,
         maxDoors,
         setMaxDoors,
+        trapDensity,
+        setTrapDensity,
         tempDropPerStep,
         setTempDropPerStep,
         heatingPerStep,

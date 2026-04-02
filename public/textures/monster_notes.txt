@@ -1,9 +1,0 @@
-altho it's designed for a 64x64 grid, the wings and the fact I allowed for modular monsters, means the bat doesn't quite fit. He starts on row 7, column 1.
-
-The images are (from left to right):
-angry monster/happy monster
-monster body/monster head (dead)
-monster head (angry)/monster head (happy)
-
-The intent is to use the full images as placeholders, and the body parts to animate the final output.
-ie. the head bobs up and down relative to the body.

@@ -51,6 +51,8 @@ export default function SettingsTabs({
   setMaxRoomSize,
   maxDoors,
   setMaxDoors,
+  trapDensity,
+  setTrapDensity,
   torchColor,
   setTorchColor,
   torchIntensity,
@@ -165,6 +167,15 @@ export default function SettingsTabs({
               max={50}
               step={1}
               onChange={(v) => setAdventurerLootPerChest(Math.round(v))}
+            />
+            <SliderRow
+              label="Trap density"
+              value={trapDensity}
+              min={0}
+              max={2}
+              step={0.1}
+              onChange={setTrapDensity}
+              format={(v) => `${v.toFixed(1)}×`}
             />
           </>
         )}

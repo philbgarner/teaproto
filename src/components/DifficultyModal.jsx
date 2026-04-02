@@ -20,6 +20,7 @@ const SETTINGS_KEYS = [
   "minRoomSize",
   "maxRoomSize",
   "maxDoors",
+  "trapDensity",
 ];
 
 const SETTERS = {
@@ -39,6 +40,7 @@ const SETTERS = {
   minRoomSize: "setMinRoomSize",
   maxRoomSize: "setMaxRoomSize",
   maxDoors: "setMaxDoors",
+  trapDensity: "setTrapDensity",
 };
 
 const DEFAULT_PRESETS = [
