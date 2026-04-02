@@ -46,6 +46,7 @@ import {
   GHOST_DIALOG_WITH_TEA,
   GHOST_SIGHT_RADIUS,
   MOB_TYPE_MAP,
+  MOB_HP,
   PLAYER_MAX_HP,
   TURNS_PER_WAVE,
   WIN_WAVES,
@@ -261,6 +262,9 @@ export function useGameState({
   const [mobSatiations, setMobSatiations] = useState<number[]>(() =>
     initialMobs.map(() => 40),
   );
+  const [mobHps, setMobHps] = useState<number[]>(() =>
+    initialMobs.map((m) => m.hp ?? MOB_HP),
+  );
   const [mobPositions, setMobPositions] = useState<{ x: number; z: number }[]>(
     () => initialMobs.map((m) => ({ x: m.x, z: m.z })),
   );
@@ -471,6 +475,10 @@ export function useGameState({
   if (mobSatiationsRef.current === null) {
     mobSatiationsRef.current = initialMobs.map(() => 40);
   }
+  const mobHpsRef = useRef<number[] | null>(null);
+  if (mobHpsRef.current === null) {
+    mobHpsRef.current = initialMobs.map((m) => m.hp ?? MOB_HP);
+  }
 
   // Hidden passages
   const passagesRef = useRef<any[]>([]);
@@ -500,9 +508,11 @@ export function useGameState({
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
     const freshSatiations = initialMobs.map(() => 40);
+    const freshHps = initialMobs.map((m: any) => m.hp ?? MOB_HP);
     clearHands();
     addTeaToHand("left", RECIPES[0], 90);
     setMobSatiations(freshSatiations);
+    setMobHps(freshHps);
     setStoveStates(new Map());
     setShowRecipeMenu(false);
     setActiveStoveKey(null);
@@ -536,6 +546,7 @@ export function useGameState({
     ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
+    mobHpsRef.current = freshHps;
     const freshPositions = initialMobs.map((m) => ({ x: m.x, z: m.z }));
     setMobPositions(freshPositions);
     mobPositionsRef.current = freshPositions;
@@ -583,13 +594,13 @@ export function useGameState({
           type: "mob",
           tileId: 0,
           color:
-            mobSatiations[i] <= 0
+            mobHps[i] <= 0
               ? [0.25, 0.25, 0.25]
               : (STATUS_RGB[mobStatuses[i]] ?? STATUS_RGB.thirsty),
           geometrySize: tmpl?.geometrySize,
           uvRectBody: normalizeUvRect(tmpl?.uvRectBody, CHAR_SHEET_W, CHAR_SHEET_H),
           uvRectHead: normalizeUvRect(tmpl?.uvRectHead, CHAR_SHEET_W, CHAR_SHEET_H),
-          unconscious: mobSatiations[i] <= 0,
+          unconscious: mobHps[i] <= 0,
         };
       }),
       ...adventurers
@@ -609,7 +620,7 @@ export function useGameState({
         }),
     ];
     },
-    [initialMobs, mobPositions, mobStatuses, mobSatiations, adventurers],
+    [initialMobs, mobPositions, mobStatuses, mobSatiations, mobHps, adventurers],
   );
 
   // Resolve speech bubbles: look up current entity positions so bubbles follow movers
@@ -733,14 +744,12 @@ export function useGameState({
           const entity = slot.object;
           const tempComp = registry.components.temperature.get(entity);
           const teaComp = registry.components.tea.get(entity);
-          if (!tempComp || !teaComp || teaComp.ruined) continue;
+          if (!tempComp || !teaComp) continue;
           const rawTemp = tempComp.currentTemperature - tempDropPerStep;
           const newTemp = inWarmRoom
             ? Math.max(rawTemp, (tempComp.minTemperature + tempComp.maxTemperature) / 2)
             : rawTemp;
-          const ruined = newTemp < tempComp.minTemperature;
           tempComp.currentTemperature = newTemp;
-          teaComp.ruined = ruined;
           handsChanged = true;
         }
         if (handsChanged) setHandsVersion((v) => v + 1);
@@ -777,6 +786,7 @@ export function useGameState({
     let newMobSatiations = mobSatiationsRef.current!.map((s) =>
       Math.max(0, s - satiationDropPerStep),
     );
+    let newMobHps = mobHpsRef.current!.map((h) => h);
     let newMobPositions = mobPositionsRef.current.map((p) => ({ ...p }));
     let newWave = currentWaveRef.current;
     let newPlayerXp = playerXpRef.current;
@@ -941,7 +951,7 @@ export function useGameState({
         null;
       let combatDist = Infinity;
       for (let i = 0; i < initialMobs.length; i++) {
-        if (newMobSatiations[i] <= 0) continue; // unconscious
+        if (newMobHps[i] <= 0) continue; // unconscious
         const mobPos = newMobPositions[i];
         const d = Math.hypot(adv.x - mobPos.x, adv.z - mobPos.z);
         if (
@@ -959,12 +969,19 @@ export function useGameState({
         const ddz = combatTarget.z - adv.z;
         if (Math.abs(ddx) + Math.abs(ddz) === 1) {
           const damage = Math.max(1, adv.attack - MOB_DEFENSE);
-          newMobSatiations[combatTarget.idx] = Math.max(
-            0,
-            newMobSatiations[combatTarget.idx] - damage,
-          );
-          if (newMobSatiations[combatTarget.idx] <= 0) {
-            stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
+          if (newMobSatiations[combatTarget.idx] > 0) {
+            newMobSatiations[combatTarget.idx] = Math.max(
+              0,
+              newMobSatiations[combatTarget.idx] - damage,
+            );
+          } else {
+            newMobHps[combatTarget.idx] = Math.max(
+              0,
+              newMobHps[combatTarget.idx] - damage,
+            );
+            if (newMobHps[combatTarget.idx] <= 0) {
+              stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
+            }
           }
           advAttackEvents.push({ advId: adv.id, dx: ddx, dz: ddz });
           mobHitEvents.push({ mobIdx: combatTarget.idx, damage, x: combatTarget.x, z: combatTarget.z });
@@ -1535,6 +1552,7 @@ export function useGameState({
     ingredientDropsRef.current = newIngredientDrops;
     chestsRef.current = newChests;
     mobSatiationsRef.current = newMobSatiations;
+    mobHpsRef.current = newMobHps;
     mobPositionsRef.current = newMobPositions;
     setDisarmedTraps(new Set(disarmedTrapsRef.current));
 
@@ -1549,6 +1567,7 @@ export function useGameState({
     setIngredientDrops([...newIngredientDrops]);
     setChests([...newChests]);
     setMobSatiations(newMobSatiations);
+    setMobHps(newMobHps);
     setMobPositions([...newMobPositions]);
 
     // --- Combat animation events ---
@@ -1700,15 +1719,6 @@ export function useGameState({
     doorPlacements,
   ]);
 
-  // Show message when tea becomes ruined
-  useEffect(() => {
-    for (const tea of [leftHandTea, rightHandTea]) {
-      if (tea?.ruined && !ruinedNotifiedRef.current.has(tea.id)) {
-        ruinedNotifiedRef.current.add(tea.id);
-        showMsg(`Your ${tea.name} has gone cold and is ruined!`);
-      }
-    }
-  }, [leftHandTea, rightHandTea, showMsg]);
 
   const onBlockedMove = useCallback((dx: number, dz: number) => {
     const passages = passagesRef.current;
@@ -1924,11 +1934,11 @@ export function useGameState({
           mobSatiationsRef.current = next;
           setMobSatiations(next);
         }
-        if (tea.ruined || tea.temperature < lo) {
+        if (tea.temperature < lo) {
           applyMobSatiation(10);
           showSpeechBubble(
             mobBubbleId,
-            `This ${tea.name} is cold and ruined... How disappointing.`,
+            `This ${tea.name} is too cold... How disappointing.`,
           );
         } else if (tea.temperature > hi) {
           applyMobSatiation(30);
@@ -2231,6 +2241,7 @@ export function useGameState({
     // refs
     adventurerSightingsRef,
     mobSatiationsRef,
+    mobHpsRef,
     ruinedNotifiedRef,
     playerHandsRef, // { left: Tea|null, right: Tea|null } kept in sync with ECS
     exploredMaskRef,

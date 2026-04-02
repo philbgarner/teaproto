@@ -2,23 +2,6 @@ import GhostInventory from "./GhostInventory";
 import { Minimap } from "./Minimap";
 import styles from "./styles/MinimapSidebar.module.css";
 
-/**
- * Right sidebar containing the 3-D minimap and the ghost inventory panel.
- *
- * @param {{
- *   solidData: Uint8Array,
- *   dungeonWidth: number,
- *   dungeonHeight: number,
- *   camera: { x: number, z: number, yaw: number },
- *   texture: import('three').Texture,
- *   atlas: object,
- *   floorTile: number,
- *   floorData?: Uint8Array,
- *   floorTileMap?: number[],
- *   tileSize?: number,
- *   exploredMaskRef?: React.RefObject<Uint8Array|null>,
- * }} props
- */
 export function MinimapSidebar({
   solidData,
   dungeonWidth,
@@ -31,6 +14,13 @@ export function MinimapSidebar({
   floorData,
   floorTileMap,
   tileSize,
+  mobs,
+  adventurers,
+  doorPlacements,
+  stovePlacements,
+  hazardData,
+  disarmedTraps,
+  scale,
 }) {
   return (
     <div className={styles.sidebar}>
@@ -47,6 +37,13 @@ export function MinimapSidebar({
           floorTileMap={floorTileMap}
           tileSize={tileSize}
           exploredMaskRef={exploredMaskRef}
+          mobs={mobs}
+          adventurers={adventurers}
+          doorPlacements={doorPlacements}
+          stovePlacements={stovePlacements}
+          hazardData={hazardData}
+          disarmedTraps={disarmedTraps}
+          scale={scale}
           className={styles.canvas}
         />
       </div>

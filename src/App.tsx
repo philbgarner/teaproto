@@ -539,6 +539,16 @@ export default function App() {
             floorData={ds.floorData}
             floorTileMap={FLOOR_TILE_MAP}
             tileSize={TILE_SIZE}
+            mobs={gs.mobPositions.map((pos: { x: number; z: number }, i: number) => ({
+              x: pos.x,
+              z: pos.z,
+              name: (ds.initialMobs as any[])[i]?.name,
+            }))}
+            adventurers={gs.adventurers}
+            doorPlacements={ds.doorPlacements}
+            stovePlacements={ds.stovePlacements}
+            hazardData={ds.hazardData}
+            disarmedTraps={gs.disarmedTraps}
           />
         </div>
 

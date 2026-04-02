@@ -9,6 +9,7 @@ import {
   COBBLESTONE_WALL_ID,
   MOB_ATTACK,
   MOB_DEFENSE,
+  MOB_HP,
   MOB_NAMES,
   MOB_TYPES,
 } from "../gameConstants";
@@ -374,6 +375,7 @@ export function useDungeonSetup({
         preferredRecipeId: RECIPES[(idx * 3 + 1) % RECIPES.length].id,
         attack: MOB_ATTACK,
         defense: MOB_DEFENSE,
+        hp: MOB_HP,
       });
       idx++;
     }

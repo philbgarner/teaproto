@@ -212,6 +212,7 @@ export const PLAYER_MAX_HP = 30;
 export const PLAYER_DEFENSE = 2;
 export const MOB_ATTACK = 3;
 export const MOB_DEFENSE = 1;
+export const MOB_HP = 20;
 export const WIN_WAVES = 10;
 export const SPIKE_TRAP_DAMAGE = 8;
 
