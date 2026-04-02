@@ -35,17 +35,37 @@ export default function GhostInventory({
       <div style={{ display: "flex", flexDirection: "row" }}>
         <button
           key={"lefthand"}
-          className={styles.inventorySlot}
+          className={`${styles.inventorySlot} ${!leftHandItem[0] || !registry.getSlotObjectName(leftHandItem[0]) ? styles.emptySlot : ""}`}
           style={{ maxWidth: "50%" }}
+          disabled={!leftHandItem[0] || !registry.getSlotObjectName(leftHandItem[0])}
         >
-          left
+          {leftHandItem[0] && registry.getSlotObjectName(leftHandItem[0])
+            ? (
+              <>
+                <span className={styles.itemName}>{registry.getSlotObjectName(leftHandItem[0])}</span>
+                {registry.getSlotQuantity(leftHandItem[0]) > 1 && (
+                  <span className={styles.itemCount}>×{registry.getSlotQuantity(leftHandItem[0])}</span>
+                )}
+              </>
+            )
+            : "(left)"}
         </button>
         <button
           key={"righthand"}
-          className={styles.inventorySlot}
+          className={`${styles.inventorySlot} ${!rightHandItem[0] || !registry.getSlotObjectName(rightHandItem[0]) ? styles.emptySlot : ""}`}
           style={{ maxWidth: "50%" }}
+          disabled={!rightHandItem[0] || !registry.getSlotObjectName(rightHandItem[0])}
         >
-          right
+          {rightHandItem[0] && registry.getSlotObjectName(rightHandItem[0])
+            ? (
+              <>
+                <span className={styles.itemName}>{registry.getSlotObjectName(rightHandItem[0])}</span>
+                {registry.getSlotQuantity(rightHandItem[0]) > 1 && (
+                  <span className={styles.itemCount}>×{registry.getSlotQuantity(rightHandItem[0])}</span>
+                )}
+              </>
+            )
+            : "(right)"}
         </button>
       </div>
 

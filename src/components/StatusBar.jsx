@@ -21,14 +21,20 @@ function tempBand(temp) {
   return "Warm";
 }
 
-export function StatusBar({ camera, facing, playerXp, ingredients, currentRoomTemp }) {
+export function StatusBar({
+  camera,
+  facing,
+  playerXp,
+  ingredients,
+  currentRoomTemp,
+}) {
   return (
     <div className={styles.bar}>
       <span className={styles.coords}>
         ({Math.floor(camera.x)}, {Math.floor(camera.z)})
       </span>
       <span className={styles.facing}>Facing: {facing}</span>
-      <span className={styles.xp}>XP: {playerXp}</span>
+      <span className={styles.xp}>Gold: {playerXp}</span>
       <span className={styles.ingredients}>
         Rations: {ingredients.rations} · Herbs: {ingredients.herbs} · Dust:{" "}
         {ingredients.dust}

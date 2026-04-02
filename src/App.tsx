@@ -22,7 +22,7 @@ import {
   WALL_TILE_MAP,
   CEILING_TILE_MAP,
   PASSAGE_OVERLAY_IDS,
-  SPIKE_TRAP_OVERLAY_ID,
+  TRAP_GRID_OVERLAY_ID,
   PLAYER_MAX_HP,
   WAVE_COUNTDOWN_THRESHOLD,
   WIN_WAVES,
@@ -131,7 +131,7 @@ export default function App() {
       onStep: gs.onStep,
       blocked: gs.showRecipeMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
-      canPhaseWalls: !gs.playerHands.left && !gs.playerHands.right,
+      canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
       keybindings,
       startYaw: ds.spawnYaw,
     },
@@ -244,7 +244,7 @@ export default function App() {
                 passageMask={gs.passageMask ?? undefined}
                 passageOverlayIds={PASSAGE_OVERLAY_IDS}
                 hazardData={ds.hazardData}
-                hazardOverlayId={SPIKE_TRAP_OVERLAY_ID}
+                hazardOverlayId={TRAP_GRID_OVERLAY_ID}
                 speechBubbles={
                   gs.message
                     ? gs.activeSpeechBubbles.map((b) => ({
@@ -472,7 +472,7 @@ export default function App() {
         onPlayAgain={() => {
           setDungeonSeed((s) => s);
           const freshSatiations = ds.initialMobs.map(() => 40);
-          gs.setPlayerHands({ left: null, right: null });
+          gs.clearHands();
           gs.setMobSatiations(freshSatiations);
           gs.setRoomTempRise(new Map());
           gs.setStoveStates(new Map());

@@ -74,7 +74,7 @@ function LessonView({
       onStep: gs.onStep,
       blocked: gs.showRecipeMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
-      canPhaseWalls: !gs.playerHands.left && !gs.playerHands.right,
+      canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
       keybindings,
       startYaw: ds.spawnYaw,
     },
@@ -388,21 +388,13 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
 
     // Lesson 2: player starts empty-handed so they must brew
     if (lessonIndex === 1) {
-      gs.setPlayerHands({ left: null, right: null });
-      gs.playerHandsRef.current = { left: null, right: null };
+      gs.clearHands();
     }
 
     // Lesson 3: Green Tea at ideal temp, mob starts unconscious
     if (lessonIndex === 2) {
-      const greenTea = {
-        id: crypto.randomUUID(),
-        name: "Green Tea",
-        recipe: RECIPES[0],
-        temperature: 68, // within ideal range [60, 75]
-        ruined: false,
-      };
-      gs.setPlayerHands({ left: greenTea, right: null });
-      gs.playerHandsRef.current = { left: greenTea, right: null };
+      gs.clearHands();
+      gs.addTeaToHand("left", RECIPES[0], 68); // within ideal range [60, 75]
       gs.setMobSatiations([-1]);
       gs.mobSatiationsRef.current = [-1];
     }
@@ -461,13 +453,13 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     if (lessonIndex !== 1 || lessonDoneRef.current) return;
     // Read the ref so we see the synchronous clear written by the per-lesson
     // init effect, not the stale state value from the previous render.
-    const hands = gs.playerHandsRef.current;
+    const hands = gs.playerHandsRef.current; // stays in sync with ECS each render
     if (hands.left || hands.right) {
       lessonDoneRef.current = true;
       gs.showMsg("You almost feel like a person again.");
       setTimeout(() => setLessonIndex(2), 3000);
     }
-  }, [gs.playerHands.left, gs.playerHands.right, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gs.leftHandTea, gs.rightHandTea, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Lesson 3: unconscious traveller has been revived
   useEffect(() => {

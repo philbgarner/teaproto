@@ -75,6 +75,9 @@ export const COBBLESTONE_WALL_ID: number =
 export const SPIKE_TRAP_OVERLAY_ID: number = _atlasUvToId(
   (atlasIndex.overlays.byName("spikeTrap")?.uv as [number, number]) ?? [320, 256],
 );
+export const TRAP_GRID_OVERLAY_ID: number = _atlasUvToId(
+  (atlasIndex.overlays.byName("trapGrid")?.uv as [number, number]) ?? [256, 192],
+);
 
 export const PASSAGE_OVERLAY_IDS: number[] = [
   _atlasUvToId(
