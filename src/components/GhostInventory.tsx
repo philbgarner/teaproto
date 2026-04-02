@@ -21,6 +21,11 @@ export default function GhostInventory({
       className={styles.inventoryContainer}
       style={{ gridTemplateColumns: `repeat(${columnsPerRow}, 1fr)` }}
     >
+      <div style={{ display: "flex", flexDirection: "row" }}>
+        <button key={"lefthand"}>left hand</button>
+        <button key={"righthand"}>left hand</button>
+      </div>
+
       {slots.map((slotEntity) => {
         const name = registry.getSlotObjectName(slotEntity);
         const count = registry.getSlotQuantity(slotEntity);
