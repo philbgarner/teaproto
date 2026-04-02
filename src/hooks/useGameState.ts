@@ -53,6 +53,7 @@ import {
   STATUS_CSS,
   LOS_RADIUS,
   MOB_DEFENSE,
+  SPIKE_TRAP_DAMAGE,
 } from "../gameConstants";
 import {
   normalizeUvRect,
@@ -81,6 +82,7 @@ export interface UseGameStateParams {
   spawnYaw: number;
   stovePlacements: any[];
   doorPlacements: any[];
+  hazardData: Uint8Array;
   dungeonSeed: number;
   dungeonWidth: number;
   dungeonHeight: number;
@@ -112,6 +114,7 @@ export function useGameState({
   spawnYaw,
   stovePlacements,
   doorPlacements,
+  hazardData,
   dungeonSeed,
   dungeonWidth,
   dungeonHeight,
@@ -410,6 +413,8 @@ export function useGameState({
   const [mobAttackDirs, setMobAttackDirs] = useState<Array<{ dx: number; dz: number } | null>>(() => initialMobs.map(() => null));
   const [advAttackDirs, setAdvAttackDirs] = useState<Array<{ dx: number; dz: number } | null>>([]);
   const [damageNumbers, setDamageNumbers] = useState<DamageNumberData[]>([]);
+  const [disarmedTraps, setDisarmedTraps] = useState<Set<string>>(() => new Set());
+  const disarmedTrapsRef = useRef<Set<string>>(new Set());
 
   // Ingredient inventory  { rations: 0, herbs: 0, dust: 0 }
   const [ingredients, setIngredients] = useState<Record<string, number>>({
@@ -1340,6 +1345,55 @@ export function useGameState({
       }
     }
 
+    // --- Spike trap triggering (adventurers only) ---
+    for (let i = 0; i < newAdventurers.length; i++) {
+      const adv = newAdventurers[i];
+      if (!adv.alive) continue;
+      const trapIdx = adv.z * dungeonWidth + adv.x;
+      const key = `${adv.x}_${adv.z}`;
+      if (hazardData[trapIdx] !== 1 || disarmedTrapsRef.current.has(key)) continue;
+
+      // Armed trap — trigger it
+      const newDisarmed = new Set(disarmedTrapsRef.current);
+      newDisarmed.add(key);
+      disarmedTrapsRef.current = newDisarmed;
+
+      const newHp = adv.hp - SPIKE_TRAP_DAMAGE;
+      advHitEvents.push({ advId: adv.id, damage: SPIKE_TRAP_DAMAGE, x: adv.x, z: adv.z });
+      if (newHp <= 0) {
+        newAdventurers[i] = { ...adv, alive: false, hp: 0 };
+        const dreadFactor =
+          (adv.dreadThreshold ?? 0) > 0
+            ? Math.min(1, (adv.dread ?? 0) / adv.dreadThreshold)
+            : 0;
+        const lootFactor =
+          (adv.lootThreshold ?? 0) > 0
+            ? Math.min(1, (adv.loot ?? 0) / adv.lootThreshold)
+            : 0;
+        const xpReward = Math.round(adv.xp * (1 + dreadFactor + lootFactor));
+        newXpDrops.push({
+          id: `xp_trap_${Date.now()}_${i}`,
+          x: adv.x,
+          z: adv.z,
+          amount: xpReward,
+        });
+        const tmpl = ADVENTURER_TYPES.find((t) => t.type === adv.template);
+        if (tmpl?.drop) {
+          newIngredientDrops.push({
+            id: tmpl.drop.id,
+            name: tmpl.drop.name,
+            x: adv.x,
+            z: adv.z,
+            dropKey: `ing_trap_${Date.now()}_${i}`,
+          });
+        }
+        stepMessage = `The ${adv.name} was slain by a spike trap! (+${xpReward} XP)`;
+      } else {
+        newAdventurers[i] = { ...adv, hp: newHp };
+        stepMessage = `A spike trap strikes the ${adv.name}!`;
+      }
+    }
+
     // --- Conscious mob AI: move toward nearest adventurer in line of sight ---
     console.log("[onStep] mob AI start");
     for (let i = 0; i < initialMobs.length; i++) {
@@ -1385,7 +1439,10 @@ export function useGameState({
           (p: any, j: number) =>
             j !== i && p.x === step.x && p.z === step.y,
         );
-        if (!blockedByMob) {
+        const blockedByAdventurer = newAdventurers.some(
+          (a) => a.alive && a.x === step.x && a.z === step.y,
+        );
+        if (!blockedByMob && !blockedByAdventurer) {
           newMobPositions[i] = { x: step.x, z: step.y };
         }
       }
@@ -1479,6 +1536,7 @@ export function useGameState({
     chestsRef.current = newChests;
     mobSatiationsRef.current = newMobSatiations;
     mobPositionsRef.current = newMobPositions;
+    setDisarmedTraps(new Set(disarmedTrapsRef.current));
 
     setTurnCount(newTurnCount);
     setWaveCountdown(newWaveCountdown);
@@ -1682,6 +1740,12 @@ export function useGameState({
       const { x, z, yaw } = logRef.current;
       const gx = Math.floor(x);
       const gz = Math.floor(z);
+      // Check if player is standing on a disarmed trap (interact to rearm)
+      const playerKey = `${gx}_${gz}`;
+      const playerTrapIdx = gz * dungeonWidth + gx;
+      if (hazardData[playerTrapIdx] === 1 && disarmedTrapsRef.current.has(playerKey)) {
+        return { type: "trap" as const, x: gx, z: gz };
+      }
       const fdx = Math.round(-Math.sin(yaw));
       const fdz = Math.round(-Math.cos(yaw));
       const tx = gx + fdx;
@@ -1697,7 +1761,7 @@ export function useGameState({
       if (mi !== -1) return { type: "mob" as const, mobIdx: mi };
       return null;
     },
-    [stovePlacements, mobPositions],
+    [stovePlacements, mobPositions, hazardData, dungeonWidth],
   );
 
   // Passage traversal step-loop — needs doMove from camera; exposed via ref
@@ -1795,6 +1859,13 @@ export function useGameState({
             `Brewing ${state.brewing.recipe.name}... ${state.brewing.stepsRemaining} steps remaining.`,
           );
         }
+      } else if (facingTarget.type === "trap") {
+        const key = `${facingTarget.x}_${facingTarget.z}`;
+        const newDisarmed = new Set(disarmedTrapsRef.current);
+        newDisarmed.delete(key);
+        disarmedTrapsRef.current = newDisarmed;
+        setDisarmedTraps(new Set(newDisarmed));
+        showMsg("You reset the spike trap.");
       } else if (facingTarget.type === "mob") {
         const mob = initialMobs[facingTarget.mobIdx];
         const hand = leftHandTea ? "left" : rightHandTea ? "right" : null;
@@ -2190,5 +2261,7 @@ export function useGameState({
     mobAttackDirs,
     advAttackDirs,
     damageNumbers,
+    // trap state
+    disarmedTraps,
   };
 }

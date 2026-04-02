@@ -103,6 +103,7 @@ export default function App() {
     spawnYaw: ds.spawnYaw,
     stovePlacements: ds.stovePlacements,
     doorPlacements: ds.doorPlacements,
+    hazardData: ds.hazardData,
     dungeonSeed,
     dungeonWidth,
     dungeonHeight,

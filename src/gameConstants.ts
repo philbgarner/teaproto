@@ -213,6 +213,7 @@ export const PLAYER_DEFENSE = 2;
 export const MOB_ATTACK = 3;
 export const MOB_DEFENSE = 1;
 export const WIN_WAVES = 10;
+export const SPIKE_TRAP_DAMAGE = 8;
 
 export interface AdventurerType {
   type: string;
