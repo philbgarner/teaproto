@@ -1,9 +1,15 @@
 import { useMemo } from "react";
+import * as THREE from "three";
 import { useSettings } from "./SettingsContext";
 import { useDungeonSetup } from "./hooks/useDungeonSetup";
 import { useGameState } from "./hooks/useGameState";
 import { useEotBCamera } from "./hooks/useEotBCamera";
 import { PerspectiveDungeonView } from "../roguelike-mazetools/src/rendering/PerspectiveDungeonView";
+import {
+  InstancedTileMesh,
+  type TileInstance,
+} from "../roguelike-mazetools/src/rendering/InstancedTileMesh";
+import type { TileAtlas } from "../roguelike-mazetools/src/rendering/tileAtlas";
 import { GameHeader } from "./components/GameHeader";
 import { StatusBar } from "./components/StatusBar";
 import { WaveCountdown } from "./components/WaveCountdown";
@@ -23,12 +29,115 @@ import {
   CEILING_TILE_MAP,
   PASSAGE_OVERLAY_IDS,
   TRAP_GRID_OVERLAY_ID,
+  SPIKE_TRAP_OVERLAY_ID,
   PLAYER_MAX_HP,
   WAVE_COUNTDOWN_THRESHOLD,
   WIN_WAVES,
 } from "./gameConstants";
 import { cardinalDir } from "./gameUtils";
 import "./App.css";
+
+// ---------------------------------------------------------------------------
+// Spike trap 3D mesh — rendered inside the Canvas as children of PerspectiveDungeonView
+// ---------------------------------------------------------------------------
+
+const _spikeQ = new THREE.Quaternion();
+const _spikeV = new THREE.Vector3();
+const _spikeS = new THREE.Vector3();
+
+function buildSpikeMatrix(
+  px: number,
+  py: number,
+  pz: number,
+  ry: number,
+  scaleY: number,
+  scaleX: number,
+): THREE.Matrix4 {
+  _spikeQ.setFromEuler(new THREE.Euler(0, ry, 0, "YXZ"));
+  const m = new THREE.Matrix4();
+  m.compose(_spikeV.set(px, py, pz), _spikeQ, _spikeS.set(scaleX, scaleY, 1));
+  return m;
+}
+
+function SpikeTrapMeshes({
+  disarmedTraps,
+  hazardData,
+  dungeonWidth,
+  atlas,
+  texture,
+  tileSize,
+  ceilingHeight,
+  fogNear,
+  fogFar,
+  torchColor,
+  torchIntensity,
+}: {
+  disarmedTraps: Set<string>;
+  hazardData: Uint8Array;
+  dungeonWidth: number;
+  atlas: TileAtlas;
+  texture: THREE.Texture;
+  tileSize: number;
+  ceilingHeight: number;
+  fogNear?: number;
+  fogFar?: number;
+  torchColor?: string;
+  torchIntensity?: number;
+}) {
+  const torchColorObj = useMemo(
+    () => (torchColor ? new THREE.Color(torchColor) : undefined),
+    [torchColor],
+  );
+
+  const instances = useMemo<TileInstance[]>(() => {
+    const result: TileInstance[] = [];
+    const spikeH = ceilingHeight / 3;
+    const spacing = tileSize / 3;
+    const HALF_PI = Math.PI / 2;
+
+    for (const key of disarmedTraps) {
+      const [xs, zs] = key.split("_");
+      const cx = parseInt(xs, 10);
+      const cz = parseInt(zs, 10);
+      if (hazardData[cz * dungeonWidth + cx] !== 1) continue;
+
+      const wx = (cx + 0.5) * tileSize;
+      const wz = (cz + 0.5) * tileSize;
+      const py = spikeH / 2;
+
+      // Group A: 3 fins running along Z, offset along X, rotated 90° around Y
+      for (const dx of [-spacing, 0, spacing]) {
+        result.push({
+          matrix: buildSpikeMatrix(wx + dx, py, wz, HALF_PI, spikeH, tileSize),
+          tileId: SPIKE_TRAP_OVERLAY_ID,
+        });
+      }
+      // Group B: 3 fins running along X, offset along Z, no Y rotation
+      for (const dz of [-spacing, 0, spacing]) {
+        result.push({
+          matrix: buildSpikeMatrix(wx, py, wz + dz, 0, spikeH, tileSize),
+          tileId: SPIKE_TRAP_OVERLAY_ID,
+        });
+      }
+    }
+    return result;
+  }, [disarmedTraps, hazardData, dungeonWidth, tileSize, ceilingHeight]);
+
+  if (instances.length === 0) return null;
+
+  return (
+    <InstancedTileMesh
+      instances={instances}
+      atlas={atlas}
+      texture={texture}
+      fogNear={fogNear}
+      fogFar={fogFar}
+      torchColor={torchColorObj}
+      torchIntensity={torchIntensity}
+      doubleSide
+    />
+  );
+}
 
 export default function App() {
   const {
@@ -153,6 +262,11 @@ export default function App() {
   // Interaction prompt text
   const promptText = useMemo(() => {
     if (!facingTarget) return null;
+    if (facingTarget.type === "trap") {
+      const interactKey =
+        keybindings.interact[0] === " " ? "space" : keybindings.interact[0];
+      return `Spike trap triggered — Press [${interactKey}] to rearm`;
+    }
     if (facingTarget.type === "stove") {
       const state = gs.stoveStates.get(facingTarget.stoveKey);
       if (!state?.brewing) return "Teaomatic — Press [space] to brew tea";
@@ -169,7 +283,7 @@ export default function App() {
       return `${mob?.name} is unconscious — Press [space] to offer tea to revive`;
     }
     return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press [space] to offer tea`;
-  }, [facingTarget, gs.stoveStates, ds.initialMobs, gs.mobSatiations]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [facingTarget, gs.stoveStates, ds.initialMobs, gs.mobSatiations, keybindings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Combined mobile flash + attack dirs (mobs first, then alive advs)
   const mobileFlash = useMemo(
@@ -277,7 +391,21 @@ export default function App() {
                 wallTileMap={WALL_TILE_MAP}
                 ceilingTileMap={CEILING_TILE_MAP}
                 style={{ width: "100%", height: "100%" }}
-              />
+              >
+                <SpikeTrapMeshes
+                  disarmedTraps={gs.disarmedTraps}
+                  hazardData={ds.hazardData}
+                  dungeonWidth={dungeonWidth}
+                  atlas={gs.atlas}
+                  texture={gs.texture}
+                  tileSize={TILE_SIZE}
+                  ceilingHeight={CEILING_H}
+                  fogNear={4}
+                  fogFar={28}
+                  torchColor={torchColor}
+                  torchIntensity={torchIntensity}
+                />
+              </PerspectiveDungeonView>
             )}
 
             <WaveCountdown
