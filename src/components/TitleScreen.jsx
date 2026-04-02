@@ -303,10 +303,8 @@ const STORM_CLOUD_DEFS = [
   },
 ];
 
-// White clouds — gentle independent drift in the cleared lite sky.
-// Each has a dark underlayer (darkTi) that follows the same movement sequence
-// but delayed by LITE_FOLLOW_DELAY seconds, so it lags then catches up.
-const LITE_FOLLOW_DELAY = 0.5;
+const LITE_FOLLOW_OFFSET = 0.02; // Fixed X offset for dark underlayer
+
 
 // Flowers — appear with white clouds and turn continuously
 const FLOWER_DEFS = [
@@ -511,12 +509,8 @@ function SceneContent({
       // Dark underlayer evaluates the same sequence but LITE_FOLLOW_DELAY behind,
       // clamped to startT so it doesn't evaluate before the cloud exists.
       if (darkMesh) {
-        darkMesh.position.x = driftX(
-          Math.max(st, t - LITE_FOLLOW_DELAY),
-          positions,
-          W,
-          loop,
-        );
+        darkMesh.position.x = driftX(t, positions, W, loop) + (LITE_FOLLOW_OFFSET * W);
+
         darkMesh.material.opacity = opacity * 0.3;
       }
     }
