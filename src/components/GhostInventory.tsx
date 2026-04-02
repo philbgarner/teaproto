@@ -9,46 +9,71 @@ export default function GhostInventory({
   columnsPerRow = 3,
 }: GhostInventoryProps) {
   const { playerData } = useSettings();
-  const { registry, playerEntity, playerInventory } = playerData.ecsData;
+  const { registry, playerEntity, playerInventory, leftHand, rightHand } =
+    playerData.ecsData;
 
   const slots =
     playerInventory != null
       ? (registry.components.inventory.get(playerInventory)?.slots ?? [])
       : registry.getFirstInventorySlots(playerEntity);
 
+  const leftHandItem =
+    leftHand != null
+      ? (registry.components.inventory.get(leftHand)?.slots ?? [])
+      : [];
+
+  const rightHandItem =
+    rightHand != null
+      ? (registry.components.inventory.get(rightHand)?.slots ?? [])
+      : [];
+
   return (
     <div
       className={styles.inventoryContainer}
-      style={{ gridTemplateColumns: `repeat(${columnsPerRow}, 1fr)` }}
+      style={{ display: "flex", flexDirection: "column" }}
     >
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <button key={"lefthand"}>left hand</button>
-        <button key={"righthand"}>left hand</button>
+        <button
+          key={"lefthand"}
+          className={styles.inventorySlot}
+          style={{ maxWidth: "50%" }}
+        >
+          left
+        </button>
+        <button
+          key={"righthand"}
+          className={styles.inventorySlot}
+          style={{ maxWidth: "50%" }}
+        >
+          right
+        </button>
       </div>
 
-      {slots.map((slotEntity) => {
-        const name = registry.getSlotObjectName(slotEntity);
-        const count = registry.getSlotQuantity(slotEntity);
-        const isEmpty = !name;
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {slots.map((slotEntity) => {
+          const name = registry.getSlotObjectName(slotEntity);
+          const count = registry.getSlotQuantity(slotEntity);
+          const isEmpty = !name;
 
-        return (
-          <button
-            key={slotEntity}
-            className={`${styles.inventorySlot} ${isEmpty ? styles.emptySlot : ""}`}
-            disabled={isEmpty}
-          >
-            {!isEmpty && (
-              <>
-                <span className={styles.itemName}>{name}</span>
-                {count > 1 && (
-                  <span className={styles.itemCount}>×{count}</span>
-                )}
-              </>
-            )}
-            {isEmpty && `(empty)`}
-          </button>
-        );
-      })}
+          return (
+            <button
+              key={slotEntity}
+              className={`${styles.inventorySlot} ${isEmpty ? styles.emptySlot : ""}`}
+              disabled={isEmpty}
+            >
+              {!isEmpty && (
+                <>
+                  <span className={styles.itemName}>{name}</span>
+                  {count > 1 && (
+                    <span className={styles.itemCount}>×{count}</span>
+                  )}
+                </>
+              )}
+              {isEmpty && `(empty)`}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
