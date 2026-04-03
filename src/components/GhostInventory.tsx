@@ -10,6 +10,10 @@ function LeftHandEmpty() {
     <div
       style={{
         backgroundImage: `${import.meta.env.BASE_URL}textures/icons.png`,
+        width: "32px",
+        height: "32px",
+        backgroundPosition: "64px 64px",
+        backgroundSize: "256px 256px",
       }}
     ></div>
   );
