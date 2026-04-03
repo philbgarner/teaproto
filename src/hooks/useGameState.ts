@@ -1016,8 +1016,9 @@ export function useGameState({
     if (doorStatesRef.current.has(playerDoorKey)) {
       const playerDoorState =
         doorStatesRef.current.get(playerDoorKey) ?? "closed";
-      if (playerDoorState !== "locked") {
+      if (playerDoorState === "closed") {
         setDoorStates((prev) => new Map(prev).set(playerDoorKey, "open"));
+        showMsg("You open the door.");
       }
     }
     function isWalkableForLos(x: number, z: number): boolean {
@@ -2214,7 +2215,7 @@ export function useGameState({
           setDoorStates((prev) =>
             new Map(prev).set(facingTarget.doorKey, "open"),
           );
-          showMsg("You unlock the door.");
+          showMsg("You open the door.");
         }
       }
     }
