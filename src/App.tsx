@@ -729,6 +729,11 @@ export default function App() {
     ds.spawnZ,
     {
       onStep: gs.onStep,
+      onRotation: () => {
+        // Update facing target immediately when player rotates
+        const facingTarget = gs.getFacingTarget(camLogicalRef);
+        gs.facingTargetRef.current = facingTarget;
+      },
       blocked: gs.showRecipeMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
       canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,

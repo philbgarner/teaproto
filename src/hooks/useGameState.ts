@@ -2067,9 +2067,9 @@ export function useGameState({
   const facingTargetRef = useRef<any>(null);
 
   useEffect(() => {
-    const facingTarget = facingTargetRef.current;
-
     function doInteract() {
+      // Read fresh facing target from ref to avoid closure issues
+      const facingTarget = facingTargetRef.current;
       if (!facingTarget) return;
       if (gameState !== "playing") return;
 
