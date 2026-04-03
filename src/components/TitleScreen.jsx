@@ -3,8 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
 import { Suspense } from "react";
-import { useSfx } from "../hooks/useSfx";
-import { useMusic } from "../hooks/useMusic";
+import { useSoundHelper } from "../hooks/useSoundHelper";
 import { useSettings } from "../SettingsContext";
 import SettingsTabs from "../SettingsTabs";
 import Credits from "./Credits";
@@ -680,40 +679,24 @@ function SceneContent({
 
 function PreloadedScene({ onMenuReady, onMusicReady, skipRef }) {
   const textures = useTexture(ALL_TEXTURE_PATHS);
-  const { play: playLightningStrike } = useSfx(
-    `${BASE}sfx/dragon-studio-lightning-strike-386161.mp3`,
-    0.25,
-  );
-  const { play: playThunderStrike } = useSfx(
-    `${BASE}sfx/tanweraman-thunder-strike-wav-321628.mp3`,
-    0.25,
-  );
-  const { play: playMusic, fadeOut: fadeOutMusic } = useMusic(
-    `${BASE}music/juliush-awakening-chill-out-music-1295.mp3`,
-    { loop: true, volume: 0.25 },
-  );
-  const { play: playBirds, fadeOut: fadeOutBirds } = useSfx(
-    `${BASE}sfx/loswin23-morning-birds-499429.mp3`,
-    0.2,
-  );
-  const { fadeIn: fadeInSafeZone } = useMusic(
-    `${BASE}music/MUS_8_SafeZone_Cozy.ogg`,
-    { loop: true },
-    1.0,
-  );
+  const { sounds } = useSoundHelper();
 
   useEffect(() => {
-    onMusicReady({ fadeOutMusic, fadeOutBirds, fadeInSafeZone });
-  }, []);
+    onMusicReady({ 
+      fadeOutMusic: sounds.mainTheme.fadeOut, 
+      fadeOutBirds: sounds.birds.fadeOut, 
+      fadeInSafeZone: sounds.safeZoneMusic.fadeIn 
+    });
+  }, [sounds]);
 
   return (
     <SceneContent
       textures={textures}
       onMenuReady={onMenuReady}
-      playLightningStrike={playLightningStrike}
-      playThunderStrike={playThunderStrike}
-      playMusic={playMusic}
-      playBirds={playBirds}
+      playLightningStrike={sounds.lightning.play}
+      playThunderStrike={sounds.thunder.play}
+      playMusic={sounds.mainTheme.play}
+      playBirds={sounds.birds.play}
       skipRef={skipRef}
     />
   );

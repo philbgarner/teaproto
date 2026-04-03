@@ -15,7 +15,7 @@ export function useSoundHelper() {
   const uiClick = useSfx(`${import.meta.env.BASE_URL}sfx/freesound_community-ui-click-97915.mp3`, { volume: 0.2 });
   const selectionChanged = useSfx(`${import.meta.env.BASE_URL}sfx/Selection_changed.wav`, { volume: 0.4 });
   const acceptSelection = useSfx(`${import.meta.env.BASE_URL}sfx/accept_selection.wav`, { volume: 0.5 });
-  const denySelection = useSfx(`${import.meta.env.BASE_URL}sfx/deny_selection.wav`, { volume: 0.5 });
+  const denySelection = useSfx(`${import.meta.env.BASE_URL}sfx/deny_selection.wav`, { volume: 0.2 });
   
   // Game Action Sounds
   const lightning = useSfx(`${import.meta.env.BASE_URL}sfx/dragon-studio-lightning-strike-386161.mp3`, { volume: 0.4 });
@@ -24,12 +24,17 @@ export function useSoundHelper() {
   const twinkle = useSfx(`${import.meta.env.BASE_URL}sfx/twinkle.wav`, { volume: 0.3 });
   const invert_twinkle = useSfx(`${import.meta.env.BASE_URL}sfx/invert_twinkle.wav`, { volume: 0.3 });
   const tea_ready = useSfx(`${import.meta.env.BASE_URL}sfx/tea_ready.wav`, { volume: 0.5 });
+  const beep_failure = useSfx(`${import.meta.env.BASE_URL}sfx/beep_failure.wav`, { volume: 0.5 });
+  const trap_armed = useSfx(`${import.meta.env.BASE_URL}sfx/trap_armed.wav`, { volume: 0.5 });
   
   // Door Sounds
   const doorOpen = useSfx(`${import.meta.env.BASE_URL}sfx/door_open.wav`, { volume: 0.5 });
   const doorClose = useSfx(`${import.meta.env.BASE_URL}sfx/door_closes.wav`, { volume: 0.5 });
   const key_open = useSfx(`${import.meta.env.BASE_URL}sfx/key_turn.wav`, { volume: 0.5 });
   const key_close = useSfx(`${import.meta.env.BASE_URL}sfx/key_lock.wav`, { volume: 0.5 });
+  const slideUp = useSfx(`${import.meta.env.BASE_URL}sfx/slide_up.wav`, { volume: 0.5 });
+  const slideDown = useSfx(`${import.meta.env.BASE_URL}sfx/slide_down.wav`, { volume: 0.5 });
+
 
   // Ambient/Environment Sounds
   const birds = useMusic(`${import.meta.env.BASE_URL}sfx/loswin23-morning-birds-499429.mp3`, { volume: 0.2, loop: true });
@@ -37,7 +42,7 @@ export function useSoundHelper() {
   // Music Tracks
   const mainTheme = useMusic(`${import.meta.env.BASE_URL}music/juliush-awakening-chill-out-music-1295.mp3`, { volume: 0.25, loop: true });
   const safeZoneMusic = useMusic(`${import.meta.env.BASE_URL}music/MUS_8_SafeZone_Cozy.ogg`, { volume: 1.0, loop: true });
-  const mainTheme_2 = useMusic(`${import.meta.env.BASE_URL}music/MUS_1_MainTheme_Cozy.ogg`, { volume: 1.0, loop: true });
+  const mainThemeDungeon = useMusic(`${import.meta.env.BASE_URL}music/MUS_1_MainTheme_Cozy.ogg`, { volume: 1.0, loop: true });
 
   //footsteps
   const footstep_1 = useSfx(`${import.meta.env.BASE_URL}sfx/footstep_1.wav`, { volume: 0.3 });
@@ -70,14 +75,18 @@ export function useSoundHelper() {
       twinkle,
       invert_twinkle,
       tea_ready,
+      beep_failure,
+      trap_armed,
       doorOpen,
       doorClose,
       key_open,
       key_close,
+      slideUp,
+      slideDown,
       birds,
       mainTheme,
       safeZoneMusic,
-      mainTheme_2,
+      mainThemeDungeon,
       playRandomFootstep
     }
   };

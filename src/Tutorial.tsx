@@ -23,6 +23,7 @@ import { cardinalDir } from "./gameUtils";
 import { RECIPES } from "./tea";
 import { LESSON_CONFIGS } from "./tutorial/lessons";
 import { buildPassageMask } from "../roguelike-mazetools/src/rendering/hiddenPassagesMask";
+import { useSoundHelper } from "./hooks/useSoundHelper";
 import "./App.css";
 
 // Tutorial uses Easy-like settings, waves effectively disabled
@@ -269,6 +270,7 @@ function LessonView({
                 gs.showMsg(
                   `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
                 );
+                sounds.acceptSelection.play();
               }}
               onCancel={() => gs.setShowRecipeMenu(false)}
             />
@@ -342,6 +344,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     setAdventurerDreadRate,
     setAdventurerLootPerChest,
   } = useSettings();
+  const { sounds } = useSoundHelper();
   const [lessonIndex, setLessonIndex] = useState(0);
   const lessonDoneRef = useRef(false);
 
