@@ -364,6 +364,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     spawnYaw: ds.spawnYaw,
     stovePlacements: ds.stovePlacements,
     doorPlacements: [],
+    hazardData: new Uint8Array(config.dungeonW * config.dungeonH),
     dungeonSeed: 0x1337 + lessonIndex,
     dungeonWidth: config.dungeonW,
     dungeonHeight: config.dungeonH,
@@ -375,6 +376,11 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
 
   useEffect(() => {
     lessonDoneRef.current = false;
+
+    // Start every lesson fully unexplored
+    if (gs.exploredMaskRef.current) {
+      gs.exploredMaskRef.current.fill(0);
+    }
 
     // Lesson 1: replace auto-generated passages with our specific one
     if (lessonIndex === 0 && config.passage) {

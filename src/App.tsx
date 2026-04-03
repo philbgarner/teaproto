@@ -773,6 +773,7 @@ export default function App() {
                 floorTileMap={FLOOR_TILE_MAP}
                 wallTileMap={WALL_TILE_MAP}
                 ceilingTileMap={CEILING_TILE_MAP}
+                ghostWallRadius={!gs.leftHandTea && !gs.rightHandTea ? TILE_SIZE * 1.5 : undefined}
                 style={{ width: "100%", height: "100%" }}
               >
                 <SpikeTrapMeshes
@@ -945,6 +946,10 @@ export default function App() {
                 x: pos.x,
                 z: pos.z,
                 name: (ds.initialMobs as any[])[i]?.name,
+                hp: gs.mobHps[i],
+                maxHp: (ds.initialMobs as any[])[i]?.hp ?? 20,
+                satiation: gs.mobSatiations[i],
+                maxSatiation: 40,
               }),
             )}
             adventurers={gs.adventurers}

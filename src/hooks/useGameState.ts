@@ -817,7 +817,6 @@ export function useGameState({
 
   // On each player step: cool tea, count down brewing, run game loop
   const onStep = useCallback(() => {
-    console.log("[onStep] start, gameState:", gameState);
     if (gameState !== "playing") return;
     // --- Tea cooling ---
     // Check if player is in a warm or cozy room (roomTemp > 127)
@@ -1213,6 +1212,7 @@ export function useGameState({
           newChests.splice(chestIdx, 1);
           if (pickedChest.mimic) {
             adv = { ...adv, alive: false, hp: 0 };
+            stepMessage = `The ${adv.name} opened a mimic chest and was devoured!`;
             return {
               adv,
               intendedX: adv.x,
@@ -2426,6 +2426,8 @@ export function useGameState({
     addTeaToHand,
     mobSatiations,
     setMobSatiations,
+    mobHps,
+    setMobHps,
     mobPositions,
     setMobPositions,
     mobPositionsRef,

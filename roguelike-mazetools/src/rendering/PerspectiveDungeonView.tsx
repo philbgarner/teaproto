@@ -932,6 +932,152 @@ function buildFaceInstances(
 // ---------------------------------------------------------------------------
 
 // Bone icon UV in the 256×256 icons.png sheet (tileSize=32, bone at pixel [224,64])
+// ---------------------------------------------------------------------------
+// GhostWallMesh — ectoplasmic cyan proximity overlay on vertical wall faces
+// ---------------------------------------------------------------------------
+// Shown when the camera is within ghostRadius world units of a wall face and
+// the player is in ghost/wall-phase mode (no tea in hand).  The intersection
+// of a sphere of radius ghostRadius centred on the camera with each wall plane
+// is rendered as a translucent cyan ring: transparent at the deepest point
+// (closest to camera), fading in toward the edge of the disc.
+
+const GHOST_WALL_VERT = /* glsl */ `
+attribute float aTileId;
+uniform vec2  uTileSize;
+uniform float uColumns;
+varying vec3 vWorldPos;
+varying vec3 vNormal;
+varying vec2 vAtlasUv;
+
+void main() {
+  float id  = floor(aTileId + 0.5);
+  float col = mod(id, uColumns);
+  float row = floor(id / uColumns);
+  vec2 offset = vec2(col * uTileSize.x, 1.0 - (row + 1.0) * uTileSize.y);
+  vAtlasUv = offset + uv * uTileSize;
+
+  vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);
+  vWorldPos = worldPos.xyz;
+
+  // Face normal in world space — PlaneGeometry default normal is +Z, rotated by instance.
+  mat3 normalMat = mat3(modelMatrix * instanceMatrix);
+  vNormal = normalize(normalMat * vec3(0.0, 0.0, 1.0));
+
+  gl_Position = projectionMatrix * viewMatrix * worldPos;
+}
+`;
+
+const GHOST_WALL_FRAG = /* glsl */ `
+uniform sampler2D uAtlas;
+uniform vec3  uCameraPos;
+uniform float uGhostRadius;
+varying vec3 vWorldPos;
+varying vec3 vNormal;
+varying vec2 vAtlasUv;
+
+void main() {
+  vec3 dVec = vWorldPos - uCameraPos;
+
+  // Perpendicular distance from camera to this wall plane.
+  float d_perp = abs(dot(dVec, vNormal));
+
+  // Intersection circle radius at this plane.
+  float r_sq = uGhostRadius * uGhostRadius - d_perp * d_perp;
+  if (r_sq <= 0.0) discard;
+  float r_intersect = sqrt(r_sq);
+
+  // Distance from the projection of camera onto the wall to this fragment.
+  float d_total = length(dVec);
+  float d_along = sqrt(max(0.0, d_total * d_total - d_perp * d_perp));
+
+  if (d_along >= r_intersect) discard;
+
+  // t = 0 at centre (deepest/transparent hole), 1 at the intersection edge.
+  float t = d_along / r_intersect;
+
+  vec4 texColor = texture2D(uAtlas, vAtlasUv);
+  if (texColor.a < 0.05) discard;
+
+  // Cyan ectoplasm using texture luminance as detail.
+  float lum = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+  vec3 cyan = vec3(0.0, 0.95, 0.85);
+  vec3 ectoColor = cyan * (0.5 + lum * 0.5);
+
+  // Glow concentrated near the edge of the hole: ramps up toward t=1.
+  // The wall is discarded for t < 1, so this fills the ring around the hole.
+  float ring = smoothstep(0.5, 1.0, t);
+  float alpha = ring * 0.9;
+
+  gl_FragColor = vec4(ectoColor, alpha);
+}
+`;
+
+function GhostWallMesh({
+  walls,
+  atlas,
+  texture,
+  ghostRadius,
+}: {
+  walls: TileInstance[];
+  atlas: TileAtlas;
+  texture: THREE.Texture;
+  ghostRadius: number;
+}) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const count = walls.length;
+
+  const { geo, mat } = useMemo(() => {
+    const geo = new THREE.PlaneGeometry(1, 1);
+    const tileIds = new Float32Array(count);
+    walls.forEach((w, i) => {
+      tileIds[i] = w.tileId;
+    });
+    geo.setAttribute("aTileId", new THREE.InstancedBufferAttribute(tileIds, 1));
+
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uAtlas: { value: texture },
+        uTileSize: {
+          value: new THREE.Vector2(
+            atlas.tileWidth / atlas.sheetWidth,
+            atlas.tileHeight / atlas.sheetHeight,
+          ),
+        },
+        uColumns: { value: atlas.columns },
+        uCameraPos: { value: new THREE.Vector3() },
+        uGhostRadius: { value: ghostRadius },
+      },
+      vertexShader: GHOST_WALL_VERT,
+      fragmentShader: GHOST_WALL_FRAG,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+
+    return { geo, mat };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walls, atlas, texture, count]);
+
+  useEffect(() => {
+    if (!meshRef.current) return;
+    walls.forEach((w, i) => {
+      meshRef.current!.setMatrixAt(i, w.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+    mat.uniforms.uGhostRadius.value = ghostRadius;
+  }, [walls, ghostRadius, mat]);
+
+  useFrame(({ camera }) => {
+    mat.uniforms.uCameraPos.value.copy(camera.position);
+  });
+
+  if (count === 0) return null;
+  return <instancedMesh ref={meshRef} args={[geo, mat, count]} />;
+}
+
+// ---------------------------------------------------------------------------
+
 const BONE_UV = {
   x: 224 / 256,
   y: (256 - 64 - 32) / 256, // flip to WebGL bottom-origin
@@ -1131,6 +1277,13 @@ type SceneProps = {
   backgroundTile?: number;
   /** Optional icons texture for scattering bone decorations on the background sphere. */
   boneTexture?: THREE.Texture;
+  /**
+   * When set, renders an ectoplasmic cyan ghost-wall overlay on vertical wall
+   * faces within this world-space radius of the camera.  Pass undefined (or 0)
+   * to disable.  Intended to hint that the player can currently phase through
+   * walls (i.e. no tea in hand).
+   */
+  ghostWallRadius?: number;
 };
 
 function DungeonScene({
@@ -1179,6 +1332,7 @@ function DungeonScene({
   ceilingTileMap,
   backgroundTile,
   boneTexture,
+  ghostWallRadius,
 }: SceneProps) {
   const fogColorObj = useMemo(
     () => (fogColor ? new THREE.Color(fogColor) : undefined),
@@ -1331,7 +1485,16 @@ function DungeonScene({
         tintColors={tintColorObjs}
         torchColor={torchColorObj}
         torchIntensity={torchIntensity}
+        ghostRadius={ghostWallRadius}
       />
+      {ghostWallRadius != null && ghostWallRadius > 0 && (
+        <GhostWallMesh
+          walls={walls}
+          atlas={atlas}
+          texture={texture}
+          ghostRadius={ghostWallRadius}
+        />
+      )}
 
       {objects && objects.length > 0 && objectRegistry && (
         <SceneObjects

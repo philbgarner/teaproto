@@ -38,7 +38,15 @@ const TOOLTIP_STYLE: React.CSSProperties = {
 // Entity prop types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type MinimapMob = { x: number; z: number; name?: string };
+export type MinimapMob = {
+  x: number;
+  z: number;
+  name?: string;
+  hp?: number;
+  maxHp?: number;
+  satiation?: number;
+  maxSatiation?: number;
+};
 export type MinimapAdventurer = { x: number; z: number; alive: boolean; name?: string };
 export type MinimapDoor = { x: number; z: number };
 export type MinimapStove = { x: number; z: number };
@@ -147,23 +155,71 @@ function ChestIcon({ x, z, tileSize }: { x: number; z: number; tileSize: number 
 // Circle icon — mobs (green) and adventurers (red)
 // ─────────────────────────────────────────────────────────────────────────────
 
+function ArcRing({
+  inner,
+  outer,
+  fraction,
+  bgColor,
+  fgColor,
+  renderOrder,
+}: {
+  inner: number;
+  outer: number;
+  fraction: number;
+  bgColor: string;
+  fgColor: string;
+  renderOrder: number;
+}) {
+  const frac = Math.max(0, Math.min(1, fraction));
+  return (
+    <>
+      {/* background full ring */}
+      <mesh rotation={[-HALF_PI, 0, 0]} renderOrder={renderOrder}>
+        <ringGeometry args={[inner, outer, 32, 1, 0, TWO_PI]} />
+        <meshBasicMaterial color={bgColor} depthTest={false} />
+      </mesh>
+      {/* foreground arc */}
+      {frac > 0 && (
+        <mesh rotation={[-HALF_PI, 0, -HALF_PI]} renderOrder={renderOrder + 0.1}>
+          <ringGeometry args={[inner, outer, 32, 1, 0, TWO_PI * frac]} />
+          <meshBasicMaterial color={fgColor} depthTest={false} />
+        </mesh>
+      )}
+    </>
+  );
+}
+
 function CircleIcon({
   x,
   z,
   tileSize,
   color,
   tooltip,
+  hp,
+  maxHp,
+  satiation,
+  maxSatiation,
 }: {
   x: number;
   z: number;
   tileSize: number;
   color: string;
   tooltip: string;
+  hp?: number;
+  maxHp?: number;
+  satiation?: number;
+  maxSatiation?: number;
 }) {
   const [hovered, setHovered] = useState(false);
   const r = tileSize * 0.3;
   const wx = (x + 0.5) * tileSize;
   const wz = (z + 0.5) * tileSize;
+
+  const showBars = hp !== undefined && maxHp !== undefined && satiation !== undefined && maxSatiation !== undefined;
+  const hpFrac = showBars ? hp! / maxHp! : 1;
+  const satFrac = showBars ? satiation! / maxSatiation! : 1;
+  const unconscious = showBars && hp === 0;
+  const displayColor = unconscious ? "#dddd00" : color;
 
   return (
     <group position={[wx, 0.1, wz]}>
@@ -174,8 +230,28 @@ function CircleIcon({
         onPointerLeave={() => setHovered(false)}
       >
         <circleGeometry args={[r, 16]} />
-        <meshBasicMaterial color={color} depthTest={false} />
+        <meshBasicMaterial color={displayColor} depthTest={false} />
       </mesh>
+      {showBars && (
+        <>
+          <ArcRing
+            inner={r * 1.15}
+            outer={r * 1.55}
+            fraction={hpFrac}
+            bgColor="#660000"
+            fgColor="#ff4444"
+            renderOrder={3}
+          />
+          <ArcRing
+            inner={r * 1.65}
+            outer={r * 2.05}
+            fraction={satFrac}
+            bgColor="#006060"
+            fgColor="#44dddd"
+            renderOrder={3}
+          />
+        </>
+      )}
       {hovered && <Html style={TOOLTIP_STYLE}>{tooltip}</Html>}
     </group>
   );
@@ -452,6 +528,10 @@ function MinimapScene({
           tileSize={tileSize}
           color="#22dd44"
           tooltip={m.name ?? "Monster"}
+          hp={m.hp}
+          maxHp={m.maxHp}
+          satiation={m.satiation}
+          maxSatiation={m.maxSatiation}
         />
       ))}
 

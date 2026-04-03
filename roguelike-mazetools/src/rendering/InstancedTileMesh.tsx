@@ -47,6 +47,8 @@ varying vec2  vAtlasUv;
 varying vec2  vTileOrigin; // atlas UV of this tile's bottom-left corner
 varying float vFogDist;
 varying vec2  vWorldPos;
+varying vec3  vWorldPos3D;
+varying vec3  vFaceNormal;
 varying vec2  vTileUv;
 varying float vHighlight;
 varying float vPassage;
@@ -68,7 +70,11 @@ void main() {
   vHazard    = aHazard;
 
   vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);
-  vWorldPos = worldPos.xz;
+  vWorldPos    = worldPos.xz;
+  vWorldPos3D  = worldPos.xyz;
+  // Face normal: PlaneGeometry default +Z rotated by this instance.
+  // normalizing handles any scale in the matrix.
+  vFaceNormal  = normalize(mat3(modelMatrix * instanceMatrix) * vec3(0.0, 0.0, 1.0));
 
   vec4 eyePos = viewMatrix * worldPos;
   vFogDist = uUsePlayerDist > 0.5
@@ -96,12 +102,16 @@ uniform float uPassageOvUnpressed; // tile ID for untoggled hidden passage overl
 uniform float uPassageOvPressed;   // tile ID for toggled hidden passage overlay
 uniform float uPassageOvOpen;      // tile ID for open-door overlay (toggled only)
 uniform float uHazardOv;           // tile ID for floor hazard overlay (0 = disabled)
+uniform vec3  uGhostCamPos;        // camera world position when ghost mode is active
+uniform float uGhostRadius;        // sphere radius (0 = disabled)
 ${TORCH_UNIFORMS_GLSL}
 
 varying vec2  vAtlasUv;
 varying vec2  vTileOrigin;
 varying float vFogDist;
 varying vec2  vWorldPos;
+varying vec3  vWorldPos3D;
+varying vec3  vFaceNormal;
 varying vec2  vTileUv;
 varying float vHighlight;
 varying float vPassage;
@@ -119,6 +129,18 @@ void main() {
 
   vec4 color = texture2D(uAtlas, atlasUv);
   if (color.a < 0.01) discard;
+
+  // Ghost wall hole: discard fragments inside the proximity sphere so the
+  // background shows through.  The ecto overlay mesh paints the ring edge.
+  if (uGhostRadius > 0.0) {
+    vec3 dVec    = vWorldPos3D - uGhostCamPos;
+    float d_perp = abs(dot(dVec, vFaceNormal));
+    float r_sq   = uGhostRadius * uGhostRadius - d_perp * d_perp;
+    if (r_sq > 0.0) {
+      float d_along = sqrt(max(0.0, dot(dVec, dVec) - d_perp * d_perp));
+      if (d_along < sqrt(r_sq)) discard;
+    }
+  }
 
   // Bump from intensity gradient: sample right+up neighbours, derive tangent normal.
   vec3 luma = vec3(0.299, 0.587, 0.114);
@@ -249,6 +271,12 @@ type Props = {
   bandNear?: number;
   /** Render both faces of each plane (default: FrontSide only). */
   doubleSide?: boolean;
+  /**
+   * When > 0, fragments inside the sphere of this world-space radius centred
+   * on the camera are discarded (creates a see-through hole in the wall).
+   * Camera position is read each frame automatically.
+   */
+  ghostRadius?: number;
 };
 
 export function InstancedTileMesh({
@@ -271,6 +299,7 @@ export function InstancedTileMesh({
   playerWorldPos,
   bandNear,
   doubleSide = false,
+  ghostRadius,
 }: Props) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
@@ -329,6 +358,8 @@ export function InstancedTileMesh({
           uHazardOv: { value: hazardOverlayId ?? 0 },
           uPlayerWorldPos: { value: new THREE.Vector2(0, 0) },
           uUsePlayerDist: { value: 0.0 },
+          uGhostCamPos: { value: new THREE.Vector3() },
+          uGhostRadius: { value: 0.0 },
           ...makeTorchUniforms(tintColors),
         },
         side: doubleSide ? THREE.DoubleSide : THREE.FrontSide,
@@ -336,8 +367,11 @@ export function InstancedTileMesh({
     [atlas, texture, fogNear, fogFar, fogColor, doubleSide],
   );
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     material.uniforms.uTime.value = clock.getElapsedTime();
+    if (material.uniforms.uGhostRadius.value > 0) {
+      material.uniforms.uGhostCamPos.value.copy(camera.position);
+    }
   });
 
   useEffect(() => {
@@ -383,6 +417,10 @@ export function InstancedTileMesh({
   useEffect(() => {
     material.uniforms.uBandNear.value = bandNear ?? DEFAULT_BAND_NEAR;
   }, [bandNear, material]);
+
+  useEffect(() => {
+    material.uniforms.uGhostRadius.value = ghostRadius ?? 0;
+  }, [ghostRadius, material]);
 
   useEffect(() => {
     const mesh = meshRef.current;
