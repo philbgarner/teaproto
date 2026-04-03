@@ -24,6 +24,7 @@ import { GameOverOverlay } from "./components/GameOverOverlay";
 import { MinimapSidebar } from "./components/MinimapSidebar";
 import { DifficultyModal } from "./components/DifficultyModal";
 import { RECIPES } from "./tea";
+import atlasJson from "./assets/atlas.json";
 import {
   TILE_FLOOR,
   TILE_CEILING,
@@ -40,6 +41,9 @@ import {
   PLAYER_MAX_HP,
   WAVE_COUNTDOWN_THRESHOLD,
   WIN_WAVES,
+  ATLAS_SHEET_W,
+  ATLAS_SHEET_H,
+  atlasIndex,
 } from "./gameConstants";
 import { cardinalDir } from "./gameUtils";
 import "./App.css";
@@ -222,6 +226,20 @@ const MIMIC_UV_RECT = new THREE.Vector4(
   64 / _CHAR_W,
   64 / _CHAR_H,
 );
+
+const _ATLAS_W = ATLAS_SHEET_W;
+const _ATLAS_H = ATLAS_SHEET_H;
+function spriteUvRect(name: string): THREE.Vector4 {
+  const entry = atlasIndex.sprites.byName(name);
+  const [px, py] = entry?.uv ?? [0, 0];
+  const tileSize = atlasJson.tileSize ?? 64;
+  return new THREE.Vector4(
+    px / _ATLAS_W,
+    1 - (py + tileSize) / _ATLAS_H,
+    tileSize / _ATLAS_W,
+    tileSize / _ATLAS_H,
+  );
+}
 
 const CHEST_VERT = /* glsl */ `
 uniform float uTime;
@@ -538,7 +556,6 @@ function FurnitureBillboard({
 
 function FurnitureMeshes({
   items,
-  uvRect,
   tileSize = 1,
   fogNear = 4,
   fogFar = 28,
@@ -546,7 +563,6 @@ function FurnitureMeshes({
   torchIntensity,
 }: {
   items: { id: string; x: number; z: number; type: string }[];
-  uvRect: THREE.Vector4;
   tileSize?: number;
   fogNear?: number;
   fogFar?: number;
@@ -555,48 +571,59 @@ function FurnitureMeshes({
 }) {
   const texture = useLoader(
     THREE.TextureLoader,
-    `${import.meta.env.BASE_URL}textures/monsters.png`,
+    `${import.meta.env.BASE_URL}textures/atlas.png`,
   );
 
-  const mat = useMemo(() => {
+  const matsByType = useMemo(() => {
     texture.magFilter = THREE.NearestFilter;
     texture.minFilter = THREE.NearestFilter;
     texture.generateMipmaps = false;
     texture.needsUpdate = true;
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        uAtlas: { value: texture },
-        uUvRect: { value: uvRect },
-        uFogColor: { value: new THREE.Color(0, 0, 0) },
-        uFogNear: { value: fogNear },
-        uFogFar: { value: fogFar },
-        ...makeTorchUniforms(),
-      },
-      vertexShader: CHEST_VERT,
-      fragmentShader: FURNITURE_FRAG,
-      transparent: true,
-      alphaTest: 0.5,
-      side: THREE.DoubleSide,
-    });
+    const types = [...new Set(items.map((i) => i.type))];
+    return Object.fromEntries(
+      types.map((type) => [
+        type,
+        new THREE.ShaderMaterial({
+          uniforms: {
+            uAtlas: { value: texture },
+            uUvRect: { value: spriteUvRect(type) },
+            uFogColor: { value: new THREE.Color(0, 0, 0) },
+            uFogNear: { value: fogNear },
+            uFogFar: { value: fogFar },
+            ...makeTorchUniforms(),
+          },
+          vertexShader: CHEST_VERT,
+          fragmentShader: FURNITURE_FRAG,
+          transparent: true,
+          alphaTest: 0.5,
+          side: THREE.DoubleSide,
+        }),
+      ]),
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [texture, uvRect, fogNear, fogFar]);
+  }, [texture, fogNear, fogFar]);
 
   const torchColorObj = useMemo(
     () => (torchColor ? new THREE.Color(torchColor) : undefined),
     [torchColor],
   );
   useEffect(() => {
-    if (torchColorObj) mat.uniforms.uTorchColor.value = torchColorObj;
-  }, [torchColorObj, mat]);
+    if (torchColorObj)
+      Object.values(matsByType).forEach(
+        (m) => (m.uniforms.uTorchColor.value = torchColorObj),
+      );
+  }, [torchColorObj, matsByType]);
   useEffect(() => {
     if (torchIntensity !== undefined)
-      mat.uniforms.uTorchIntensity.value = torchIntensity;
-  }, [torchIntensity, mat]);
+      Object.values(matsByType).forEach(
+        (m) => (m.uniforms.uTorchIntensity.value = torchIntensity),
+      );
+  }, [torchIntensity, matsByType]);
 
   return (
     <>
       {items.map((item) => (
-        <FurnitureBillboard key={item.id} item={item} tileSize={tileSize} mat={mat} />
+        <FurnitureBillboard key={item.id} item={item} tileSize={tileSize} mat={matsByType[item.type]} />
       ))}
     </>
   );
@@ -929,7 +956,6 @@ export default function App() {
                 />
                 <FurnitureMeshes
                   items={ds.initialFurniture ?? []}
-                  uvRect={new THREE.Vector4(0, 0, 0, 0) /* TODO: set furniture UV rect */}
                   tileSize={TILE_SIZE}
                   fogNear={4}
                   fogFar={28}
