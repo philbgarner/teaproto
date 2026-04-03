@@ -6,6 +6,8 @@ export type ActorId = string;
 
 export type ActorKind = "player" | "monster";
 
+export type RpsEffect = "none" | "bleeding" | "freezing" | "poisoned";
+
 export type ActorBase = {
   id: ActorId;
   kind: ActorKind;
@@ -47,6 +49,7 @@ export type MonsterActor = ActorBase & {
   defense: number;
   xp: number;
   alertState: MonsterAlertState;
+  rpsEffect: RpsEffect;
   searchTurnsLeft: number;
   lastKnownPlayerPos: { x: number; y: number } | null;
 };
