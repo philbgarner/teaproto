@@ -7,7 +7,10 @@
     { "id": 4, "name": "archDoor", "uv": [256, 0] },
     { "id": 5, "name": "archBrick", "uv": [0, 64] },
     { "id": 6, "name": "stoneColumn", "uv": [64, 64] },
-    { "id": 7, "name": "stoneColumnBase", "uv": [128, 64] }
+    { "id": 7, "name": "stoneColumnBase", "uv": [128, 64] },
+    { "id": 8, "name": "doorOpen", "uv": [64, 64] },
+    { "id": 9, "name": "doorClosed", "uv": [128, 64] },
+    { "id": 10, "name": "doorLocked", "uv": [256, 64] }
   ],
   "floorTypes": [
     { "id": 0, "name": "none" },

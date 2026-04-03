@@ -1,16 +1,22 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import * as THREE from "three";
+import { useLoader, useFrame } from "@react-three/fiber";
 import { useSettings } from "./SettingsContext";
 import { useDungeonSetup } from "./hooks/useDungeonSetup";
 import { useGameState } from "./hooks/useGameState";
 import { useEotBCamera } from "./hooks/useEotBCamera";
 import { PerspectiveDungeonView } from "../roguelike-mazetools/src/rendering/PerspectiveDungeonView";
 import {
+  TORCH_UNIFORMS_GLSL,
+  TORCH_HASH_GLSL,
+  TORCH_FNS_GLSL,
+  makeTorchUniforms,
+} from "../roguelike-mazetools/src/rendering/torchLighting";
+import {
   InstancedTileMesh,
   type TileInstance,
 } from "../roguelike-mazetools/src/rendering/InstancedTileMesh";
 import type { TileAtlas } from "../roguelike-mazetools/src/rendering/tileAtlas";
-import { GameHeader } from "./components/GameHeader";
 import { StatusBar } from "./components/StatusBar";
 import { WaveCountdown } from "./components/WaveCountdown";
 import { RecipeMenu } from "./components/RecipeMenu";
@@ -139,6 +145,163 @@ function SpikeTrapMeshes({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Coin drop 3D mesh — billboarded sprites using icons.png with torch lighting
+// ---------------------------------------------------------------------------
+
+// icons.png is 256×256 with 32-pixel tile grid.
+// coins1 sprite is at pixel origin (32, 128).
+const _ICONS_W = 256;
+const _ICONS_H = 256;
+const _ICON_PX = 32;
+const COIN_UV_RECT = new THREE.Vector4(
+  32 / _ICONS_W,
+  1 - (128 + _ICON_PX) / _ICONS_H, // WebGL: y=0 is bottom
+  _ICON_PX / _ICONS_W,
+  _ICON_PX / _ICONS_H,
+);
+
+const COIN_VERT = /* glsl */ `
+uniform float uTime;
+varying vec2 vUv;
+varying float vFogDist;
+varying vec2 vWorldPos;
+void main() {
+  vUv = uv;
+  float bob = sin(uTime * 2.5) * 0.06;
+  vec4 worldPos = modelMatrix * vec4(position.x, position.y + bob, position.z, 1.0);
+  vWorldPos = worldPos.xz;
+  vec4 eyePos = viewMatrix * worldPos;
+  vFogDist = length(eyePos.xyz);
+  gl_Position = projectionMatrix * eyePos;
+}
+`;
+
+const COIN_FRAG = /* glsl */ `
+uniform sampler2D uAtlas;
+uniform vec4 uUvRect;
+uniform vec3 uFogColor;
+${TORCH_UNIFORMS_GLSL}
+varying vec2 vUv;
+varying float vFogDist;
+varying vec2 vWorldPos;
+${TORCH_HASH_GLSL}
+${TORCH_FNS_GLSL}
+void main() {
+  vec4 color = texture2D(uAtlas, uUvRect.xy + vUv * uUvRect.zw);
+  if (color.a < 0.5) discard;
+  float band = torchBand(0.03);
+  vec3 lit = applyTorchLighting(color.rgb, band);
+  float shinePhase = fract(uTime * 0.4);
+  float shine = smoothstep(0.08, 0.0, abs(vUv.x - shinePhase)) * 0.7;
+  lit += color.rgb * shine * vec3(1.0, 0.95, 0.7);
+  gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
+}
+`;
+
+const COIN_GEO = new THREE.PlaneGeometry(1, 1);
+
+function CoinBillboard({
+  drop,
+  tileSize,
+  mat,
+}: {
+  drop: { x: number; z: number };
+  tileSize: number;
+  mat: THREE.ShaderMaterial;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+  const coinSize = tileSize * 0.5;
+  const wx = (drop.x + 0.5) * tileSize;
+  const wz = (drop.z + 0.5) * tileSize;
+
+  useFrame(({ camera }) => {
+    if (ref.current)
+      ref.current.rotation.y = Math.atan2(
+        camera.position.x - wx,
+        camera.position.z - wz,
+      );
+  });
+
+  return (
+    <mesh
+      ref={ref}
+      geometry={COIN_GEO}
+      material={mat}
+      position={[wx, coinSize / 2, wz]}
+      scale={[coinSize, coinSize, 1]}
+    />
+  );
+}
+
+function CoinDropMeshes({
+  drops,
+  tileSize = 1,
+  fogNear = 4,
+  fogFar = 28,
+  torchColor,
+  torchIntensity,
+}: {
+  drops: { id: string; x: number; z: number }[];
+  tileSize?: number;
+  fogNear?: number;
+  fogFar?: number;
+  torchColor?: string;
+  torchIntensity?: number;
+}) {
+  const texture = useLoader(
+    THREE.TextureLoader,
+    `${import.meta.env.BASE_URL}textures/icons.png`,
+  );
+
+  const mat = useMemo(() => {
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uAtlas: { value: texture },
+        uUvRect: { value: COIN_UV_RECT },
+        uFogColor: { value: new THREE.Color(0, 0, 0) },
+        uFogNear: { value: fogNear },
+        uFogFar: { value: fogFar },
+        uTime: { value: 0 },
+        ...makeTorchUniforms(),
+      },
+      vertexShader: COIN_VERT,
+      fragmentShader: COIN_FRAG,
+      transparent: true,
+      alphaTest: 0.5,
+      side: THREE.DoubleSide,
+    });
+  }, [texture, fogNear, fogFar]);
+
+  const torchColorObj = useMemo(
+    () => (torchColor ? new THREE.Color(torchColor) : undefined),
+    [torchColor],
+  );
+  useEffect(() => {
+    if (torchColorObj) mat.uniforms.uTorchColor.value = torchColorObj;
+  }, [torchColorObj, mat]);
+  useEffect(() => {
+    if (torchIntensity !== undefined)
+      mat.uniforms.uTorchIntensity.value = torchIntensity;
+  }, [torchIntensity, mat]);
+
+  useFrame(({ clock }) => {
+    mat.uniforms.uTime.value = clock.getElapsedTime();
+  });
+
+  return (
+    <>
+      {drops.map((drop) => (
+        <CoinBillboard key={drop.id} drop={drop} tileSize={tileSize} mat={mat} />
+      ))}
+    </>
+  );
+}
+
 export default function App() {
   const {
     playerData,
@@ -242,7 +405,12 @@ export default function App() {
       blocked: gs.showRecipeMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
       canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
-      blockedPositions: ds.stovePlacements,
+      blockedPositions: [
+        ...ds.stovePlacements,
+        ...ds.doorPlacements.filter(
+          (d: any) => gs.doorStates.get(`${d.x}_${d.z}`) === "locked",
+        ),
+      ],
       keybindings,
       startYaw: ds.spawnYaw,
     },
@@ -274,6 +442,16 @@ export default function App() {
         return `${state.brewing.recipe.name} is ready! — Press [space] to collect`;
       return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press [space] for status`;
     }
+    if (facingTarget.type === "door") {
+      const interactKey =
+        keybindings.interact[0] === " " ? "space" : keybindings.interact[0];
+      const state = gs.doorStates.get(facingTarget.doorKey) ?? "closed";
+      if (state === "open")
+        return `Open door — Press [${interactKey}] to close`;
+      if (state === "closed")
+        return `Closed door — Press [${interactKey}] to lock`;
+      return `Locked door — Press [${interactKey}] to unlock`;
+    }
     const mob = ds.initialMobs[facingTarget.mobIdx];
     const preferredRecipe = RECIPES.find(
       (r) => r.id === mob?.preferredRecipeId,
@@ -283,7 +461,14 @@ export default function App() {
       return `${mob?.name} is unconscious — Press [space] to offer tea to revive`;
     }
     return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press [space] to offer tea`;
-  }, [facingTarget, gs.stoveStates, ds.initialMobs, gs.mobSatiations, keybindings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    facingTarget,
+    gs.stoveStates,
+    gs.doorStates,
+    ds.initialMobs,
+    gs.mobSatiations,
+    keybindings,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Combined mobile flash + attack dirs (mobs first, then alive advs)
   const mobileFlash = useMemo(
@@ -293,6 +478,26 @@ export default function App() {
   const mobileAttackDirs = useMemo(
     () => [...gs.mobAttackDirs, ...gs.advAttackDirs],
     [gs.mobAttackDirs, gs.advAttackDirs],
+  );
+
+  // Door visual planes — one per door placement, type based on current door state.
+  const doorVisualObjects = useMemo(
+    () =>
+      ds.doorPlacements.map((door: any) => ({
+        x: door.x,
+        z: door.z,
+        type: `door_state_${gs.doorStates.get(`${door.x}_${door.z}`) ?? "closed"}`,
+        offsetX: door.offsetX ?? 0,
+        offsetZ: door.offsetZ ?? 0,
+        offsetY: door.offsetY,
+        yaw: door.yaw,
+      })),
+    [ds.doorPlacements, gs.doorStates],
+  );
+
+  const allObjects = useMemo(
+    () => [...ds.objects, ...doorVisualObjects],
+    [ds.objects, doorVisualObjects],
   );
 
   // Cells currently occupied by player or creatures — used to open doors.
@@ -305,8 +510,6 @@ export default function App() {
     }
     return keys;
   }, [camera.x, camera.z, gs.mobPositions, gs.adventurers]);
-
-  console.log("playerData", playerData);
 
   return (
     <>
@@ -361,7 +564,7 @@ export default function App() {
                 fogNear={4}
                 fogFar={28}
                 tileSize={TILE_SIZE}
-                objects={ds.objects}
+                objects={allObjects}
                 objectRegistry={gs.objectRegistry}
                 objectOccupiedKeys={doorOccupiedKeys}
                 mobiles={gs.mobiles}
@@ -400,6 +603,14 @@ export default function App() {
                   texture={gs.texture}
                   tileSize={TILE_SIZE}
                   ceilingHeight={CEILING_H}
+                  fogNear={4}
+                  fogFar={28}
+                  torchColor={torchColor}
+                  torchIntensity={torchIntensity}
+                />
+                <CoinDropMeshes
+                  drops={gs.xpDrops}
+                  tileSize={TILE_SIZE}
                   fogNear={4}
                   fogFar={28}
                   torchColor={torchColor}
@@ -539,6 +750,18 @@ export default function App() {
             floorData={ds.floorData}
             floorTileMap={FLOOR_TILE_MAP}
             tileSize={TILE_SIZE}
+            mobs={gs.mobPositions.map(
+              (pos: { x: number; z: number }, i: number) => ({
+                x: pos.x,
+                z: pos.z,
+                name: (ds.initialMobs as any[])[i]?.name,
+              }),
+            )}
+            adventurers={gs.adventurers}
+            doorPlacements={ds.doorPlacements}
+            stovePlacements={ds.stovePlacements}
+            hazardData={ds.hazardData}
+            disarmedTraps={gs.disarmedTraps}
           />
         </div>
 

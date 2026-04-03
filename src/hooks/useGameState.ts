@@ -1,19 +1,9 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { aStar8 } from "../../roguelike-mazetools/src/astar";
 import { makeContentRng } from "../../roguelike-mazetools/src/content";
-import {
-  generateHiddenPassages,
-} from "../../roguelike-mazetools/src/content";
-import {
-  buildTileAtlas,
-} from "../../roguelike-mazetools/src/rendering/tileAtlas";
+import { generateHiddenPassages } from "../../roguelike-mazetools/src/content";
+import { buildTileAtlas } from "../../roguelike-mazetools/src/rendering/tileAtlas";
 import {
   buildPassageMask,
   enablePassageInMask,
@@ -39,6 +29,9 @@ import {
   CHAR_SHEET_H,
   ARCH_COBBLE_UV,
   ARCH_BRICK_UV,
+  DOOR_OPEN_UV,
+  DOOR_CLOSED_UV,
+  DOOR_LOCKED_UV,
   ADVENTURER_TYPES,
   ADVENTURER_TYPE_MAP,
   ADVENTURER_SEEKING_DIALOG,
@@ -46,6 +39,7 @@ import {
   GHOST_DIALOG_WITH_TEA,
   GHOST_SIGHT_RADIUS,
   MOB_TYPE_MAP,
+  MOB_HP,
   PLAYER_MAX_HP,
   TURNS_PER_WAVE,
   WIN_WAVES,
@@ -166,6 +160,20 @@ export function useGameState({
     () => texture && makeDoorProto(texture, ARCH_BRICK_UV[0], ARCH_BRICK_UV[1]),
     [texture],
   );
+  const doorOpenProto = useMemo(
+    () => texture && makeDoorProto(texture, DOOR_OPEN_UV[0], DOOR_OPEN_UV[1]),
+    [texture],
+  );
+  const doorClosedProto = useMemo(
+    () =>
+      texture && makeDoorProto(texture, DOOR_CLOSED_UV[0], DOOR_CLOSED_UV[1]),
+    [texture],
+  );
+  const doorLockedProto = useMemo(
+    () =>
+      texture && makeDoorProto(texture, DOOR_LOCKED_UV[0], DOOR_LOCKED_UV[1]),
+    [texture],
+  );
   const objectRegistry = useMemo(
     () => ({
       ...(teaomaticProto && { stove: () => teaomaticProto.clone(true) }),
@@ -173,16 +181,35 @@ export function useGameState({
         door_cobble: () => doorCobbleProto.clone(true),
       }),
       ...(doorBrickProto && { door_brick: () => doorBrickProto.clone(true) }),
+      ...(doorOpenProto && {
+        door_state_open: () => doorOpenProto.clone(true),
+      }),
+      ...(doorClosedProto && {
+        door_state_closed: () => doorClosedProto.clone(true),
+      }),
+      ...(doorLockedProto && {
+        door_state_locked: () => doorLockedProto.clone(true),
+      }),
     }),
-    [teaomaticProto, doorCobbleProto, doorBrickProto],
+    [
+      teaomaticProto,
+      doorCobbleProto,
+      doorBrickProto,
+      doorOpenProto,
+      doorClosedProto,
+      doorLockedProto,
+    ],
   );
 
   // ---------------------------------------------------------------------------
   // ECS hand inventory
   // ---------------------------------------------------------------------------
   const { playerData } = useSettings();
-  const { registry, leftHand: leftHandInventory, rightHand: rightHandInventory } =
-    playerData.ecsData;
+  const {
+    registry,
+    leftHand: leftHandInventory,
+    rightHand: rightHandInventory,
+  } = playerData.ecsData;
 
   // Version counter — incremented whenever ECS hand state mutates so React re-renders.
   const [handsVersion, setHandsVersion] = useState(0);
@@ -251,15 +278,24 @@ export function useGameState({
 
   // Derived hand tea values (reactive via handsVersion)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const leftHandTea = useMemo(() => getTeaFromHandInventory(leftHandInventory), [leftHandInventory, handsVersion]);
+  const leftHandTea = useMemo(
+    () => getTeaFromHandInventory(leftHandInventory),
+    [leftHandInventory, handsVersion],
+  );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const rightHandTea = useMemo(() => getTeaFromHandInventory(rightHandInventory), [rightHandInventory, handsVersion]);
+  const rightHandTea = useMemo(
+    () => getTeaFromHandInventory(rightHandInventory),
+    [rightHandInventory, handsVersion],
+  );
 
   // ---------------------------------------------------------------------------
   // Game state
   // ---------------------------------------------------------------------------
   const [mobSatiations, setMobSatiations] = useState<number[]>(() =>
     initialMobs.map(() => 40),
+  );
+  const [mobHps, setMobHps] = useState<number[]>(() =>
+    initialMobs.map((m) => m.hp ?? MOB_HP),
   );
   const [mobPositions, setMobPositions] = useState<{ x: number; z: number }[]>(
     () => initialMobs.map((m) => ({ x: m.x, z: m.z })),
@@ -296,13 +332,18 @@ export function useGameState({
   const [speechBubbles, setSpeechBubbles] = useState<
     Record<string, { text: string }>
   >({}); // { [entityId]: { text } }
-  const speechBubbleTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const speechBubbleTimersRef = useRef<
+    Record<string, ReturnType<typeof setTimeout>>
+  >({});
   const speechBubblesRef = useRef<Record<string, { text: string }>>({});
 
   const showSpeechBubble = useCallback(
     (entityId: string, text: string, duration = 6000) => {
       setSpeechBubbles((prev) => ({ ...prev, [entityId]: { text } }));
-      speechBubblesRef.current = { ...speechBubblesRef.current, [entityId]: { text } };
+      speechBubblesRef.current = {
+        ...speechBubblesRef.current,
+        [entityId]: { text },
+      };
       if (speechBubbleTimersRef.current[entityId]) {
         clearTimeout(speechBubbleTimersRef.current[entityId]);
       }
@@ -393,6 +434,18 @@ export function useGameState({
   const [showSettings, setShowSettings] = useState(false);
   const [showTempTint, setShowTempTint] = useState(false);
 
+  // Door states
+  type DoorState = "open" | "closed" | "locked";
+  const [doorStates, setDoorStates] = useState<Map<string, DoorState>>(() => {
+    const m = new Map<string, DoorState>();
+    for (const d of doorPlacements) {
+      m.set(`${d.x}_${d.z}`, "closed");
+    }
+    return m;
+  });
+  const doorStatesRef = useRef(doorStates);
+  doorStatesRef.current = doorStates;
+
   // Chests state
   const [chests, setChests] = useState<any[]>([]);
   const chestsRef = useRef<any[]>([]);
@@ -407,13 +460,21 @@ export function useGameState({
   const [playerHp, setPlayerHp] = useState(PLAYER_MAX_HP);
 
   // Combat animation state
-  const [mobDamageFlash, setMobDamageFlash] = useState<boolean[]>(() => initialMobs.map(() => false));
+  const [mobDamageFlash, setMobDamageFlash] = useState<boolean[]>(() =>
+    initialMobs.map(() => false),
+  );
   const mobDamageFlashRef = useRef<boolean[]>(initialMobs.map(() => false));
   const [advDamageFlash, setAdvDamageFlash] = useState<boolean[]>([]);
-  const [mobAttackDirs, setMobAttackDirs] = useState<Array<{ dx: number; dz: number } | null>>(() => initialMobs.map(() => null));
-  const [advAttackDirs, setAdvAttackDirs] = useState<Array<{ dx: number; dz: number } | null>>([]);
+  const [mobAttackDirs, setMobAttackDirs] = useState<
+    Array<{ dx: number; dz: number } | null>
+  >(() => initialMobs.map(() => null));
+  const [advAttackDirs, setAdvAttackDirs] = useState<
+    Array<{ dx: number; dz: number } | null>
+  >([]);
   const [damageNumbers, setDamageNumbers] = useState<DamageNumberData[]>([]);
-  const [disarmedTraps, setDisarmedTraps] = useState<Set<string>>(() => new Set());
+  const [disarmedTraps, setDisarmedTraps] = useState<Set<string>>(
+    () => new Set(),
+  );
   const disarmedTrapsRef = useRef<Set<string>>(new Set());
 
   // Ingredient inventory  { rations: 0, herbs: 0, dust: 0 }
@@ -471,6 +532,10 @@ export function useGameState({
   if (mobSatiationsRef.current === null) {
     mobSatiationsRef.current = initialMobs.map(() => 40);
   }
+  const mobHpsRef = useRef<number[] | null>(null);
+  if (mobHpsRef.current === null) {
+    mobHpsRef.current = initialMobs.map((m) => m.hp ?? MOB_HP);
+  }
 
   // Hidden passages
   const passagesRef = useRef<any[]>([]);
@@ -500,9 +565,11 @@ export function useGameState({
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
     const freshSatiations = initialMobs.map(() => 40);
+    const freshHps = initialMobs.map((m: any) => m.hp ?? MOB_HP);
     clearHands();
     addTeaToHand("left", RECIPES[0], 90);
     setMobSatiations(freshSatiations);
+    setMobHps(freshHps);
     setStoveStates(new Map());
     setShowRecipeMenu(false);
     setActiveStoveKey(null);
@@ -536,6 +603,7 @@ export function useGameState({
     ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
+    mobHpsRef.current = freshHps;
     const freshPositions = initialMobs.map((m) => ({ x: m.x, z: m.z }));
     setMobPositions(freshPositions);
     mobPositionsRef.current = freshPositions;
@@ -571,10 +639,9 @@ export function useGameState({
     chestsRef.current = [...initialChests];
   }, [initialChests]);
 
-  const mobiles = useMemo(
-    () => {
-      if (mobPositions.length !== initialMobs.length) return [];
-      return [
+  const mobiles = useMemo(() => {
+    if (mobPositions.length !== initialMobs.length) return [];
+    return [
       ...initialMobs.map((m, i) => {
         const tmpl = MOB_TYPE_MAP[m.type];
         return {
@@ -583,13 +650,21 @@ export function useGameState({
           type: "mob",
           tileId: 0,
           color:
-            mobSatiations[i] <= 0
+            mobHps[i] <= 0
               ? [0.25, 0.25, 0.25]
               : (STATUS_RGB[mobStatuses[i]] ?? STATUS_RGB.thirsty),
           geometrySize: tmpl?.geometrySize,
-          uvRectBody: normalizeUvRect(tmpl?.uvRectBody, CHAR_SHEET_W, CHAR_SHEET_H),
-          uvRectHead: normalizeUvRect(tmpl?.uvRectHead, CHAR_SHEET_W, CHAR_SHEET_H),
-          unconscious: mobSatiations[i] <= 0,
+          uvRectBody: normalizeUvRect(
+            tmpl?.uvRectBody,
+            CHAR_SHEET_W,
+            CHAR_SHEET_H,
+          ),
+          uvRectHead: normalizeUvRect(
+            tmpl?.uvRectHead,
+            CHAR_SHEET_W,
+            CHAR_SHEET_H,
+          ),
+          unconscious: mobHps[i] <= 0,
         };
       }),
       ...adventurers
@@ -603,14 +678,27 @@ export function useGameState({
             tileId: 1,
             color: a.colorRgb,
             geometrySize: tmpl?.geometrySize,
-            uvRectBody: normalizeUvRect(tmpl?.uvRectBody, CHAR_SHEET_W, CHAR_SHEET_H),
-            uvRectHead: normalizeUvRect(tmpl?.uvRectHead, CHAR_SHEET_W, CHAR_SHEET_H),
+            uvRectBody: normalizeUvRect(
+              tmpl?.uvRectBody,
+              CHAR_SHEET_W,
+              CHAR_SHEET_H,
+            ),
+            uvRectHead: normalizeUvRect(
+              tmpl?.uvRectHead,
+              CHAR_SHEET_W,
+              CHAR_SHEET_H,
+            ),
           };
         }),
     ];
-    },
-    [initialMobs, mobPositions, mobStatuses, mobSatiations, adventurers],
-  );
+  }, [
+    initialMobs,
+    mobPositions,
+    mobStatuses,
+    mobSatiations,
+    mobHps,
+    adventurers,
+  ]);
 
   // Resolve speech bubbles: look up current entity positions so bubbles follow movers
   const activeSpeechBubbles = useMemo(() => {
@@ -638,26 +726,45 @@ export function useGameState({
     (waveNum: number) => {
       const count = Math.min(1 + waveNum, 6);
       const spawned: any[] = [];
-      const occupied = new Set(
-        adventurersRef.current
+      // Block tiles occupied by alive adventurers or mobs
+      const occupied = new Set([
+        ...adventurersRef.current
           .filter((a) => a.alive)
           .map((a) => `${a.x}_${a.z}`),
-      );
+        ...mobPositionsRef.current.map((p) => `${p.x}_${p.z}`),
+      ]);
+      // Spawn all adventurers from the startRoom (adventurerSpawnRooms[0])
+      const room = adventurerSpawnRooms[0];
+      if (!room) return spawned;
       for (let i = 0; i < count; i++) {
-        const room =
-          adventurerSpawnRooms[i % Math.max(1, adventurerSpawnRooms.length)];
-        if (!room) continue;
         const tmpl = ADVENTURER_TYPES[i % ADVENTURER_TYPES.length];
-        // offset slightly to avoid stacking
-        let spawnX = room.x;
-        let spawnZ = room.z + i;
-        // clamp to bounds
-        spawnX = Math.max(1, Math.min(dungeonWidth - 2, spawnX));
-        spawnZ = Math.max(1, Math.min(dungeonHeight - 2, spawnZ));
-        const key = `${spawnX}_${spawnZ}`;
-        if (occupied.has(key)) {
-          spawnZ = Math.max(1, Math.min(dungeonHeight - 2, room.z - i));
+        // Spiral outward from room center to find a free floor tile
+        let spawnX = -1;
+        let spawnZ = -1;
+        outer: for (let r = 0; r <= 8; r++) {
+          for (let dz = -r; dz <= r; dz++) {
+            for (let dx = -r; dx <= r; dx++) {
+              if (Math.abs(dx) !== r && Math.abs(dz) !== r) continue;
+              const tx = room.x + dx;
+              const tz = room.z + dz;
+              if (
+                tx < 1 ||
+                tz < 1 ||
+                tx >= dungeonWidth - 1 ||
+                tz >= dungeonHeight - 1
+              )
+                continue;
+              if (solidData[tz * dungeonWidth + tx] !== 0) continue;
+              const key = `${tx}_${tz}`;
+              if (!occupied.has(key)) {
+                spawnX = tx;
+                spawnZ = tz;
+                break outer;
+              }
+            }
+          }
         }
+        if (spawnX === -1) continue;
         occupied.add(`${spawnX}_${spawnZ}`);
         const lootRng = makeRng(waveNum * 31337 + i * 7919 + 1);
         const dreadRng = makeRng(waveNum * 31337 + i * 7919 + 2);
@@ -684,7 +791,7 @@ export function useGameState({
       }
       return spawned;
     },
-    [adventurerSpawnRooms, dungeonHeight, dungeonWidth],
+    [adventurerSpawnRooms, dungeonHeight, dungeonWidth, solidData],
   );
 
   // logicalRef is provided by useEotBCamera — we need a ref to it here so onStep can
@@ -733,14 +840,15 @@ export function useGameState({
           const entity = slot.object;
           const tempComp = registry.components.temperature.get(entity);
           const teaComp = registry.components.tea.get(entity);
-          if (!tempComp || !teaComp || teaComp.ruined) continue;
+          if (!tempComp || !teaComp) continue;
           const rawTemp = tempComp.currentTemperature - tempDropPerStep;
           const newTemp = inWarmRoom
-            ? Math.max(rawTemp, (tempComp.minTemperature + tempComp.maxTemperature) / 2)
+            ? Math.max(
+                rawTemp,
+                (tempComp.minTemperature + tempComp.maxTemperature) / 2,
+              )
             : rawTemp;
-          const ruined = newTemp < tempComp.minTemperature;
           tempComp.currentTemperature = newTemp;
-          teaComp.ruined = ruined;
           handsChanged = true;
         }
         if (handsChanged) setHandsVersion((v) => v + 1);
@@ -777,6 +885,7 @@ export function useGameState({
     let newMobSatiations = mobSatiationsRef.current!.map((s) =>
       Math.max(0, s - satiationDropPerStep),
     );
+    let newMobHps = mobHpsRef.current!.map((h) => h);
     let newMobPositions = mobPositionsRef.current.map((p) => ({ ...p }));
     let newWave = currentWaveRef.current;
     let newPlayerXp = playerXpRef.current;
@@ -789,9 +898,20 @@ export function useGameState({
     const pendingSpeechBubbles: { entityId: string; text: string }[] = []; // collected during processing
     // Combat animation event accumulators
     const advAttackEvents: { advId: string; dx: number; dz: number }[] = [];
-    const mobHitEvents: { mobIdx: number; damage: number; x: number; z: number }[] = [];
-    const mobAttackEventsLocal: { mobIdx: number; dx: number; dz: number }[] = [];
-    const advHitEvents: { advId: string; damage: number; x: number; z: number }[] = [];
+    const mobHitEvents: {
+      mobIdx: number;
+      damage: number;
+      x: number;
+      z: number;
+    }[] = [];
+    const mobAttackEventsLocal: { mobIdx: number; dx: number; dz: number }[] =
+      [];
+    const advHitEvents: {
+      advId: string;
+      damage: number;
+      x: number;
+      z: number;
+    }[] = [];
 
     // --- Wave spawning ---
     // The countdown to the next wave only ticks when all enemies are dead.
@@ -831,7 +951,7 @@ export function useGameState({
     }
     if (xpGained > 0) {
       newPlayerXp += xpGained;
-      stepMessage = `Collected ${xpGained} XP! (Total: ${newPlayerXp})`;
+      stepMessage = `Collected ${xpGained} gold! (Total: ${newPlayerXp})`;
     }
     newXpDrops = remainingDrops;
 
@@ -857,7 +977,7 @@ export function useGameState({
       return solidData[z * dungeonWidth + x] === 0;
     }
 
-    // Closed doors block LOS. A door is open if any creature occupies its cell.
+    // Closed/locked doors block LOS. Open doors never block.
     const stepOccupied = new Set([
       `${pgx}_${pgz}`,
       ...newMobPositions.map((p) => `${p.x}_${p.z}`),
@@ -865,12 +985,24 @@ export function useGameState({
     ]);
     const closedDoorCells = new Set(
       doorPlacements
-        .filter(
-          (d) =>
-            d.type.startsWith("door") && !stepOccupied.has(`${d.x}_${d.z}`),
-        )
+        .filter((d) => {
+          const state = doorStatesRef.current.get(`${d.x}_${d.z}`) ?? "closed";
+          if (state === "open") return false;
+          if (state === "locked") return true;
+          return !stepOccupied.has(`${d.x}_${d.z}`);
+        })
         .map((d) => `${d.x}_${d.z}`),
     );
+
+    // Auto-open door when player steps onto it
+    const playerDoorKey = `${pgx}_${pgz}`;
+    if (doorStatesRef.current.has(playerDoorKey)) {
+      const playerDoorState =
+        doorStatesRef.current.get(playerDoorKey) ?? "closed";
+      if (playerDoorState !== "locked") {
+        setDoorStates((prev) => new Map(prev).set(playerDoorKey, "open"));
+      }
+    }
     function isWalkableForLos(x: number, z: number): boolean {
       if (!isWalkable(x, z)) return false;
       return !closedDoorCells.has(`${x}_${z}`);
@@ -937,11 +1069,15 @@ export function useGameState({
       // Priority: fight any conscious monster in line of sight; otherwise use state machine.
 
       // Find nearest visible (line-of-sight) conscious monster
-      let combatTarget: { x: number; z: number; type: string; idx: number } | null =
-        null;
+      let combatTarget: {
+        x: number;
+        z: number;
+        type: string;
+        idx: number;
+      } | null = null;
       let combatDist = Infinity;
       for (let i = 0; i < initialMobs.length; i++) {
-        if (newMobSatiations[i] <= 0) continue; // unconscious
+        if (newMobHps[i] <= 0) continue; // unconscious
         const mobPos = newMobPositions[i];
         const d = Math.hypot(adv.x - mobPos.x, adv.z - mobPos.z);
         if (
@@ -959,15 +1095,27 @@ export function useGameState({
         const ddz = combatTarget.z - adv.z;
         if (Math.abs(ddx) + Math.abs(ddz) === 1) {
           const damage = Math.max(1, adv.attack - MOB_DEFENSE);
-          newMobSatiations[combatTarget.idx] = Math.max(
-            0,
-            newMobSatiations[combatTarget.idx] - damage,
-          );
-          if (newMobSatiations[combatTarget.idx] <= 0) {
-            stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
+          if (newMobSatiations[combatTarget.idx] > 0) {
+            newMobSatiations[combatTarget.idx] = Math.max(
+              0,
+              newMobSatiations[combatTarget.idx] - damage,
+            );
+          } else {
+            newMobHps[combatTarget.idx] = Math.max(
+              0,
+              newMobHps[combatTarget.idx] - damage,
+            );
+            if (newMobHps[combatTarget.idx] <= 0) {
+              stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
+            }
           }
           advAttackEvents.push({ advId: adv.id, dx: ddx, dz: ddz });
-          mobHitEvents.push({ mobIdx: combatTarget.idx, damage, x: combatTarget.x, z: combatTarget.z });
+          mobHitEvents.push({
+            mobIdx: combatTarget.idx,
+            damage,
+            x: combatTarget.x,
+            z: combatTarget.z,
+          });
           return {
             adv,
             intendedX: adv.x,
@@ -984,9 +1132,16 @@ export function useGameState({
           { x: adv.x, y: adv.z },
           { x: combatTarget.x, y: combatTarget.z },
           {
-            isBlocked: (x: number, y: number) =>
-              mobPlayerOccupied.has(`${x}_${y}`) &&
-              !(x === combatTarget!.x && y === combatTarget!.z),
+            isBlocked: (x: number, y: number) => {
+              const isLockedDoor =
+                doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
+                adv.template !== "rogue";
+              return (
+                isLockedDoor ||
+                (mobPlayerOccupied.has(`${x}_${y}`) &&
+                  !(x === combatTarget!.x && y === combatTarget!.z))
+              );
+            },
             fourDir: true,
           },
         );
@@ -1081,8 +1236,12 @@ export function useGameState({
               { x: adv.x, y: adv.z },
               { x: chestTarget.x, y: chestTarget.z },
               {
-                isBlocked: (x: number, y: number) =>
-                  mobPlayerOccupied.has(`${x}_${y}`),
+                isBlocked: (x: number, y: number) => {
+                  const isLockedDoor =
+                    doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
+                    adv.template !== "rogue";
+                  return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
+                },
                 fourDir: true,
               },
             );
@@ -1134,18 +1293,20 @@ export function useGameState({
             const roomPickIdx =
               (adv.id.charCodeAt(4) ?? 0) % nonEndRoomsArray.length;
             const [, wanderRoom] = nonEndRoomsArray[roomPickIdx] as [any, any];
-            const wx =
-              wanderRoom.rect.x + Math.floor(wanderRoom.rect.w / 2);
-            const wz =
-              wanderRoom.rect.y + Math.floor(wanderRoom.rect.h / 2);
+            const wx = wanderRoom.rect.x + Math.floor(wanderRoom.rect.w / 2);
+            const wz = wanderRoom.rect.y + Math.floor(wanderRoom.rect.h / 2);
             const wanderAstar = aStar8(
               { width: dungeonWidth, height: dungeonHeight },
               (x: number, y: number) => isWalkable(x, y),
               { x: adv.x, y: adv.z },
               { x: wx, y: wz },
               {
-                isBlocked: (x: number, y: number) =>
-                  mobPlayerOccupied.has(`${x}_${y}`),
+                isBlocked: (x: number, y: number) => {
+                  const isLockedDoor =
+                    doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
+                    adv.template !== "rogue";
+                  return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
+                },
                 fourDir: true,
               },
             );
@@ -1219,8 +1380,12 @@ export function useGameState({
         { x: adv.x, y: adv.z },
         { x: stoveTarget.x, y: stoveTarget.z },
         {
-          isBlocked: (x: number, y: number) =>
-            mobPlayerOccupied.has(`${x}_${y}`),
+          isBlocked: (x: number, y: number) => {
+            const isLockedDoor =
+              doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
+              adv.template !== "rogue";
+            return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
+          },
           fourDir: true,
         },
       );
@@ -1333,6 +1498,26 @@ export function useGameState({
       });
     }
 
+    // --- Adventurers open doors they've stepped onto ---
+    {
+      const doorUpdates = new Map(doorStatesRef.current);
+      let anyDoorChanged = false;
+      for (const adv of newAdventurers) {
+        if (!adv.alive) continue;
+        const key = `${adv.x}_${adv.z}`;
+        const state = doorUpdates.get(key);
+        if (state === undefined) continue;
+        if (state === "locked" && adv.template === "rogue") {
+          doorUpdates.set(key, "open");
+          anyDoorChanged = true;
+        } else if (state !== "locked" && state !== "open") {
+          doorUpdates.set(key, "open");
+          anyDoorChanged = true;
+        }
+      }
+      if (anyDoorChanged) setDoorStates(doorUpdates);
+    }
+
     // --- Adventurers pick up loot they've walked onto ---
     for (const adv of newAdventurers) {
       if (!adv.alive) continue;
@@ -1351,7 +1536,8 @@ export function useGameState({
       if (!adv.alive) continue;
       const trapIdx = adv.z * dungeonWidth + adv.x;
       const key = `${adv.x}_${adv.z}`;
-      if (hazardData[trapIdx] !== 1 || disarmedTrapsRef.current.has(key)) continue;
+      if (hazardData[trapIdx] !== 1 || disarmedTrapsRef.current.has(key))
+        continue;
 
       // Armed trap — trigger it
       const newDisarmed = new Set(disarmedTrapsRef.current);
@@ -1359,7 +1545,12 @@ export function useGameState({
       disarmedTrapsRef.current = newDisarmed;
 
       const newHp = adv.hp - SPIKE_TRAP_DAMAGE;
-      advHitEvents.push({ advId: adv.id, damage: SPIKE_TRAP_DAMAGE, x: adv.x, z: adv.z });
+      advHitEvents.push({
+        advId: adv.id,
+        damage: SPIKE_TRAP_DAMAGE,
+        x: adv.x,
+        z: adv.z,
+      });
       if (newHp <= 0) {
         newAdventurers[i] = { ...adv, alive: false, hp: 0 };
         const dreadFactor =
@@ -1387,7 +1578,7 @@ export function useGameState({
             dropKey: `ing_trap_${Date.now()}_${i}`,
           });
         }
-        stepMessage = `The ${adv.name} was slain by a spike trap! (+${xpReward} XP)`;
+        stepMessage = `The ${adv.name} was slain by a spike trap! (+${xpReward} gold)`;
       } else {
         newAdventurers[i] = { ...adv, hp: newHp };
         stepMessage = `A spike trap strikes the ${adv.name}!`;
@@ -1436,8 +1627,7 @@ export function useGameState({
         const step = mobAstar.path[1];
         // Don't step onto another mob's cell
         const blockedByMob = newMobPositions.some(
-          (p: any, j: number) =>
-            j !== i && p.x === step.x && p.z === step.y,
+          (p: any, j: number) => j !== i && p.x === step.x && p.z === step.y,
         );
         const blockedByAdventurer = newAdventurers.some(
           (a) => a.alive && a.x === step.x && a.z === step.y,
@@ -1459,7 +1649,11 @@ export function useGameState({
         if (Math.abs(adv.x - mobPos.x) + Math.abs(adv.z - mobPos.z) === 1) {
           const damage = Math.max(1, mob.attack - adv.defense);
           const newHp = adv.hp - damage;
-          mobAttackEventsLocal.push({ mobIdx: i, dx: adv.x - mobPos.x, dz: adv.z - mobPos.z });
+          mobAttackEventsLocal.push({
+            mobIdx: i,
+            dx: adv.x - mobPos.x,
+            dz: adv.z - mobPos.z,
+          });
           advHitEvents.push({ advId: adv.id, damage, x: adv.x, z: adv.z });
           if (newHp <= 0) {
             newAdventurers[j] = { ...adv, alive: false, hp: 0 };
@@ -1491,7 +1685,7 @@ export function useGameState({
                 dropKey: `ing_${Date.now()}_${j}`,
               });
             }
-            stepMessage = `${mob.name} slew the ${adv.name}! (+${xpReward} XP, ${tmpl?.drop?.name ?? "?"} dropped)`;
+            stepMessage = `${mob.name} slew the ${adv.name}! (+${xpReward} gold, ${tmpl?.drop?.name ?? "?"} dropped)`;
           } else {
             newAdventurers[j] = { ...adv, hp: newHp };
           }
@@ -1535,6 +1729,7 @@ export function useGameState({
     ingredientDropsRef.current = newIngredientDrops;
     chestsRef.current = newChests;
     mobSatiationsRef.current = newMobSatiations;
+    mobHpsRef.current = newMobHps;
     mobPositionsRef.current = newMobPositions;
     setDisarmedTraps(new Set(disarmedTrapsRef.current));
 
@@ -1549,6 +1744,7 @@ export function useGameState({
     setIngredientDrops([...newIngredientDrops]);
     setChests([...newChests]);
     setMobSatiations(newMobSatiations);
+    setMobHps(newMobHps);
     setMobPositions([...newMobPositions]);
 
     // --- Combat animation events ---
@@ -1560,7 +1756,9 @@ export function useGameState({
       // Mob damage flash
       if (mobHitEvents.length > 0) {
         const newFlash = mobDamageFlashRef.current.slice();
-        mobHitEvents.forEach((e) => { newFlash[e.mobIdx] = true; });
+        mobHitEvents.forEach((e) => {
+          newFlash[e.mobIdx] = true;
+        });
         mobDamageFlashRef.current = newFlash;
         setMobDamageFlash([...newFlash]);
         mobHitEvents.forEach((e) =>
@@ -1576,28 +1774,36 @@ export function useGameState({
       // Adventurer damage flash
       if (advHitEvents.length > 0) {
         const aliveAdvs = newAdventurers.filter((a) => a.alive);
-        const newAdvFlash = aliveAdvs.map((a) => advHitEvents.some((e) => e.advId === a.id));
+        const newAdvFlash = aliveAdvs.map((a) =>
+          advHitEvents.some((e) => e.advId === a.id),
+        );
         setAdvDamageFlash(newAdvFlash);
-        if (newAdvFlash.some(Boolean)) setTimeout(() => setAdvDamageFlash([]), FLASH_MS);
+        if (newAdvFlash.some(Boolean))
+          setTimeout(() => setAdvDamageFlash([]), FLASH_MS);
       }
 
       // Mob attack lunge dirs
       if (mobAttackEventsLocal.length > 0) {
-        const newMobDirs: Array<{ dx: number; dz: number } | null> = initialMobs.map((_, idx) => {
-          const e = mobAttackEventsLocal.find((ev) => ev.mobIdx === idx);
-          return e ? { dx: e.dx, dz: e.dz } : null;
-        });
+        const newMobDirs: Array<{ dx: number; dz: number } | null> =
+          initialMobs.map((_, idx) => {
+            const e = mobAttackEventsLocal.find((ev) => ev.mobIdx === idx);
+            return e ? { dx: e.dx, dz: e.dz } : null;
+          });
         setMobAttackDirs(newMobDirs);
-        setTimeout(() => setMobAttackDirs(initialMobs.map(() => null)), ATTACK_MS);
+        setTimeout(
+          () => setMobAttackDirs(initialMobs.map(() => null)),
+          ATTACK_MS,
+        );
       }
 
       // Adventurer attack lunge dirs
       if (advAttackEvents.length > 0) {
         const aliveAdvs = newAdventurers.filter((a) => a.alive);
-        const newAdvDirs: Array<{ dx: number; dz: number } | null> = aliveAdvs.map((a) => {
-          const e = advAttackEvents.find((ev) => ev.advId === a.id);
-          return e ? { dx: e.dx, dz: e.dz } : null;
-        });
+        const newAdvDirs: Array<{ dx: number; dz: number } | null> =
+          aliveAdvs.map((a) => {
+            const e = advAttackEvents.find((ev) => ev.advId === a.id);
+            return e ? { dx: e.dx, dz: e.dz } : null;
+          });
         setAdvAttackDirs(newAdvDirs);
         setTimeout(() => setAdvAttackDirs([]), ATTACK_MS);
       }
@@ -1623,7 +1829,10 @@ export function useGameState({
       if (allNums.length > 0) {
         setDamageNumbers((prev) => [...prev, ...allNums]);
         allNums.forEach((n) =>
-          setTimeout(() => setDamageNumbers((prev) => prev.filter((x) => x.id !== n.id)), NUM_MS),
+          setTimeout(
+            () => setDamageNumbers((prev) => prev.filter((x) => x.id !== n.id)),
+            NUM_MS,
+          ),
         );
       }
     }
@@ -1669,10 +1878,14 @@ export function useGameState({
       if (id.startsWith("mob_")) {
         const idx = parseInt(id.slice(4), 10);
         const pos = newMobPositions[idx];
-        return pos ? Math.hypot(pos.x - pgx, pos.z - pgz) <= GHOST_SIGHT_RADIUS : false;
+        return pos
+          ? Math.hypot(pos.x - pgx, pos.z - pgz) <= GHOST_SIGHT_RADIUS
+          : false;
       }
       const adv = newAdventurers.find((a) => a.id === id && a.alive);
-      return adv ? Math.hypot(adv.x - pgx, adv.z - pgz) <= GHOST_SIGHT_RADIUS : false;
+      return adv
+        ? Math.hypot(adv.x - pgx, adv.z - pgz) <= GHOST_SIGHT_RADIUS
+        : false;
     });
     if (!hasNearbyActiveBubble) {
       for (const { entityId, text } of pendingSpeechBubbles) {
@@ -1699,16 +1912,6 @@ export function useGameState({
     stovePlacements,
     doorPlacements,
   ]);
-
-  // Show message when tea becomes ruined
-  useEffect(() => {
-    for (const tea of [leftHandTea, rightHandTea]) {
-      if (tea?.ruined && !ruinedNotifiedRef.current.has(tea.id)) {
-        ruinedNotifiedRef.current.add(tea.id);
-        showMsg(`Your ${tea.name} has gone cold and is ruined!`);
-      }
-    }
-  }, [leftHandTea, rightHandTea, showMsg]);
 
   const onBlockedMove = useCallback((dx: number, dz: number) => {
     const passages = passagesRef.current;
@@ -1743,7 +1946,10 @@ export function useGameState({
       // Check if player is standing on a disarmed trap (interact to rearm)
       const playerKey = `${gx}_${gz}`;
       const playerTrapIdx = gz * dungeonWidth + gx;
-      if (hazardData[playerTrapIdx] === 1 && disarmedTrapsRef.current.has(playerKey)) {
+      if (
+        hazardData[playerTrapIdx] === 1 &&
+        disarmedTrapsRef.current.has(playerKey)
+      ) {
         return { type: "trap" as const, x: gx, z: gz };
       }
       const fdx = Math.round(-Math.sin(yaw));
@@ -1759,6 +1965,10 @@ export function useGameState({
       }
       const mi = mobPositions.findIndex((p) => p.x === tx && p.z === tz);
       if (mi !== -1) return { type: "mob" as const, mobIdx: mi };
+      const doorKey = `${tx}_${tz}`;
+      if (doorStatesRef.current.has(doorKey)) {
+        return { type: "door" as const, doorKey };
+      }
       return null;
     },
     [stovePlacements, mobPositions, hazardData, dungeonWidth],
@@ -1813,7 +2023,7 @@ export function useGameState({
           return;
         }
       }
-      showMsg("Nothing to interact with here.");
+      // showMsg("Nothing to interact with here.");
     };
     const keys = keybindings.togglePassage.join(",");
     if (keys) hotkeys(keys, handler as any);
@@ -1869,7 +2079,12 @@ export function useGameState({
       } else if (facingTarget.type === "mob") {
         const mob = initialMobs[facingTarget.mobIdx];
         const hand = leftHandTea ? "left" : rightHandTea ? "right" : null;
-        const tea = hand === "left" ? leftHandTea : hand === "right" ? rightHandTea : null;
+        const tea =
+          hand === "left"
+            ? leftHandTea
+            : hand === "right"
+              ? rightHandTea
+              : null;
         const mobStatus = mobStatuses[facingTarget.mobIdx];
         const isUnconscious = mobSatiations[facingTarget.mobIdx] <= 0;
         const mobBubbleId = `mob_${facingTarget.mobIdx}`;
@@ -1924,11 +2139,11 @@ export function useGameState({
           mobSatiationsRef.current = next;
           setMobSatiations(next);
         }
-        if (tea.ruined || tea.temperature < lo) {
+        if (tea.temperature < lo) {
           applyMobSatiation(10);
           showSpeechBubble(
             mobBubbleId,
-            `This ${tea.name} is cold and ruined... How disappointing.`,
+            `This ${tea.name} is too cold... How disappointing.`,
           );
         } else if (tea.temperature > hi) {
           applyMobSatiation(30);
@@ -1951,6 +2166,25 @@ export function useGameState({
               `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
             );
           }
+        }
+      } else if (facingTarget.type === "door") {
+        const state =
+          doorStatesRef.current.get(facingTarget.doorKey) ?? "closed";
+        if (state === "open") {
+          setDoorStates((prev) =>
+            new Map(prev).set(facingTarget.doorKey, "closed"),
+          );
+          showMsg("You close the door.");
+        } else if (state === "closed") {
+          setDoorStates((prev) =>
+            new Map(prev).set(facingTarget.doorKey, "locked"),
+          );
+          showMsg("You lock the door.");
+        } else {
+          setDoorStates((prev) =>
+            new Map(prev).set(facingTarget.doorKey, "open"),
+          );
+          showMsg("You unlock the door.");
         }
       }
     }
@@ -2231,6 +2465,7 @@ export function useGameState({
     // refs
     adventurerSightingsRef,
     mobSatiationsRef,
+    mobHpsRef,
     ruinedNotifiedRef,
     playerHandsRef, // { left: Tea|null, right: Tea|null } kept in sync with ECS
     exploredMaskRef,
@@ -2263,5 +2498,7 @@ export function useGameState({
     damageNumbers,
     // trap state
     disarmedTraps,
+    // door state
+    doorStates,
   };
 }

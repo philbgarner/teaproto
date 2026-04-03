@@ -67,6 +67,15 @@ export const ARCH_COBBLE_UV: [number, number] = (atlasIndex.architecture.byName(
 export const ARCH_BRICK_UV: [number, number] = (atlasIndex.architecture.byName(
   "archBrick",
 )?.uv as [number, number]) ?? [0, 64];
+export const DOOR_OPEN_UV: [number, number] = (atlasIndex.architecture.byName(
+  "doorOpen",
+)?.uv as [number, number]) ?? [64, 64];
+export const DOOR_CLOSED_UV: [number, number] = (atlasIndex.architecture.byName(
+  "doorClosed",
+)?.uv as [number, number]) ?? [128, 64];
+export const DOOR_LOCKED_UV: [number, number] = (atlasIndex.architecture.byName(
+  "doorLocked",
+)?.uv as [number, number]) ?? [256, 64];
 export const COBBLESTONE_WALL_ID: number =
   atlasIndex.wallTypes.idByName("Cobblestone");
 export const SPIKE_TRAP_OVERLAY_ID: number = _atlasUvToId(
@@ -212,6 +221,7 @@ export const PLAYER_MAX_HP = 30;
 export const PLAYER_DEFENSE = 2;
 export const MOB_ATTACK = 3;
 export const MOB_DEFENSE = 1;
+export const MOB_HP = 20;
 export const WIN_WAVES = 10;
 export const SPIKE_TRAP_DAMAGE = 8;
 
