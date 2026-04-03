@@ -1,6 +1,14 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -456,7 +464,11 @@ function TeaomaticIndicator({
 }: {
   stove: MinimapStove;
   tileSize: number;
-  propsRef: React.RefObject<{ playerX: number; playerZ: number; targetYaw: number }>;
+  propsRef: React.RefObject<{
+    playerX: number;
+    playerZ: number;
+    targetYaw: number;
+  }>;
   lerpedYawRef: React.RefObject<number>;
 }) {
   const { camera, size } = useThree();
@@ -498,15 +510,15 @@ function TeaomaticIndicator({
     // Ray-box intersection: find t where ray (0,0)→(vx,vy) hits the frustum edge
     const tx = vx !== 0 ? halfW / Math.abs(vx) : Infinity;
     const ty = vy !== 0 ? halfH / Math.abs(vy) : Infinity;
-    const t = Math.min(tx, ty) * 0.90; // 10% inset so triangle is fully visible
+    const t = Math.min(tx, ty) * 0.9; // 10% inset so triangle is fully visible
 
     const edgeVx = vx * t;
     const edgeVy = vy * t;
 
     // Back-project from view space to world XZ
     // right_world = (cosY, 0, -sinY),  up_world = (-sinY, 0, -cosY)
-    const worldX = pwx + edgeVx * cosY + edgeVy * (-sinY);
-    const worldZ = pwz + edgeVx * (-sinY) + edgeVy * (-cosY);
+    const worldX = pwx + edgeVx * cosY + edgeVy * -sinY;
+    const worldZ = pwz + edgeVx * -sinY + edgeVy * -cosY;
 
     group.position.set(worldX, 0.2, worldZ);
     // Rotate so triangle apex points toward stove
@@ -521,7 +533,12 @@ function TeaomaticIndicator({
           group.rotation.y then aims it at the stove in world space */}
       <mesh rotation={[-HALF_PI, 0, Math.PI]} renderOrder={10}>
         <coneGeometry args={[triSize * 0.65, triSize * 1.4, 3]} />
-        <meshBasicMaterial color="#00b8da" depthTest={false} transparent opacity={0.9} />
+        <meshBasicMaterial
+          color="#00b8da"
+          depthTest={false}
+          transparent
+          opacity={0.9}
+        />
       </mesh>
     </group>
   );
@@ -825,7 +842,10 @@ export function Minimap({
     const MARGIN = 6;
     let left = tooltip.pos.x - rect.width / 2;
     let top = tooltip.pos.y - rect.height - 10;
-    left = Math.max(MARGIN, Math.min(window.innerWidth - rect.width - MARGIN, left));
+    left = Math.max(
+      MARGIN,
+      Math.min(window.innerWidth - rect.width - MARGIN, left),
+    );
     top = Math.max(MARGIN, top);
     el.style.left = `${left}px`;
     el.style.top = `${top}px`;

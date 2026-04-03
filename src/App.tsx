@@ -260,6 +260,29 @@ void main() {
 }
 `;
 
+// ---------------------------------------------------------------------------
+// Furniture billboard — same pipeline as chest but no shine effect.
+// ---------------------------------------------------------------------------
+
+const FURNITURE_FRAG = /* glsl */ `
+uniform sampler2D uAtlas;
+uniform vec4 uUvRect;
+uniform vec3 uFogColor;
+${TORCH_UNIFORMS_GLSL}
+varying vec2 vUv;
+varying float vFogDist;
+varying vec2 vWorldPos;
+${TORCH_HASH_GLSL}
+${TORCH_FNS_GLSL}
+void main() {
+  vec4 color = texture2D(uAtlas, uUvRect.xy + vUv * uUvRect.zw);
+  if (color.a < 0.5) discard;
+  float band = torchBand(0.03);
+  vec3 lit = applyTorchLighting(color.rgb, band);
+  gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
+}
+`;
+
 function CoinBillboard({
   drop,
   tileSize,
@@ -475,6 +498,105 @@ function ChestMeshes({
     <>
       {chests.map((chest) => (
         <ChestBillboard key={chest.id} chest={chest} tileSize={tileSize} mat={mat} mimicMat={mimicMat} />
+      ))}
+    </>
+  );
+}
+
+function FurnitureBillboard({
+  item,
+  tileSize,
+  mat,
+}: {
+  item: { x: number; z: number };
+  tileSize: number;
+  mat: THREE.ShaderMaterial;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+  const size = tileSize * 0.6;
+  const wx = (item.x + 0.5) * tileSize;
+  const wz = (item.z + 0.5) * tileSize;
+
+  useFrame(({ camera }) => {
+    if (ref.current)
+      ref.current.rotation.y = Math.atan2(
+        camera.position.x - wx,
+        camera.position.z - wz,
+      );
+  });
+
+  return (
+    <mesh
+      ref={ref}
+      geometry={COIN_GEO}
+      material={mat}
+      position={[wx, size / 2, wz]}
+      scale={[size, size, 1]}
+    />
+  );
+}
+
+function FurnitureMeshes({
+  items,
+  uvRect,
+  tileSize = 1,
+  fogNear = 4,
+  fogFar = 28,
+  torchColor,
+  torchIntensity,
+}: {
+  items: { id: string; x: number; z: number; type: string }[];
+  uvRect: THREE.Vector4;
+  tileSize?: number;
+  fogNear?: number;
+  fogFar?: number;
+  torchColor?: string;
+  torchIntensity?: number;
+}) {
+  const texture = useLoader(
+    THREE.TextureLoader,
+    `${import.meta.env.BASE_URL}textures/monsters.png`,
+  );
+
+  const mat = useMemo(() => {
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uAtlas: { value: texture },
+        uUvRect: { value: uvRect },
+        uFogColor: { value: new THREE.Color(0, 0, 0) },
+        uFogNear: { value: fogNear },
+        uFogFar: { value: fogFar },
+        ...makeTorchUniforms(),
+      },
+      vertexShader: CHEST_VERT,
+      fragmentShader: FURNITURE_FRAG,
+      transparent: true,
+      alphaTest: 0.5,
+      side: THREE.DoubleSide,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [texture, uvRect, fogNear, fogFar]);
+
+  const torchColorObj = useMemo(
+    () => (torchColor ? new THREE.Color(torchColor) : undefined),
+    [torchColor],
+  );
+  useEffect(() => {
+    if (torchColorObj) mat.uniforms.uTorchColor.value = torchColorObj;
+  }, [torchColorObj, mat]);
+  useEffect(() => {
+    if (torchIntensity !== undefined)
+      mat.uniforms.uTorchIntensity.value = torchIntensity;
+  }, [torchIntensity, mat]);
+
+  return (
+    <>
+      {items.map((item) => (
+        <FurnitureBillboard key={item.id} item={item} tileSize={tileSize} mat={mat} />
       ))}
     </>
   );
@@ -799,6 +921,15 @@ export default function App() {
                 />
                 <ChestMeshes
                   chests={gs.chests}
+                  tileSize={TILE_SIZE}
+                  fogNear={4}
+                  fogFar={28}
+                  torchColor={torchColor}
+                  torchIntensity={torchIntensity}
+                />
+                <FurnitureMeshes
+                  items={ds.initialFurniture ?? []}
+                  uvRect={new THREE.Vector4(0, 0, 0, 0) /* TODO: set furniture UV rect */}
                   tileSize={TILE_SIZE}
                   fogNear={4}
                   fogFar={28}

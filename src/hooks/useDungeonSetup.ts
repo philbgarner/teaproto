@@ -93,8 +93,15 @@ export function useDungeonSetup({
     };
   }, [dungeon]);
 
-  // Assign floor/wall/ceiling types to every room and corridor by theme
-  useMemo(() => {
+  // Assign floor/wall/ceiling types to every room and corridor by theme.
+  // Also collects furniture placements via placeFurniture() calls inside per-cell callbacks.
+  const initialFurniture = useMemo(() => {
+    const furniture: { id: string; x: number; z: number; type: string }[] = [];
+    let furnitureCount = 0;
+    const placeFurniture = (x: number, z: number, type: string) => {
+      furniture.push({ id: `furniture_${furnitureCount++}`, x, z, type });
+    };
+
     const floorDataArr = dungeon.textures.floorType.image.data;
     const wallDataArr = dungeon.textures.wallType.image.data;
     const ceilingDataArr = dungeon.textures.ceilingType.image.data;
@@ -182,6 +189,9 @@ export function useDungeonSetup({
         const wallOverlays = context.textures.wallOverlays.image.data; // wall overlays; read at oi+[0..3]
         const ceilingOverlays = context.textures.ceilingOverlays.image.data; // ceiling overlays; read at oi+[0..3]
 
+        // Example put a piece of furniture in the room,
+        // only where distanceToWall is 0 (against wall)
+
         // If this is a dug out cell (ie: not a wall)
         if (!solid) {
           floorDataArr[i] = floorId;
@@ -195,6 +205,7 @@ export function useDungeonSetup({
     dungeon.textures.floorType.needsUpdate = true;
     dungeon.textures.wallType.needsUpdate = true;
     dungeon.textures.ceilingType.needsUpdate = true;
+    return furniture;
   }, [dungeon]);
 
   // Stove placements — 1 stove in end room at centre
@@ -552,5 +563,6 @@ export function useDungeonSetup({
     adventurerSpawnRooms,
     initialIngredientDrops,
     initialChests,
+    initialFurniture,
   };
 }

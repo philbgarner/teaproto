@@ -17,7 +17,8 @@
   "sprites": [
     { "id": 1, "name": "teaomatic", "uv": [448, 320], "size": [64, 64] },
     { "id": 2, "name": "machinePanelA", "uv": [448, 512] },
-    { "id": 3, "name": "machinePanelB", "uv": [448, 576] }
+    { "id": 3, "name": "machinePanelB", "uv": [448, 576] },
+    { "id": 4, "name": "Chair", "uv": [320, 512] }
   ],
   "wallTypes": [
     { "id": 0, "name": "none" },
