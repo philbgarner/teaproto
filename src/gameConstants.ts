@@ -242,6 +242,7 @@ export interface AdventurerType {
   geometrySize: [number, number];
   uvRectBody: { x: number; y: number; w: number; h: number };
   uvRectHead: { x: number; y: number; w: number; h: number };
+  rpsEffect: "none" | "bleeding" | "freezing" | "poisoned";
 }
 
 // ingredientId matches RECIPES ingredientId
@@ -258,6 +259,7 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     geometrySize: [1, 1],
     uvRectBody: { x: 256, y: 64, w: 64, h: 64 },
     uvRectHead: { x: 320, y: 64, w: 64, h: 64 },
+    rpsEffect: "bleeding",
   },
   {
     type: "rogue",
@@ -271,6 +273,7 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     geometrySize: [1, 1],
     uvRectBody: { x: 256, y: 0, w: 64, h: 64 },
     uvRectHead: { x: 320, y: 0, w: 64, h: 64 },
+    rpsEffect: "poisoned",
   },
   {
     type: "mage",
@@ -284,6 +287,7 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     geometrySize: [2, 2],
     uvRectBody: { x: 320, y: 128, w: 128, h: 128 },
     uvRectHead: { x: 192, y: 256, w: 128, h: 128 },
+    rpsEffect: "freezing",
   },
 ];
 

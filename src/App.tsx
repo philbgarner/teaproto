@@ -950,6 +950,7 @@ export default function App() {
                 maxHp: (ds.initialMobs as any[])[i]?.hp ?? 20,
                 satiation: gs.mobSatiations[i],
                 maxSatiation: 40,
+                rpsEffect: gs.mobRpsEffects[i],
               }),
             )}
             adventurers={gs.adventurers}

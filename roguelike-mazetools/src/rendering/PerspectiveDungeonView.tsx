@@ -232,7 +232,10 @@ function DamageNumberSprite({
   });
 
   return (
-    <Html position={[wx, wy, wz]} style={{ pointerEvents: "none", userSelect: "none" }}>
+    <Html
+      position={[wx, wy, wz]}
+      style={{ pointerEvents: "none", userSelect: "none" }}
+    >
       <div
         ref={divRef}
         style={{
@@ -1008,7 +1011,10 @@ void main() {
   float ring = smoothstep(0.5, 1.0, t);
   float alpha = ring * 0.9;
 
-  gl_FragColor = vec4(ectoColor, alpha);
+  //gl_FragColor = vec4(ectoColor, alpha);
+  vec4 colr = vec4(ectoColor, alpha);
+  vec3 grey25 = vec3(0.25); // Darken by 75%
+  gl_FragColor = vec4(color.rgb * grey25, color.a);
 }
 `;
 
@@ -1197,7 +1203,15 @@ function BackgroundSphere({
       depthWrite: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [texture, tile.uvX, tile.uvY, tile.uvW, tile.uvH, boneTexture, boneTileUv]);
+  }, [
+    texture,
+    tile.uvX,
+    tile.uvY,
+    tile.uvW,
+    tile.uvH,
+    boneTexture,
+    boneTileUv,
+  ]);
 
   return (
     <mesh ref={meshRef} renderOrder={-1}>
