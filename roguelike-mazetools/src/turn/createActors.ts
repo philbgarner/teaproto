@@ -203,5 +203,5 @@ export function createMonstersFromMobiles(
   mobiles: MobilePlacement[],
   templates?: Record<string, MonsterTemplate>,
 ): MonsterActor[] {
-  return mobiles.map((m) => createMonsterFromPlacement(m, templates));
+  return mobiles.map(m => createMonsterFromPlacement(m, templates));
 }
