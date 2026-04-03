@@ -202,6 +202,64 @@ void main() {
 
 const COIN_GEO = new THREE.PlaneGeometry(1, 1);
 
+// ---------------------------------------------------------------------------
+// Chest billboard — same sheet as character sprites (monsters.png 512×512)
+// Chest sprite is at pixel (384, 0), size 64×64.
+// No bobbing; white shine.
+// ---------------------------------------------------------------------------
+
+const _CHAR_W = 512;
+const _CHAR_H = 512;
+const CHEST_UV_RECT = new THREE.Vector4(
+  384 / _CHAR_W,
+  1 - 64 / _CHAR_H, // WebGL: y=0 is bottom; top row → bottom = 1 - 64/512
+  64 / _CHAR_W,
+  64 / _CHAR_H,
+);
+const MIMIC_UV_RECT = new THREE.Vector4(
+  448 / _CHAR_W,
+  1 - 64 / _CHAR_H,
+  64 / _CHAR_W,
+  64 / _CHAR_H,
+);
+
+const CHEST_VERT = /* glsl */ `
+uniform float uTime;
+varying vec2 vUv;
+varying float vFogDist;
+varying vec2 vWorldPos;
+void main() {
+  vUv = uv;
+  vec4 worldPos = modelMatrix * vec4(position, 1.0);
+  vWorldPos = worldPos.xz;
+  vec4 eyePos = viewMatrix * worldPos;
+  vFogDist = length(eyePos.xyz);
+  gl_Position = projectionMatrix * eyePos;
+}
+`;
+
+const CHEST_FRAG = /* glsl */ `
+uniform sampler2D uAtlas;
+uniform vec4 uUvRect;
+uniform vec3 uFogColor;
+${TORCH_UNIFORMS_GLSL}
+varying vec2 vUv;
+varying float vFogDist;
+varying vec2 vWorldPos;
+${TORCH_HASH_GLSL}
+${TORCH_FNS_GLSL}
+void main() {
+  vec4 color = texture2D(uAtlas, uUvRect.xy + vUv * uUvRect.zw);
+  if (color.a < 0.5) discard;
+  float band = torchBand(0.03);
+  vec3 lit = applyTorchLighting(color.rgb, band);
+  float shinePhase = fract(uTime * 0.4);
+  float shine = smoothstep(0.08, 0.0, abs(vUv.x - shinePhase)) * 0.7;
+  lit += color.rgb * shine * vec3(1.0, 1.0, 1.0);
+  gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
+}
+`;
+
 function CoinBillboard({
   drop,
   tileSize,
@@ -298,6 +356,125 @@ function CoinDropMeshes({
     <>
       {drops.map((drop) => (
         <CoinBillboard key={drop.id} drop={drop} tileSize={tileSize} mat={mat} />
+      ))}
+    </>
+  );
+}
+
+function ChestBillboard({
+  chest,
+  tileSize,
+  mat,
+  mimicMat,
+}: {
+  chest: { x: number; z: number; mimic?: boolean };
+  tileSize: number;
+  mat: THREE.ShaderMaterial;
+  mimicMat: THREE.ShaderMaterial;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+  const chestSize = tileSize * 0.6;
+  const wx = (chest.x + 0.5) * tileSize;
+  const wz = (chest.z + 0.5) * tileSize;
+
+  useFrame(({ camera }) => {
+    if (ref.current)
+      ref.current.rotation.y = Math.atan2(
+        camera.position.x - wx,
+        camera.position.z - wz,
+      );
+  });
+
+  return (
+    <mesh
+      ref={ref}
+      geometry={COIN_GEO}
+      material={chest.mimic ? mimicMat : mat}
+      position={[wx, chestSize / 2, wz]}
+      scale={[chestSize, chestSize, 1]}
+    />
+  );
+}
+
+function ChestMeshes({
+  chests,
+  tileSize = 1,
+  fogNear = 4,
+  fogFar = 28,
+  torchColor,
+  torchIntensity,
+}: {
+  chests: { id: string; x: number; z: number; mimic?: boolean }[];
+  tileSize?: number;
+  fogNear?: number;
+  fogFar?: number;
+  torchColor?: string;
+  torchIntensity?: number;
+}) {
+  const texture = useLoader(
+    THREE.TextureLoader,
+    `${import.meta.env.BASE_URL}textures/monsters.png`,
+  );
+
+  const makeMat = (uvRect: THREE.Vector4) =>
+    new THREE.ShaderMaterial({
+      uniforms: {
+        uAtlas: { value: texture },
+        uUvRect: { value: uvRect },
+        uFogColor: { value: new THREE.Color(0, 0, 0) },
+        uFogNear: { value: fogNear },
+        uFogFar: { value: fogFar },
+        uTime: { value: 0 },
+        ...makeTorchUniforms(),
+      },
+      vertexShader: CHEST_VERT,
+      fragmentShader: CHEST_FRAG,
+      transparent: true,
+      alphaTest: 0.5,
+      side: THREE.DoubleSide,
+    });
+
+  const mat = useMemo(() => {
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+    return makeMat(CHEST_UV_RECT);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [texture, fogNear, fogFar]);
+
+  const mimicMat = useMemo(
+    () => makeMat(MIMIC_UV_RECT),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [texture, fogNear, fogFar]);
+
+  const torchColorObj = useMemo(
+    () => (torchColor ? new THREE.Color(torchColor) : undefined),
+    [torchColor],
+  );
+  useEffect(() => {
+    if (torchColorObj) {
+      mat.uniforms.uTorchColor.value = torchColorObj;
+      mimicMat.uniforms.uTorchColor.value = torchColorObj;
+    }
+  }, [torchColorObj, mat, mimicMat]);
+  useEffect(() => {
+    if (torchIntensity !== undefined) {
+      mat.uniforms.uTorchIntensity.value = torchIntensity;
+      mimicMat.uniforms.uTorchIntensity.value = torchIntensity;
+    }
+  }, [torchIntensity, mat, mimicMat]);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    mat.uniforms.uTime.value = t;
+    mimicMat.uniforms.uTime.value = t;
+  });
+
+  return (
+    <>
+      {chests.map((chest) => (
+        <ChestBillboard key={chest.id} chest={chest} tileSize={tileSize} mat={mat} mimicMat={mimicMat} />
       ))}
     </>
   );
@@ -619,6 +796,14 @@ export default function App() {
                   torchColor={torchColor}
                   torchIntensity={torchIntensity}
                 />
+                <ChestMeshes
+                  chests={gs.chests}
+                  tileSize={TILE_SIZE}
+                  fogNear={4}
+                  fogFar={28}
+                  torchColor={torchColor}
+                  torchIntensity={torchIntensity}
+                />
               </PerspectiveDungeonView>
             )}
 
@@ -767,6 +952,7 @@ export default function App() {
             stovePlacements={ds.stovePlacements}
             hazardData={ds.hazardData}
             disarmedTraps={gs.disarmedTraps}
+            chests={gs.chests}
           />
         </div>
 

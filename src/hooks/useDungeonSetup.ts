@@ -466,7 +466,7 @@ export function useDungeonSetup({
         const cz = room.rect.y + Math.floor(room.rect.h / 2);
         const idx = cz * dungeonWidth + cx;
         if (solidData[idx] !== 0) continue;
-        chests.push({ id: `chest_${i}`, x: cx, z: cz, value: 10 });
+        chests.push({ id: `chest_${i}`, x: cx, z: cz, value: 10, mimic: rng() < 0.25 });
         break;
       }
     }

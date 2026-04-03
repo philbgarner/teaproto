@@ -119,6 +119,31 @@ function StoveTile({ x, z, tileSize }: { x: number; z: number; tileSize: number 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Chest icon — tan square tile
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ChestIcon({ x, z, tileSize }: { x: number; z: number; tileSize: number }) {
+  const [hovered, setHovered] = useState(false);
+  const wx = (x + 0.5) * tileSize;
+  const wz = (z + 0.5) * tileSize;
+
+  return (
+    <group position={[wx, 0.02, wz]}>
+      <mesh
+        rotation={[-HALF_PI, 0, 0]}
+        renderOrder={2}
+        onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); }}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <planeGeometry args={[tileSize * 0.7, tileSize * 0.5]} />
+        <meshBasicMaterial color="#c8a46e" depthTest={false} />
+      </mesh>
+      {hovered && <Html style={TOOLTIP_STYLE}>Chest</Html>}
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Circle icon — mobs (green) and adventurers (red)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -276,6 +301,8 @@ function PlayerArrow({
 // Inner R3F scene
 // ─────────────────────────────────────────────────────────────────────────────
 
+type MinimapChest = { x: number; z: number };
+
 type SceneProps = {
   solidData: Uint8Array;
   width: number;
@@ -291,6 +318,7 @@ type SceneProps = {
   stovePlacements: MinimapStove[];
   hazardData?: Uint8Array;
   disarmedTraps: Set<string>;
+  chests: MinimapChest[];
   scale: number;
 };
 
@@ -309,6 +337,7 @@ function MinimapScene({
   stovePlacements,
   hazardData,
   disarmedTraps,
+  chests,
   scale,
 }: SceneProps) {
   const { camera } = useThree();
@@ -391,6 +420,10 @@ function MinimapScene({
         <StoveTile key={`stove_${s.x}_${s.z}`} x={s.x} z={s.z} tileSize={tileSize} />
       ))}
 
+      {chests.map((c, i) => (
+        <ChestIcon key={`chest_${i}`} x={c.x} z={c.z} tileSize={tileSize} />
+      ))}
+
       {trapList.map((t) => (
         <TrapIcon
           key={`trap_${t.x}_${t.z}`}
@@ -459,6 +492,7 @@ export type MinimapProps = {
   stovePlacements?: MinimapStove[];
   hazardData?: Uint8Array;
   disarmedTraps?: Set<string>;
+  chests?: MinimapChest[];
   /** Orthographic zoom level. Defaults to 4.5. */
   scale?: number;
   // Legacy props kept for call-site compatibility
@@ -483,6 +517,7 @@ export function Minimap({
   stovePlacements = [],
   hazardData,
   disarmedTraps = new Set(),
+  chests = [],
   scale = DEFAULT_ZOOM,
 }: MinimapProps) {
   return (
@@ -516,6 +551,7 @@ export function Minimap({
           stovePlacements={stovePlacements}
           hazardData={hazardData}
           disarmedTraps={disarmedTraps}
+          chests={chests}
           scale={scale}
         />
       </Canvas>

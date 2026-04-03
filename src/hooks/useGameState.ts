@@ -1209,8 +1209,20 @@ export function useGameState({
           (c) => c.x === adv.x && c.z === adv.z,
         );
         if (chestIdx !== -1) {
-          newLoot += adventurerLootPerChestRef.current;
+          const pickedChest = newChests[chestIdx];
           newChests.splice(chestIdx, 1);
+          if (pickedChest.mimic) {
+            adv = { ...adv, alive: false, hp: 0 };
+            return {
+              adv,
+              intendedX: adv.x,
+              intendedZ: adv.z,
+              debugPath: [],
+              isAttack: false,
+              inCombat: false,
+            };
+          }
+          newLoot += adventurerLootPerChestRef.current;
         }
 
         // Check state transition
