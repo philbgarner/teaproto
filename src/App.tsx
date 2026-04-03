@@ -1117,6 +1117,8 @@ export default function App() {
             disarmedTraps={gs.disarmedTraps}
             chests={gs.chests}
             furniturePlacements={ds.initialFurniture}
+            goldDrops={gs.xpDrops}
+            itemDrops={gs.ingredientDrops}
           />
         </div>
 
