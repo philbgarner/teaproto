@@ -1,14 +1,14 @@
 /**
- * Overlay shown in the top-right of the 3D view when the next adventurer wave
+ * Overlay shown in the top-right of the 3D view when the next adventurer round
  * is imminent and no adventurers are currently alive. Only renders when
- * `turnsLeft` is at or below `threshold` and the current wave is cleared.
+ * `turnsLeft` is at or below `threshold` and the current round is cleared.
  *
  * @param {{
  *   turnsLeft: number,
  *   visible: boolean,
  * }} props
  */
-export function WaveCountdown({ turnsLeft, visible }) {
+export function RoundCountdown({ turnsLeft, visible }) {
   if (!visible) return null;
   return (
     <div

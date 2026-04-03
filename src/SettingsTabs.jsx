@@ -28,8 +28,8 @@ export default function SettingsTabs({
   setSatiationDropPerStep,
   supersatiationBonus,
   setSupersatiationBonus,
-  turnsPerWave,
-  setTurnsPerWave,
+  turnsPerRound,
+  setTurnsPerRound,
   traversalFactor,
   setTraversalFactor,
   adventurerDreadRate,
@@ -135,12 +135,12 @@ export default function SettingsTabs({
               format={(v) => `${v}%`}
             />
             <SliderRow
-              label="Turns/wave"
-              value={turnsPerWave}
+              label="Turns/round"
+              value={turnsPerRound}
               min={10}
               max={300}
               step={5}
-              onChange={(v) => setTurnsPerWave(Math.round(v))}
+              onChange={(v) => setTurnsPerRound(Math.round(v))}
             />
             <SliderRow
               label="Passage speed"

@@ -18,7 +18,7 @@ import {
 } from "../roguelike-mazetools/src/rendering/InstancedTileMesh";
 import type { TileAtlas } from "../roguelike-mazetools/src/rendering/tileAtlas";
 import { StatusBar } from "./components/StatusBar";
-import { WaveCountdown } from "./components/WaveCountdown";
+import { RoundCountdown } from "./components/WaveCountdown";
 import { RecipeMenu } from "./components/RecipeMenu";
 import { GameOverOverlay } from "./components/GameOverOverlay";
 import { MinimapSidebar } from "./components/MinimapSidebar";
@@ -39,8 +39,8 @@ import {
   TRAP_GRID_OVERLAY_ID,
   SPIKE_TRAP_OVERLAY_ID,
   PLAYER_MAX_HP,
-  WAVE_COUNTDOWN_THRESHOLD,
-  WIN_WAVES,
+  ROUND_COUNTDOWN_THRESHOLD,
+  WIN_ROUNDS,
   ATLAS_SHEET_W,
   ATLAS_SHEET_H,
   atlasIndex,
@@ -657,8 +657,8 @@ export default function App() {
     setSatiationDropPerStep,
     supersatiationBonus,
     setSupersatiationBonus,
-    turnsPerWave,
-    setTurnsPerWave,
+    turnsPerRound,
+    setTurnsPerRound,
     traversalFactor,
     setTraversalFactor,
     adventurerDreadRate,
@@ -710,7 +710,7 @@ export default function App() {
     heatingPerStep,
     satiationDropPerStep,
     supersatiationBonus,
-    turnsPerWave,
+    turnsPerRound,
     traversalFactor,
     adventurerDreadRate,
     adventurerLootPerChest,
@@ -965,10 +965,10 @@ export default function App() {
               </PerspectiveDungeonView>
             )}
 
-            <WaveCountdown
-              turnsLeft={gs.waveCountdown}
+            <RoundCountdown
+              turnsLeft={gs.roundCountdown}
               visible={
-                gs.waveCountdown <= WAVE_COUNTDOWN_THRESHOLD &&
+                gs.roundCountdown <= ROUND_COUNTDOWN_THRESHOLD &&
                 gs.adventurers.filter((a: any) => a.alive).length === 0
               }
             />
@@ -1131,8 +1131,8 @@ export default function App() {
             heatingPerStep,
             setHeatingPerStep,
             satiationDropPerStep,
-            turnsPerWave,
-            setTurnsPerWave,
+            turnsPerRound,
+            setTurnsPerRound,
             setSatiationDropPerStep,
             supersatiationBonus,
             setSupersatiationBonus,
@@ -1189,9 +1189,9 @@ export default function App() {
       <GameOverOverlay
         gameState={gs.gameState}
         gameOverReason={gs.gameOverReason}
-        currentWave={gs.currentWave}
+        currentRound={gs.currentRound}
         turnCount={gs.turnCount}
-        winWaves={WIN_WAVES}
+        winRounds={WIN_ROUNDS}
         onPlayAgain={() => {
           setDungeonSeed((s) => s);
           const freshSatiations = ds.initialMobs.map(() => 40);
@@ -1203,9 +1203,9 @@ export default function App() {
           gs.setActiveStoveKey(null);
           gs.setMessage(null);
           gs.setAdventurers([]);
-          gs.setCurrentWave(0);
+          gs.setCurrentRound(0);
           gs.setTurnCount(0);
-          gs.setWaveCountdown(turnsPerWave);
+          gs.setRoundCountdown(turnsPerRound);
           gs.setPlayerXp(0);
           gs.setXpDrops([]);
           gs.setPlayerHp(PLAYER_MAX_HP);
@@ -1216,9 +1216,9 @@ export default function App() {
           gs.setGameState("playing");
           gs.setGameOverReason(null);
           gs.adventurersRef.current = [];
-          gs.currentWaveRef.current = 0;
+          gs.currentRoundRef.current = 0;
           gs.turnCountRef.current = 0;
-          gs.waveCountdownRef.current = turnsPerWave;
+          gs.roundCountdownRef.current = turnsPerRound;
           gs.playerXpRef.current = 0;
           gs.xpDropsRef.current = [];
           gs.playerHpRef.current = PLAYER_MAX_HP;

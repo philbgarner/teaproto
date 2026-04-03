@@ -32,16 +32,16 @@
     letter-spacing: 0.05em;
 }
 
-.wave {
+.round {
     font-size: 0.75rem;
     letter-spacing: 0.05em;
 }
 
-.waveActive {
+.roundActive {
     color: #f88;
 }
 
-.waveInactive {
+.roundInactive {
     color: #555;
 }
 
