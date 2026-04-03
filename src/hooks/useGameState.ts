@@ -681,26 +681,45 @@ export function useGameState({
     (waveNum: number) => {
       const count = Math.min(1 + waveNum, 6);
       const spawned: any[] = [];
-      const occupied = new Set(
-        adventurersRef.current
+      // Block tiles occupied by alive adventurers or mobs
+      const occupied = new Set([
+        ...adventurersRef.current
           .filter((a) => a.alive)
           .map((a) => `${a.x}_${a.z}`),
-      );
+        ...mobPositionsRef.current.map((p) => `${p.x}_${p.z}`),
+      ]);
+      // Spawn all adventurers from the startRoom (adventurerSpawnRooms[0])
+      const room = adventurerSpawnRooms[0];
+      if (!room) return spawned;
       for (let i = 0; i < count; i++) {
-        const room =
-          adventurerSpawnRooms[i % Math.max(1, adventurerSpawnRooms.length)];
-        if (!room) continue;
         const tmpl = ADVENTURER_TYPES[i % ADVENTURER_TYPES.length];
-        // offset slightly to avoid stacking
-        let spawnX = room.x;
-        let spawnZ = room.z + i;
-        // clamp to bounds
-        spawnX = Math.max(1, Math.min(dungeonWidth - 2, spawnX));
-        spawnZ = Math.max(1, Math.min(dungeonHeight - 2, spawnZ));
-        const key = `${spawnX}_${spawnZ}`;
-        if (occupied.has(key)) {
-          spawnZ = Math.max(1, Math.min(dungeonHeight - 2, room.z - i));
+        // Spiral outward from room center to find a free floor tile
+        let spawnX = -1;
+        let spawnZ = -1;
+        outer: for (let r = 0; r <= 8; r++) {
+          for (let dz = -r; dz <= r; dz++) {
+            for (let dx = -r; dx <= r; dx++) {
+              if (Math.abs(dx) !== r && Math.abs(dz) !== r) continue;
+              const tx = room.x + dx;
+              const tz = room.z + dz;
+              if (
+                tx < 1 ||
+                tz < 1 ||
+                tx >= dungeonWidth - 1 ||
+                tz >= dungeonHeight - 1
+              )
+                continue;
+              if (solidData[tz * dungeonWidth + tx] !== 0) continue;
+              const key = `${tx}_${tz}`;
+              if (!occupied.has(key)) {
+                spawnX = tx;
+                spawnZ = tz;
+                break outer;
+              }
+            }
+          }
         }
+        if (spawnX === -1) continue;
         occupied.add(`${spawnX}_${spawnZ}`);
         const lootRng = makeRng(waveNum * 31337 + i * 7919 + 1);
         const dreadRng = makeRng(waveNum * 31337 + i * 7919 + 2);
@@ -727,7 +746,7 @@ export function useGameState({
       }
       return spawned;
     },
-    [adventurerSpawnRooms, dungeonHeight, dungeonWidth],
+    [adventurerSpawnRooms, dungeonHeight, dungeonWidth, solidData],
   );
 
   // logicalRef is provided by useEotBCamera — we need a ref to it here so onStep can

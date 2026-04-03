@@ -98,7 +98,6 @@ export function useDungeonSetup({
     const rng = makeRng(dungeon.seed);
     const themes: Record<any, any> = {};
     for (const [roomId, room] of dungeon.rooms) {
-      console.log("room", room);
       let floorId: number, wallId: number, ceilingId: number;
       if (roomId === dungeon.startRoomId) {
         floorId = atlasIndex.floorTypes.idByName("Steel");
@@ -382,26 +381,33 @@ export function useDungeonSetup({
     return mobs;
   }, [dungeon]);
 
-  // Rooms sorted farthest-first from player spawn — used for adventurer spawning
+  // Adventurer spawn rooms: startRoom first, then other non-end rooms farthest-first.
+  // Player spawns in endRoom; adventurers enter from the opposite end (startRoom).
   const adventurerSpawnRooms = useMemo(() => {
     const endRoom = dungeon.rooms.get(dungeon.endRoomId);
+    const startRoom = dungeon.rooms.get(dungeon.startRoomId);
     const endCx = endRoom
       ? (endRoom as any).rect.x + (endRoom as any).rect.w / 2
       : 0;
     const endCz = endRoom
       ? (endRoom as any).rect.y + (endRoom as any).rect.h / 2
       : 0;
-    return Array.from(dungeon.rooms.entries())
-      .filter(([id]) => id !== dungeon.endRoomId)
-      .map(([, room]) => ({
-        x: Math.floor((room as any).rect.x + (room as any).rect.w / 2),
-        z: Math.floor((room as any).rect.y + (room as any).rect.h / 2),
-        dist: Math.hypot(
-          (room as any).rect.x + (room as any).rect.w / 2 - endCx,
-          (room as any).rect.y + (room as any).rect.h / 2 - endCz,
-        ),
-      }))
+    const toEntry = (room: any) => ({
+      x: Math.floor(room.rect.x + room.rect.w / 2),
+      z: Math.floor(room.rect.y + room.rect.h / 2),
+      dist: Math.hypot(
+        room.rect.x + room.rect.w / 2 - endCx,
+        room.rect.y + room.rect.h / 2 - endCz,
+      ),
+    });
+    const startEntry = startRoom ? [toEntry(startRoom as any)] : [];
+    const others = Array.from(dungeon.rooms.entries())
+      .filter(
+        ([id]) => id !== dungeon.endRoomId && id !== dungeon.startRoomId,
+      )
+      .map(([, room]) => toEntry(room as any))
       .sort((a, b) => b.dist - a.dist);
+    return [...startEntry, ...others];
   }, [dungeon]);
 
   // Scatter ingredients across non-end rooms at game start

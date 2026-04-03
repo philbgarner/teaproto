@@ -5,6 +5,16 @@ interface GhostInventoryProps {
   columnsPerRow?: number;
 }
 
+function LeftHandEmpty() {
+  return (
+    <div
+      style={{
+        backgroundImage: `${import.meta.env.BASE_URL}textures/icons.png`,
+      }}
+    ></div>
+  );
+}
+
 export default function GhostInventory({
   columnsPerRow = 3,
 }: GhostInventoryProps) {
@@ -37,35 +47,47 @@ export default function GhostInventory({
           key={"lefthand"}
           className={`${styles.inventorySlot} ${!leftHandItem[0] || !registry.getSlotObjectName(leftHandItem[0]) ? styles.emptySlot : ""}`}
           style={{ maxWidth: "50%" }}
-          disabled={!leftHandItem[0] || !registry.getSlotObjectName(leftHandItem[0])}
+          disabled={
+            !leftHandItem[0] || !registry.getSlotObjectName(leftHandItem[0])
+          }
         >
-          {leftHandItem[0] && registry.getSlotObjectName(leftHandItem[0])
-            ? (
-              <>
-                <span className={styles.itemName}>{registry.getSlotObjectName(leftHandItem[0])}</span>
-                {registry.getSlotQuantity(leftHandItem[0]) > 1 && (
-                  <span className={styles.itemCount}>×{registry.getSlotQuantity(leftHandItem[0])}</span>
-                )}
-              </>
-            )
-            : "(left)"}
+          {leftHandItem[0] && registry.getSlotObjectName(leftHandItem[0]) ? (
+            <>
+              <span className={styles.itemName}>
+                {registry.getSlotObjectName(leftHandItem[0])}
+              </span>
+              {registry.getSlotQuantity(leftHandItem[0]) > 1 && (
+                <span className={styles.itemCount}>
+                  ×{registry.getSlotQuantity(leftHandItem[0])}
+                </span>
+              )}
+            </>
+          ) : (
+            "(left)"
+          )}
         </button>
         <button
           key={"righthand"}
           className={`${styles.inventorySlot} ${!rightHandItem[0] || !registry.getSlotObjectName(rightHandItem[0]) ? styles.emptySlot : ""}`}
           style={{ maxWidth: "50%" }}
-          disabled={!rightHandItem[0] || !registry.getSlotObjectName(rightHandItem[0])}
+          disabled={
+            !rightHandItem[0] || !registry.getSlotObjectName(rightHandItem[0])
+          }
         >
-          {rightHandItem[0] && registry.getSlotObjectName(rightHandItem[0])
-            ? (
-              <>
-                <span className={styles.itemName}>{registry.getSlotObjectName(rightHandItem[0])}</span>
-                {registry.getSlotQuantity(rightHandItem[0]) > 1 && (
-                  <span className={styles.itemCount}>×{registry.getSlotQuantity(rightHandItem[0])}</span>
-                )}
-              </>
-            )
-            : "(right)"}
+          {rightHandItem[0] && registry.getSlotObjectName(rightHandItem[0]) ? (
+            <>
+              <span className={styles.itemName}>
+                {registry.getSlotObjectName(rightHandItem[0])}
+              </span>
+              {registry.getSlotQuantity(rightHandItem[0]) > 1 && (
+                <span className={styles.itemCount}>
+                  ×{registry.getSlotQuantity(rightHandItem[0])}
+                </span>
+              )}
+            </>
+          ) : (
+            "(right)"
+          )}
         </button>
       </div>
 

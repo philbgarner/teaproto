@@ -17,7 +17,6 @@ import {
   type TileInstance,
 } from "../roguelike-mazetools/src/rendering/InstancedTileMesh";
 import type { TileAtlas } from "../roguelike-mazetools/src/rendering/tileAtlas";
-import { GameHeader } from "./components/GameHeader";
 import { StatusBar } from "./components/StatusBar";
 import { WaveCountdown } from "./components/WaveCountdown";
 import { RecipeMenu } from "./components/RecipeMenu";
@@ -163,12 +162,14 @@ const COIN_UV_RECT = new THREE.Vector4(
 );
 
 const COIN_VERT = /* glsl */ `
+uniform float uTime;
 varying vec2 vUv;
 varying float vFogDist;
 varying vec2 vWorldPos;
 void main() {
   vUv = uv;
-  vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);
+  float bob = sin(uTime * 2.5) * 0.06;
+  vec4 worldPos = modelMatrix * vec4(position.x, position.y + bob, position.z, 1.0);
   vWorldPos = worldPos.xz;
   vec4 eyePos = viewMatrix * worldPos;
   vFogDist = length(eyePos.xyz);
@@ -191,16 +192,47 @@ void main() {
   if (color.a < 0.5) discard;
   float band = torchBand(0.03);
   vec3 lit = applyTorchLighting(color.rgb, band);
+  float shinePhase = fract(uTime * 0.4);
+  float shine = smoothstep(0.08, 0.0, abs(vUv.x - shinePhase)) * 0.7;
+  lit += color.rgb * shine * vec3(1.0, 0.95, 0.7);
   gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
 }
 `;
 
-const MAX_COIN_DROPS = 64;
-const _cMat4 = new THREE.Matrix4();
-const _cPos = new THREE.Vector3();
-const _cQuat = new THREE.Quaternion();
-const _cScale = new THREE.Vector3();
-const _cEuler = new THREE.Euler();
+const COIN_GEO = new THREE.PlaneGeometry(1, 1);
+
+function CoinBillboard({
+  drop,
+  tileSize,
+  mat,
+}: {
+  drop: { x: number; z: number };
+  tileSize: number;
+  mat: THREE.ShaderMaterial;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+  const coinSize = tileSize * 0.5;
+  const wx = (drop.x + 0.5) * tileSize;
+  const wz = (drop.z + 0.5) * tileSize;
+
+  useFrame(({ camera }) => {
+    if (ref.current)
+      ref.current.rotation.y = Math.atan2(
+        camera.position.x - wx,
+        camera.position.z - wz,
+      );
+  });
+
+  return (
+    <mesh
+      ref={ref}
+      geometry={COIN_GEO}
+      material={mat}
+      position={[wx, coinSize / 2, wz]}
+      scale={[coinSize, coinSize, 1]}
+    />
+  );
+}
 
 function CoinDropMeshes({
   drops,
@@ -210,7 +242,7 @@ function CoinDropMeshes({
   torchColor,
   torchIntensity,
 }: {
-  drops: { x: number; z: number }[];
+  drops: { id: string; x: number; z: number }[];
   tileSize?: number;
   fogNear?: number;
   fogFar?: number;
@@ -221,18 +253,13 @@ function CoinDropMeshes({
     THREE.TextureLoader,
     `${import.meta.env.BASE_URL}textures/icons.png`,
   );
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dropsRef = useRef(drops);
-  dropsRef.current = drops;
 
-  const { geo, mat } = useMemo(() => {
+  const mat = useMemo(() => {
     texture.magFilter = THREE.NearestFilter;
     texture.minFilter = THREE.NearestFilter;
     texture.generateMipmaps = false;
     texture.needsUpdate = true;
-
-    const geo = new THREE.PlaneGeometry(1, 1);
-    const mat = new THREE.ShaderMaterial({
+    return new THREE.ShaderMaterial({
       uniforms: {
         uAtlas: { value: texture },
         uUvRect: { value: COIN_UV_RECT },
@@ -248,51 +275,31 @@ function CoinDropMeshes({
       alphaTest: 0.5,
       side: THREE.DoubleSide,
     });
-    return { geo, mat };
   }, [texture, fogNear, fogFar]);
 
   const torchColorObj = useMemo(
     () => (torchColor ? new THREE.Color(torchColor) : undefined),
     [torchColor],
   );
-
   useEffect(() => {
     if (torchColorObj) mat.uniforms.uTorchColor.value = torchColorObj;
   }, [torchColorObj, mat]);
-
   useEffect(() => {
     if (torchIntensity !== undefined)
       mat.uniforms.uTorchIntensity.value = torchIntensity;
   }, [torchIntensity, mat]);
 
-  const coinSize = tileSize * 0.5;
-
-  useFrame(({ camera, clock }) => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
+  useFrame(({ clock }) => {
     mat.uniforms.uTime.value = clock.getElapsedTime();
-
-    const currentDrops = dropsRef.current;
-    mesh.count = currentDrops.length;
-    if (currentDrops.length === 0) return;
-
-    const camPos = camera.position;
-    for (let i = 0; i < currentDrops.length; i++) {
-      const drop = currentDrops[i];
-      const wx = (drop.x + 0.5) * tileSize;
-      const wz = (drop.z + 0.5) * tileSize;
-      const wy = coinSize / 2;
-      _cPos.set(wx, wy, wz);
-      _cScale.set(coinSize, coinSize, 1);
-      _cEuler.set(0, Math.atan2(camPos.x - wx, camPos.z - wz), 0);
-      _cQuat.setFromEuler(_cEuler);
-      _cMat4.compose(_cPos, _cQuat, _cScale);
-      mesh.setMatrixAt(i, _cMat4);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
   });
 
-  return <instancedMesh ref={meshRef} args={[geo, mat, MAX_COIN_DROPS]} />;
+  return (
+    <>
+      {drops.map((drop) => (
+        <CoinBillboard key={drop.id} drop={drop} tileSize={tileSize} mat={mat} />
+      ))}
+    </>
+  );
 }
 
 export default function App() {
@@ -439,7 +446,13 @@ export default function App() {
       return `${mob?.name} is unconscious — Press [space] to offer tea to revive`;
     }
     return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press [space] to offer tea`;
-  }, [facingTarget, gs.stoveStates, ds.initialMobs, gs.mobSatiations, keybindings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    facingTarget,
+    gs.stoveStates,
+    ds.initialMobs,
+    gs.mobSatiations,
+    keybindings,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Combined mobile flash + attack dirs (mobs first, then alive advs)
   const mobileFlash = useMemo(
@@ -461,8 +474,6 @@ export default function App() {
     }
     return keys;
   }, [camera.x, camera.z, gs.mobPositions, gs.adventurers]);
-
-  console.log("playerData", playerData);
 
   return (
     <>
@@ -703,11 +714,13 @@ export default function App() {
             floorData={ds.floorData}
             floorTileMap={FLOOR_TILE_MAP}
             tileSize={TILE_SIZE}
-            mobs={gs.mobPositions.map((pos: { x: number; z: number }, i: number) => ({
-              x: pos.x,
-              z: pos.z,
-              name: (ds.initialMobs as any[])[i]?.name,
-            }))}
+            mobs={gs.mobPositions.map(
+              (pos: { x: number; z: number }, i: number) => ({
+                x: pos.x,
+                z: pos.z,
+                name: (ds.initialMobs as any[])[i]?.name,
+              }),
+            )}
             adventurers={gs.adventurers}
             doorPlacements={ds.doorPlacements}
             stovePlacements={ds.stovePlacements}
