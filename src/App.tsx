@@ -738,7 +738,7 @@ export default function App() {
                 ceilingHeight={CEILING_H}
                 wallTile={TILE_WALL}
                 backgroundTile={TILE_DIRT}
-                boneTexture={gs.iconTexture ?? undefined}
+                itemTexture={gs.iconTexture ?? undefined}
                 renderRadius={28}
                 fov={60}
                 fogNear={4}
@@ -937,7 +937,7 @@ export default function App() {
             atlas={gs.atlas}
             floorTile={TILE_FLOOR}
             backgroundTile={TILE_DIRT}
-            boneTexture={gs.iconTexture ?? undefined}
+            itemTexture={gs.iconTexture ?? undefined}
             floorData={ds.floorData}
             floorTileMap={FLOOR_TILE_MAP}
             tileSize={TILE_SIZE}
