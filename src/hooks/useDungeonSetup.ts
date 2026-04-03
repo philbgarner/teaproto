@@ -189,8 +189,10 @@ export function useDungeonSetup({
         const wallOverlays = context.textures.wallOverlays.image.data; // wall overlays; read at oi+[0..3]
         const ceilingOverlays = context.textures.ceilingOverlays.image.data; // ceiling overlays; read at oi+[0..3]
 
-        // Example put a piece of furniture in the room,
-        // only where distanceToWall is 0 (against wall)
+        // Example: place a Chair (atlas sprite id 4) against the wall on floor cells
+        if (!solid && distanceToWall === 0) {
+          placeFurniture(x, y, "Chair");
+        }
 
         // If this is a dug out cell (ie: not a wall)
         if (!solid) {
