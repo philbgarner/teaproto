@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import * as THREE from "three";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,8 +46,14 @@ export type MinimapMob = {
   maxHp?: number;
   satiation?: number;
   maxSatiation?: number;
+  rpsEffect?: string;
 };
-export type MinimapAdventurer = { x: number; z: number; alive: boolean; name?: string };
+export type MinimapAdventurer = {
+  x: number;
+  z: number;
+  alive: boolean;
+  name?: string;
+};
 export type MinimapDoor = { x: number; z: number };
 export type MinimapStove = { x: number; z: number };
 
@@ -64,7 +70,9 @@ function buildFloorCells(
   tileSize: number,
   exploredMask: Uint8Array | null | undefined,
 ): FloorCell[] {
-  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-HALF_PI, 0, 0));
+  const q = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(-HALF_PI, 0, 0),
+  );
   const scale = new THREE.Vector3(tileSize, tileSize, 1);
   const cells: FloorCell[] = [];
 
@@ -105,7 +113,15 @@ function FloorTiles({ cells }: { cells: FloorCell[] }) {
 // Teaomatic floor overlay (cyan tinted tile)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function StoveTile({ x, z, tileSize }: { x: number; z: number; tileSize: number }) {
+function StoveTile({
+  x,
+  z,
+  tileSize,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+}) {
   const [hovered, setHovered] = useState(false);
   const wx = (x + 0.5) * tileSize;
   const wz = (z + 0.5) * tileSize;
@@ -115,7 +131,10 @@ function StoveTile({ x, z, tileSize }: { x: number; z: number; tileSize: number 
       <mesh
         rotation={[-HALF_PI, 0, 0]}
         renderOrder={1}
-        onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); }}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
         onPointerLeave={() => setHovered(false)}
       >
         <planeGeometry args={[tileSize, tileSize]} />
@@ -130,7 +149,15 @@ function StoveTile({ x, z, tileSize }: { x: number; z: number; tileSize: number 
 // Chest icon — tan square tile
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ChestIcon({ x, z, tileSize }: { x: number; z: number; tileSize: number }) {
+function ChestIcon({
+  x,
+  z,
+  tileSize,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+}) {
   const [hovered, setHovered] = useState(false);
   const wx = (x + 0.5) * tileSize;
   const wz = (z + 0.5) * tileSize;
@@ -140,7 +167,10 @@ function ChestIcon({ x, z, tileSize }: { x: number; z: number; tileSize: number 
       <mesh
         rotation={[-HALF_PI, 0, 0]}
         renderOrder={2}
-        onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); }}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
         onPointerLeave={() => setHovered(false)}
       >
         <planeGeometry args={[tileSize * 0.7, tileSize * 0.5]} />
@@ -180,7 +210,10 @@ function ArcRing({
       </mesh>
       {/* foreground arc */}
       {frac > 0 && (
-        <mesh rotation={[-HALF_PI, 0, -HALF_PI]} renderOrder={renderOrder + 0.1}>
+        <mesh
+          rotation={[-HALF_PI, 0, -HALF_PI]}
+          renderOrder={renderOrder + 0.1}
+        >
           <ringGeometry args={[inner, outer, 32, 1, 0, TWO_PI * frac]} />
           <meshBasicMaterial color={fgColor} depthTest={false} />
         </mesh>
@@ -188,6 +221,12 @@ function ArcRing({
     </>
   );
 }
+
+const RPS_COLORS: Record<string, string> = {
+  poisoned: "#22dd44",
+  freezing: "#44aaff",
+  bleeding: "#ff3333",
+};
 
 function CircleIcon({
   x,
@@ -199,35 +238,59 @@ function CircleIcon({
   maxHp,
   satiation,
   maxSatiation,
+  rpsEffect,
+  onHover,
 }: {
   x: number;
   z: number;
   tileSize: number;
   color: string;
-  tooltip: string;
+  tooltip: ReactNode;
   hp?: number;
   maxHp?: number;
   satiation?: number;
   maxSatiation?: number;
+  rpsEffect?: string;
+  onHover: (pos: { x: number; y: number } | null, content: ReactNode) => void;
 }) {
-  const [hovered, setHovered] = useState(false);
   const r = tileSize * 0.3;
   const wx = (x + 0.5) * tileSize;
   const wz = (z + 0.5) * tileSize;
 
-  const showBars = hp !== undefined && maxHp !== undefined && satiation !== undefined && maxSatiation !== undefined;
+  const showBars =
+    hp !== undefined &&
+    maxHp !== undefined &&
+    satiation !== undefined &&
+    maxSatiation !== undefined;
   const hpFrac = showBars ? hp! / maxHp! : 1;
   const satFrac = showBars ? satiation! / maxSatiation! : 1;
   const unconscious = showBars && hp === 0;
-  const displayColor = unconscious ? "#dddd00" : color;
+  const rpsColor =
+    rpsEffect && rpsEffect !== "none" ? RPS_COLORS[rpsEffect] : null;
+  const displayColor = unconscious
+    ? "#dddd00"
+    : (rpsColor ?? (rpsEffect === "none" ? "#f1f1f1" : color));
 
   return (
     <group position={[wx, 0.1, wz]}>
       <mesh
         rotation={[-HALF_PI, 0, 0]}
         renderOrder={2}
-        onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); }}
-        onPointerLeave={() => setHovered(false)}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          onHover(
+            { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY },
+            tooltip,
+          );
+        }}
+        onPointerMove={(e) => {
+          e.stopPropagation();
+          onHover(
+            { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY },
+            tooltip,
+          );
+        }}
+        onPointerLeave={() => onHover(null, null)}
       >
         <circleGeometry args={[r, 16]} />
         <meshBasicMaterial color={displayColor} depthTest={false} />
@@ -252,7 +315,6 @@ function CircleIcon({
           />
         </>
       )}
-      {hovered && <Html style={TOOLTIP_STYLE}>{tooltip}</Html>}
     </group>
   );
 }
@@ -281,7 +343,10 @@ function DoorIcon({
       <mesh
         rotation={[-HALF_PI, 0, 0]}
         renderOrder={2}
-        onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); }}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
         onPointerLeave={() => setHovered(false)}
       >
         <planeGeometry args={[tileSize * 0.75, tileSize * 0.18]} />
@@ -326,11 +391,17 @@ function TrapIcon({
       <mesh
         rotation={[-HALF_PI, 0, 0]}
         renderOrder={2}
-        onPointerEnter={(e) => { e.stopPropagation(); setHovered(true); }}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
         onPointerLeave={() => setHovered(false)}
       >
         <planeGeometry args={[s, s]} />
-        <meshBasicMaterial color={disarmed ? "#0e0e0e" : "#cc1010"} depthTest={false} />
+        <meshBasicMaterial
+          color={disarmed ? "#0e0e0e" : "#cc1010"}
+          depthTest={false}
+        />
       </mesh>
       {hovered && (
         <Html style={TOOLTIP_STYLE}>
@@ -374,6 +445,89 @@ function PlayerArrow({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Off-screen teaomatic indicator — triangle at viewport edge pointing toward it
+// ─────────────────────────────────────────────────────────────────────────────
+
+function TeaomaticIndicator({
+  stove,
+  tileSize,
+  propsRef,
+  lerpedYawRef,
+}: {
+  stove: MinimapStove;
+  tileSize: number;
+  propsRef: React.RefObject<{ playerX: number; playerZ: number; targetYaw: number }>;
+  lerpedYawRef: React.RefObject<number>;
+}) {
+  const { camera, size } = useThree();
+  const groupRef = useRef<THREE.Group>(null);
+
+  const sx = (stove.x + 0.5) * tileSize;
+  const sz = (stove.z + 0.5) * tileSize;
+
+  useFrame(() => {
+    const group = groupRef.current;
+    if (!group) return;
+
+    const { playerX: px, playerZ: pz } = propsRef.current;
+    const yaw = lerpedYawRef.current;
+
+    const pwx = px * tileSize;
+    const pwz = pz * tileSize;
+
+    const dx = sx - pwx;
+    const dz = sz - pwz;
+
+    const cosY = Math.cos(yaw);
+    const sinY = Math.sin(yaw);
+
+    // Project world displacement into camera view space (X = right, Y = up)
+    const vx = dx * cosY - dz * sinY;
+    const vy = -dx * sinY - dz * cosY;
+
+    const cam = camera as THREE.OrthographicCamera;
+    const halfW = size.width / (2 * cam.zoom);
+    const halfH = size.height / (2 * cam.zoom);
+
+    if (Math.abs(vx) <= halfW && Math.abs(vy) <= halfH) {
+      group.visible = false;
+      return;
+    }
+    group.visible = true;
+
+    // Ray-box intersection: find t where ray (0,0)→(vx,vy) hits the frustum edge
+    const tx = vx !== 0 ? halfW / Math.abs(vx) : Infinity;
+    const ty = vy !== 0 ? halfH / Math.abs(vy) : Infinity;
+    const t = Math.min(tx, ty) * 0.90; // 10% inset so triangle is fully visible
+
+    const edgeVx = vx * t;
+    const edgeVy = vy * t;
+
+    // Back-project from view space to world XZ
+    // right_world = (cosY, 0, -sinY),  up_world = (-sinY, 0, -cosY)
+    const worldX = pwx + edgeVx * cosY + edgeVy * (-sinY);
+    const worldZ = pwz + edgeVx * (-sinY) + edgeVy * (-cosY);
+
+    group.position.set(worldX, 0.2, worldZ);
+    // Rotate so triangle apex points toward stove
+    group.rotation.y = Math.atan2(dx, dz);
+  });
+
+  const triSize = tileSize * 0.55;
+
+  return (
+    <group ref={groupRef}>
+      {/* coneGeometry default apex is +Y; rotation flattens it so apex → +Z;
+          group.rotation.y then aims it at the stove in world space */}
+      <mesh rotation={[-HALF_PI, 0, Math.PI]} renderOrder={10}>
+        <coneGeometry args={[triSize * 0.65, triSize * 1.4, 3]} />
+        <meshBasicMaterial color="#00b8da" depthTest={false} transparent opacity={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Inner R3F scene
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -396,6 +550,9 @@ type SceneProps = {
   disarmedTraps: Set<string>;
   chests: MinimapChest[];
   scale: number;
+  setTooltip: (
+    t: { pos: { x: number; y: number }; content: ReactNode } | null,
+  ) => void;
 };
 
 function MinimapScene({
@@ -415,6 +572,7 @@ function MinimapScene({
   disarmedTraps,
   chests,
   scale,
+  setTooltip,
 }: SceneProps) {
   const { camera } = useThree();
   const lerpedYawRef = useRef(targetYaw);
@@ -457,7 +615,11 @@ function MinimapScene({
         const idx = cz * width + cx;
         if (hazardData[idx] !== 1) continue;
         if (exploredMaskRef?.current && !exploredMaskRef.current[idx]) continue;
-        traps.push({ x: cx, z: cz, disarmed: disarmedTraps.has(`${cx}_${cz}`) });
+        traps.push({
+          x: cx,
+          z: cz,
+          disarmed: disarmedTraps.has(`${cx}_${cz}`),
+        });
       }
     }
     return traps;
@@ -493,7 +655,12 @@ function MinimapScene({
       <FloorTiles cells={floorCells} />
 
       {stovePlacements.map((s) => (
-        <StoveTile key={`stove_${s.x}_${s.z}`} x={s.x} z={s.z} tileSize={tileSize} />
+        <StoveTile
+          key={`stove_${s.x}_${s.z}`}
+          x={s.x}
+          z={s.z}
+          tileSize={tileSize}
+        />
       ))}
 
       {chests.map((c, i) => (
@@ -520,20 +687,53 @@ function MinimapScene({
         />
       ))}
 
-      {mobs.map((m, i) => (
-        <CircleIcon
-          key={`mob_${i}`}
-          x={m.x}
-          z={m.z}
-          tileSize={tileSize}
-          color="#22dd44"
-          tooltip={m.name ?? "Monster"}
-          hp={m.hp}
-          maxHp={m.maxHp}
-          satiation={m.satiation}
-          maxSatiation={m.maxSatiation}
-        />
-      ))}
+      {mobs.map((m, i) => {
+        const effectLabel =
+          m.rpsEffect && m.rpsEffect !== "none"
+            ? {
+                poisoned: "Poisoned",
+                freezing: "Frozen",
+                bleeding: "Bleeding",
+              }[m.rpsEffect]
+            : null;
+        const effectColor = m.rpsEffect ? RPS_COLORS[m.rpsEffect] : undefined;
+        const tooltip = (
+          <div>
+            <div>{m.name ?? "Monster"}</div>
+            {effectLabel && (
+              <div style={{ color: effectColor }}>{effectLabel}</div>
+            )}
+            {m.satiation !== undefined && (
+              <div style={{ color: "#44dddd" }}>
+                Armor: {m.satiation.toFixed(0)}
+              </div>
+            )}
+            {m.hp !== undefined && m.maxHp !== undefined && (
+              <div style={{ color: "#ff4444" }}>
+                HP: {m.hp.toFixed(0)}/{m.maxHp}
+              </div>
+            )}
+          </div>
+        );
+        return (
+          <CircleIcon
+            key={`mob_${i}`}
+            x={m.x}
+            z={m.z}
+            tileSize={tileSize}
+            color="#22dd44"
+            tooltip={tooltip}
+            hp={m.hp}
+            maxHp={m.maxHp}
+            satiation={m.satiation}
+            maxSatiation={m.maxSatiation}
+            rpsEffect={m.rpsEffect}
+            onHover={(pos, content) =>
+              setTooltip(pos ? { pos, content } : null)
+            }
+          />
+        );
+      })}
 
       {adventurers
         .filter((a) => a.alive)
@@ -545,10 +745,22 @@ function MinimapScene({
             tileSize={tileSize}
             color="#e02222"
             tooltip={a.name ?? "Adventurer"}
+            onHover={(pos, content) =>
+              setTooltip(pos ? { pos, content } : null)
+            }
           />
         ))}
 
       <PlayerArrow tileSize={tileSize} groupRef={arrowGroupRef} />
+
+      {stovePlacements[0] && (
+        <TeaomaticIndicator
+          stove={stovePlacements[0]}
+          tileSize={tileSize}
+          propsRef={propsRef}
+          lerpedYawRef={lerpedYawRef}
+        />
+      )}
     </>
   );
 }
@@ -600,6 +812,27 @@ export function Minimap({
   chests = [],
   scale = DEFAULT_ZOOM,
 }: MinimapProps) {
+  const [tooltip, setTooltip] = useState<{
+    pos: { x: number; y: number };
+    content: ReactNode;
+  } | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = tooltipRef.current;
+    if (!el || !tooltip) return;
+    const rect = el.getBoundingClientRect();
+    const MARGIN = 6;
+    let left = tooltip.pos.x - rect.width / 2;
+    let top = tooltip.pos.y - rect.height - 10;
+    left = Math.max(MARGIN, Math.min(window.innerWidth - rect.width - MARGIN, left));
+    top = Math.max(MARGIN, top);
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.style.transform = "none";
+    el.style.visibility = "visible";
+  }, [tooltip]);
+
   return (
     <div
       className={className}
@@ -633,8 +866,27 @@ export function Minimap({
           disarmedTraps={disarmedTraps}
           chests={chests}
           scale={scale}
+          setTooltip={setTooltip}
         />
       </Canvas>
+      {tooltip &&
+        createPortal(
+          <div
+            ref={tooltipRef}
+            style={{
+              ...TOOLTIP_STYLE,
+              position: "fixed",
+              left: tooltip.pos.x,
+              top: tooltip.pos.y,
+              transform: "translate(-50%, calc(-100% - 10px))",
+              visibility: "hidden",
+              zIndex: 9999,
+            }}
+          >
+            {tooltip.content}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -314,6 +314,9 @@ export function useGameState({
     () => initialMobs.map((m) => ({ x: m.x, z: m.z })),
   );
   const mobPositionsRef = useRef(mobPositions);
+  const [mobRpsEffects, setMobRpsEffects] = useState<string[]>(() =>
+    initialMobs.map(() => "none"),
+  );
   const mobStatuses = useMemo(
     () =>
       mobSatiations.map((s) =>
@@ -549,6 +552,7 @@ export function useGameState({
   if (mobHpsRef.current === null) {
     mobHpsRef.current = initialMobs.map((m) => m.hp ?? MOB_HP);
   }
+  const mobRpsEffectsRef = useRef<string[]>(initialMobs.map(() => "none"));
 
   // Hidden passages
   const passagesRef = useRef<any[]>([]);
@@ -583,6 +587,9 @@ export function useGameState({
     addTeaToHand("left", RECIPES[0], 90);
     setMobSatiations(freshSatiations);
     setMobHps(freshHps);
+    const freshRpsEffects = initialMobs.map(() => "none");
+    setMobRpsEffects(freshRpsEffects);
+    mobRpsEffectsRef.current = freshRpsEffects;
     setStoveStates(new Map());
     setShowRecipeMenu(false);
     setActiveStoveKey(null);
@@ -800,6 +807,7 @@ export function useGameState({
           lootThreshold: 20 + Math.floor(lootRng() * 31),
           dreadThreshold: 15 + Math.floor(dreadRng() * 26),
           noLootTurns: 0,
+          rpsEffect: tmpl.rpsEffect,
         });
       }
       return spawned;
@@ -898,6 +906,7 @@ export function useGameState({
       Math.max(0, s - satiationDropPerStep),
     );
     let newMobHps = mobHpsRef.current!.map((h) => h);
+    let newMobRpsEffects = mobRpsEffectsRef.current.map((e) => e);
     let newMobPositions = mobPositionsRef.current.map((p) => ({ ...p }));
     let newWave = currentWaveRef.current;
     let newPlayerXp = playerXpRef.current;
@@ -1120,6 +1129,9 @@ export function useGameState({
             if (newMobHps[combatTarget.idx] <= 0) {
               stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
             }
+          }
+          if ((adv as any).rpsEffect && (adv as any).rpsEffect !== "none") {
+            newMobRpsEffects[combatTarget.idx] = (adv as any).rpsEffect;
           }
           advAttackEvents.push({ advId: adv.id, dx: ddx, dz: ddz });
           mobHitEvents.push({
@@ -1755,6 +1767,7 @@ export function useGameState({
     chestsRef.current = newChests;
     mobSatiationsRef.current = newMobSatiations;
     mobHpsRef.current = newMobHps;
+    mobRpsEffectsRef.current = newMobRpsEffects;
     mobPositionsRef.current = newMobPositions;
     setDisarmedTraps(new Set(disarmedTrapsRef.current));
 
@@ -1770,6 +1783,7 @@ export function useGameState({
     setChests([...newChests]);
     setMobSatiations(newMobSatiations);
     setMobHps(newMobHps);
+    setMobRpsEffects([...newMobRpsEffects]);
     setMobPositions([...newMobPositions]);
 
     // --- Combat animation events ---
@@ -2428,6 +2442,8 @@ export function useGameState({
     setMobSatiations,
     mobHps,
     setMobHps,
+    mobRpsEffects,
+    setMobRpsEffects,
     mobPositions,
     setMobPositions,
     mobPositionsRef,

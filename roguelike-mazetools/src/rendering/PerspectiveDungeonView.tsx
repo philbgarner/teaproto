@@ -232,7 +232,10 @@ function DamageNumberSprite({
   });
 
   return (
-    <Html position={[wx, wy, wz]} style={{ pointerEvents: "none", userSelect: "none" }}>
+    <Html
+      position={[wx, wy, wz]}
+      style={{ pointerEvents: "none", userSelect: "none" }}
+    >
       <div
         ref={divRef}
         style={{
@@ -1088,7 +1091,7 @@ const BONE_UV = {
 
 const SKULL_UV = {
   x: 0 / 256,
-  y: (256 - 32 - 32) / 256, // flip to WebGL bottom-origin  
+  y: (256 - 32 - 32) / 256, // flip to WebGL bottom-origin
   w: 32 / 256,
   h: 32 / 256,
 };
@@ -1121,13 +1124,13 @@ const ITEM_CONFIGS: Record<string, ItemConfig> = {
     uvOffset: BONE_UV,
   },
   skull: {
-    probability: 0.10,
+    probability: 0.1,
     size: 0.16,
     uvOffset: SKULL_UV,
   },
   plant: {
-    probability: 0.30,
-    size: 0.10,
+    probability: 0.3,
+    size: 0.1,
     uvOffset: PLANT_UV,
   },
   plantpot: {
@@ -1143,7 +1146,7 @@ const generateItemData = () => {
   const probabilities = items.map(([_, config]) => config.probability);
   const sizes = items.map(([_, config]) => config.size);
   const uvOffsets = items.map(([_, config]) => config.uvOffset);
-  
+
   return {
     itemCount: items.length,
     probabilities,
@@ -1167,7 +1170,7 @@ function BackgroundSphere({
 }) {
   const tile = atlas.getTile(floorTile);
   const meshRef = useRef<THREE.Mesh>(null);
-  
+
   // Generate item data once
   const itemData = useMemo(() => generateItemData(), []);
 
@@ -1178,7 +1181,7 @@ function BackgroundSphere({
   const mat = useMemo(() => {
     const hasItems = !!(itemTexture && itemTileUv);
     const { itemCount, probabilities, sizes, uvOffsets } = itemData;
-    
+
     return new THREE.ShaderMaterial({
       uniforms: {
         uAtlas: { value: texture },
@@ -1186,17 +1189,17 @@ function BackgroundSphere({
         uTileSize: { value: new THREE.Vector2(tile.uvW, tile.uvH) },
         uRepeat: { value: new THREE.Vector2(12, 6) },
         uItemAtlas: { value: itemTexture ?? null },
-        uItemSize: { value: new THREE.Vector2(32.0/256, 32.0/256) },
+        uItemSize: { value: new THREE.Vector2(32.0 / 256, 32.0 / 256) },
         uHasItems: { value: hasItems ? 1 : 0 },
         // New data-driven uniforms
         uItemCount: { value: itemCount },
         uProbabilities: { value: probabilities },
         uSizes: { value: sizes },
-        uUvOffsetsX: { 
-          value: uvOffsets.map(offset => offset.x) 
+        uUvOffsetsX: {
+          value: uvOffsets.map((offset) => offset.x),
         },
-        uUvOffsetsY: { 
-          value: uvOffsets.map(offset => offset.y) 
+        uUvOffsetsY: {
+          value: uvOffsets.map((offset) => offset.y),
         },
       },
       vertexShader: `
@@ -1251,14 +1254,14 @@ function BackgroundSphere({
 
             // Determine item type based on cell hash
             float itemType = hash(cellId + vec2(1.7, 8.9));
-            
+
             // Loop through items using data-driven approach
             float cumulativeProb = 0.0;
             for (int i = 0; i < MAX_ITEMS; i++) {
               if (i >= uItemCount) break;
-              
+
               cumulativeProb += uProbabilities[i];
-              
+
               if (itemType < cumulativeProb) {
                 // Calculate position and rotation
                 vec2 center = vec2(
@@ -1271,18 +1274,18 @@ function BackgroundSphere({
                   d.x * cos(angle) - d.y * sin(angle),
                   d.x * sin(angle) + d.y * cos(angle)
                 );
-                
+
                 // Get item size
                 float itemHalf = uSizes[i];
                 vec2 itemUv = rotated / (itemHalf * 2.0) + 0.5;
-                
+
                 // Check if within bounds
                 if (itemUv.x >= 0.0 && itemUv.x <= 1.0 &&
                     itemUv.y >= 0.0 && itemUv.y <= 1.0) {
-                   
+
                   // Get UV offset for this item type
                   vec2 uvOffset = vec2(uUvOffsetsX[i], uUvOffsetsY[i]);
-                   
+
                   // Sample and blend
                   vec4 itemColor = texture2D(uItemAtlas, uvOffset + itemUv * uItemSize);
                   col = mix(col, itemColor, itemColor.a);
@@ -1292,14 +1295,24 @@ function BackgroundSphere({
             }
           }
 
-          gl_FragColor = col;
+          vec3 grey25 = vec3(0.25); // Darken by 75%
+          gl_FragColor = vec4(col.rgb * grey25, col.a);
+          //gl_FragColor = col;
         }
       `,
       side: THREE.BackSide,
       depthWrite: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [texture, tile.uvX, tile.uvY, tile.uvW, tile.uvH, itemTexture, itemTileUv]);
+  }, [
+    texture,
+    tile.uvX,
+    tile.uvY,
+    tile.uvW,
+    tile.uvH,
+    itemTexture,
+    itemTileUv,
+  ]);
 
   return (
     <mesh ref={meshRef} renderOrder={-1}>
