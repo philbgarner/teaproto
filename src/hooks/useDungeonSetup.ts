@@ -32,6 +32,7 @@ export interface DungeonSetupSettings {
   maxRoomSize: number;
   maxDoors: number;
   trapDensity: number;
+  forceReset: number;
 }
 
 export function useDungeonSetup({
@@ -44,6 +45,7 @@ export function useDungeonSetup({
   maxRoomSize,
   maxDoors,
   trapDensity,
+  forceReset,
 }: DungeonSetupSettings) {
   const dungeon = useMemo(() => {
     const d = generateBspDungeon({
@@ -65,6 +67,7 @@ export function useDungeonSetup({
     maxLeafSize,
     minRoomSize,
     maxRoomSize,
+    forceReset,
   ]);
 
   const solidData = useMemo(() => dungeon.textures.solid.image.data, [dungeon]);

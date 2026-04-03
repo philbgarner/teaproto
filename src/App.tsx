@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { useLoader, useFrame } from "@react-three/fiber";
 import { useSettings } from "./SettingsContext";
@@ -674,6 +674,8 @@ export default function App() {
     setKeybindings,
   } = useSettings();
 
+  const [forceReset, setForceReset] = useState(0);
+
   const ds = useDungeonSetup({
     dungeonSeed,
     dungeonWidth,
@@ -684,6 +686,7 @@ export default function App() {
     maxRoomSize,
     maxDoors,
     trapDensity,
+    forceReset,
   });
 
   const gs = useGameState({
@@ -1198,45 +1201,7 @@ export default function App() {
         turnCount={gs.turnCount}
         winRounds={WIN_ROUNDS}
         onPlayAgain={() => {
-          setDungeonSeed((s) => s);
-          const freshSatiations = ds.initialMobs.map(() => 40);
-          gs.clearHands();
-          gs.setMobSatiations(freshSatiations);
-          gs.setRoomTempRise(new Map());
-          gs.setStoveStates(new Map());
-          gs.setShowRecipeMenu(false);
-          gs.setActiveStoveKey(null);
-          gs.setMessage(null);
-          gs.setAdventurers([]);
-          gs.setCurrentRound(0);
-          gs.setTurnCount(0);
-          gs.setRoundCountdown(turnsPerRound);
-          gs.setPlayerXp(0);
-          gs.setXpDrops([]);
-          gs.setPlayerHp(PLAYER_MAX_HP);
-          gs.setIngredients({ rations: 0, herbs: 0, dust: 0 });
-          gs.setIngredientDrops([...ds.initialIngredientDrops]);
-          gs.setChests([...ds.initialChests]);
-          gs.chestsRef.current = [...ds.initialChests];
-          gs.setGameState("playing");
-          gs.setGameOverReason(null);
-          gs.adventurersRef.current = [];
-          gs.currentRoundRef.current = 0;
-          gs.turnCountRef.current = 0;
-          gs.roundCountdownRef.current = turnsPerRound;
-          gs.playerXpRef.current = 0;
-          gs.xpDropsRef.current = [];
-          gs.playerHpRef.current = PLAYER_MAX_HP;
-          gs.ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
-          gs.ingredientDropsRef.current = [...ds.initialIngredientDrops];
-          gs.mobSatiationsRef.current = freshSatiations;
-          const freshPositions = ds.initialMobs.map((m: any) => ({
-            x: m.x,
-            z: m.z,
-          }));
-          gs.setMobPositions(freshPositions);
-          gs.mobPositionsRef.current = freshPositions;
-          gs.ruinedNotifiedRef.current = new Set();
+          setForceReset(prev => prev + 1);
         }}
       />
     </>

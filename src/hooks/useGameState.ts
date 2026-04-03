@@ -608,6 +608,8 @@ export function useGameState({
     setMobAttackDirs(initialMobs.map(() => null));
     setAdvAttackDirs([]);
     setDamageNumbers([]);
+    setDisarmedTraps(new Set());
+    disarmedTrapsRef.current = new Set();
     setIngredients({ rations: 0, herbs: 0, dust: 0 });
     setIngredientDrops([...initialIngredientDrops]);
     setChests([...initialChests]);
