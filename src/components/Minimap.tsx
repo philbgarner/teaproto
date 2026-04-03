@@ -64,6 +64,8 @@ export type MinimapAdventurer = {
 };
 export type MinimapDoor = { x: number; z: number };
 export type MinimapStove = { x: number; z: number };
+export type MinimapGoldDrop = { x: number; z: number; amount: number };
+export type MinimapItemDrop = { x: number; z: number; name?: string };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Floor tiles (flat-color instanced mesh, no texture or shading)
@@ -209,6 +211,84 @@ function ChestIcon({
         <meshBasicMaterial color="#c8a46e" depthTest={false} />
       </mesh>
       {hovered && <Html style={TOOLTIP_STYLE}>Chest</Html>}
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gold drop icon — small yellow rotated square (diamond)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function GoldDropIcon({
+  x,
+  z,
+  tileSize,
+  amount,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+  amount: number;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const wx = (x + 0.5) * tileSize;
+  const wz = (z + 0.5) * tileSize;
+  const s = tileSize * 0.38;
+
+  return (
+    <group position={[wx, 0.03, wz]}>
+      <mesh
+        rotation={[-HALF_PI, 0, Math.PI / 4]}
+        renderOrder={2}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <planeGeometry args={[s, s]} />
+        <meshBasicMaterial color="#f5c842" depthTest={false} />
+      </mesh>
+      {hovered && <Html style={TOOLTIP_STYLE}>{amount} gold</Html>}
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Item drop icon — small purple square
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ItemDropIcon({
+  x,
+  z,
+  tileSize,
+  name,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+  name?: string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const wx = (x + 0.5) * tileSize;
+  const wz = (z + 0.5) * tileSize;
+  const s = tileSize * 0.32;
+
+  return (
+    <group position={[wx, 0.04, wz]}>
+      <mesh
+        rotation={[-HALF_PI, 0, 0]}
+        renderOrder={2}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <planeGeometry args={[s, s]} />
+        <meshBasicMaterial color="#c46ef5" depthTest={false} />
+      </mesh>
+      {hovered && <Html style={TOOLTIP_STYLE}>{name ?? "Item"}</Html>}
     </group>
   );
 }
@@ -591,6 +671,8 @@ type SceneProps = {
   disarmedTraps: Set<string>;
   chests: MinimapChest[];
   furniturePlacements: { x: number; z: number }[];
+  goldDrops: MinimapGoldDrop[];
+  itemDrops: MinimapItemDrop[];
   scale: number;
   setTooltip: (
     t: { pos: { x: number; y: number }; content: ReactNode } | null,
@@ -614,6 +696,8 @@ function MinimapScene({
   disarmedTraps,
   chests,
   furniturePlacements,
+  goldDrops,
+  itemDrops,
   scale,
   setTooltip,
 }: SceneProps) {
@@ -712,6 +796,26 @@ function MinimapScene({
 
       {chests.map((c, i) => (
         <ChestIcon key={`chest_${i}`} x={c.x} z={c.z} tileSize={tileSize} />
+      ))}
+
+      {goldDrops.map((g, i) => (
+        <GoldDropIcon
+          key={`gold_${i}`}
+          x={g.x}
+          z={g.z}
+          tileSize={tileSize}
+          amount={g.amount}
+        />
+      ))}
+
+      {itemDrops.map((d, i) => (
+        <ItemDropIcon
+          key={`item_${i}`}
+          x={d.x}
+          z={d.z}
+          tileSize={tileSize}
+          name={d.name}
+        />
       ))}
 
       {trapList.map((t) => (
@@ -833,6 +937,8 @@ export type MinimapProps = {
   disarmedTraps?: Set<string>;
   chests?: MinimapChest[];
   furniturePlacements?: { x: number; z: number }[];
+  goldDrops?: MinimapGoldDrop[];
+  itemDrops?: MinimapItemDrop[];
   /** Orthographic zoom level. Defaults to 4.5. */
   scale?: number;
   // Legacy props kept for call-site compatibility
@@ -859,6 +965,8 @@ export function Minimap({
   disarmedTraps = new Set(),
   chests = [],
   furniturePlacements = [],
+  goldDrops = [],
+  itemDrops = [],
   scale = DEFAULT_ZOOM,
 }: MinimapProps) {
   const [tooltip, setTooltip] = useState<{
@@ -918,6 +1026,8 @@ export function Minimap({
           disarmedTraps={disarmedTraps}
           chests={chests}
           furniturePlacements={furniturePlacements}
+          goldDrops={goldDrops}
+          itemDrops={itemDrops}
           scale={scale}
           setTooltip={setTooltip}
         />

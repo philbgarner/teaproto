@@ -59,8 +59,8 @@ interface SettingsContextValue {
   setSatiationDropPerStep: Dispatch<SetStateAction<number>>;
   supersatiationBonus: number;
   setSupersatiationBonus: Dispatch<SetStateAction<number>>;
-  turnsPerWave: number;
-  setTurnsPerWave: Dispatch<SetStateAction<number>>;
+  turnsPerRound: number;
+  setTurnsPerRound: Dispatch<SetStateAction<number>>;
   traversalFactor: number;
   setTraversalFactor: Dispatch<SetStateAction<number>>;
   adventurerDreadRate: number;
@@ -118,7 +118,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [heatingPerStep, setHeatingPerStep] = useState(2.0);
   const [satiationDropPerStep, setSatiationDropPerStep] = useState(0.5);
   const [supersatiationBonus, setSupersatiationBonus] = useState(50);
-  const [turnsPerWave, setTurnsPerWave] = useState(120);
+  const [turnsPerRound, setTurnsPerRound] = useState(120);
   const [traversalFactor, setTraversalFactor] = useState(2.0);
   const [adventurerDreadRate, setAdventurerDreadRate] = useState(1.0);
   const [adventurerLootPerChest, setAdventurerLootPerChest] = useState(10);
@@ -170,8 +170,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setSatiationDropPerStep,
         supersatiationBonus,
         setSupersatiationBonus,
-        turnsPerWave,
-        setTurnsPerWave,
+        turnsPerRound,
+        setTurnsPerRound,
         traversalFactor,
         setTraversalFactor,
         adventurerDreadRate,

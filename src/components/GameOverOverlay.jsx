@@ -7,18 +7,18 @@
  * @param {{
  *   gameState: "playing" | "gameover" | "won",
  *   gameOverReason: string|null,
- *   currentWave: number,
+ *   currentRound: number,
  *   turnCount: number,
- *   winWaves: number,
+ *   winRounds: number,
  *   onPlayAgain: () => void,
  * }} props
  */
 export function GameOverOverlay({
   gameState,
   gameOverReason,
-  currentWave,
+  currentRound,
   turnCount,
-  winWaves,
+  winRounds,
   onPlayAgain,
 }) {
   if (gameState === "playing") return null;
@@ -60,7 +60,7 @@ export function GameOverOverlay({
         </div>
         {won ? (
           <div style={{ color: "#aaa", marginBottom: 24, lineHeight: 1.6 }}>
-            You survived {winWaves} waves of adventurers and kept the dungeon
+            You survived {winRounds} rounds of adventurers and kept the dungeon
             cozy.
             <br />
             The monsters are very grateful.
@@ -70,7 +70,7 @@ export function GameOverOverlay({
             {gameOverReason}
             <br />
             <span style={{ fontSize: 12, color: "#666" }}>
-              Survived {currentWave} wave{currentWave !== 1 ? "s" : ""} ·{" "}
+              Survived {currentRound} round{currentRound !== 1 ? "s" : ""} ·{" "}
               {turnCount} turns
             </span>
           </div>
