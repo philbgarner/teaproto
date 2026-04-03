@@ -20,12 +20,13 @@ export function useSoundHelper() {
   // Game Action Sounds
   const lightning = useSfx(`${import.meta.env.BASE_URL}sfx/dragon-studio-lightning-strike-386161.mp3`, { volume: 0.4 });
   const thunder = useSfx(`${import.meta.env.BASE_URL}sfx/tanweraman-thunder-strike-wav-321628.mp3`, { volume: 0.3 });
-  const teacup = useSfx(`${import.meta.env.BASE_URL}sfx/teacup-sfx.wav`, { volume: 0.6 });
-  const twinkle = useSfx(`${import.meta.env.BASE_URL}sfx/twinkle.wav`, { volume: 0.3 });
+  const teacup = useSfx(`${import.meta.env.BASE_URL}sfx/teacup-sfx.wav`, { volume: 0.4 });
+  const twinkle = useSfx(`${import.meta.env.BASE_URL}sfx/twinkle.wav`, { volume: 0.2 });
   const invert_twinkle = useSfx(`${import.meta.env.BASE_URL}sfx/invert_twinkle.wav`, { volume: 0.3 });
   const tea_ready = useSfx(`${import.meta.env.BASE_URL}sfx/tea_ready.wav`, { volume: 0.5 });
-  const beep_failure = useSfx(`${import.meta.env.BASE_URL}sfx/beep_failure.wav`, { volume: 0.5 });
+  const beep_failure = useSfx(`${import.meta.env.BASE_URL}sfx/beep_failure.wav`, { volume: 0.3 });
   const trap_armed = useSfx(`${import.meta.env.BASE_URL}sfx/trap_armed.wav`, { volume: 0.5 });
+  const coins = useSfx(`${import.meta.env.BASE_URL}sfx/coins.wav`, { volume: 0.5 });
   
   // Door Sounds
   const doorOpen = useSfx(`${import.meta.env.BASE_URL}sfx/door_open.wav`, { volume: 0.5 });
@@ -57,10 +58,19 @@ export function useSoundHelper() {
   const footstep_10 = useSfx(`${import.meta.env.BASE_URL}sfx/footstep_10.wav`, { volume: 0.3 });
 
   const steps = [footstep_1, footstep_2, footstep_3, footstep_4, footstep_5, footstep_6, footstep_7, footstep_8, footstep_9, footstep_10];
-  const playRandomFootstep = () => {
-    const randomStep = steps[Math.floor(Math.random() * steps.length)];
-    randomStep.play();
+  const playRandomFootstep = () => playRandomFromChoices(steps);
+
+  //talk beeps
+  const beep_talk_1 = useSfx(`${import.meta.env.BASE_URL}sfx/beep_talk_1.wav`, { volume: 0.1 });
+  const beep_talk_2 = useSfx(`${import.meta.env.BASE_URL}sfx/beep_talk_2.wav`, { volume: 0.1 });
+  const beeps = [beep_talk_1, beep_talk_2];
+  const playRandomBeep = () => playRandomFromChoices(beeps);
+
+  const playRandomFromChoices = (choices) => {
+    const randomChoice = choices[Math.floor(Math.random() * choices.length)];
+    randomChoice.play();
   };
+  
   return {
     // Direct access to sound objects if needed
     sounds: {
@@ -77,6 +87,7 @@ export function useSoundHelper() {
       tea_ready,
       beep_failure,
       trap_armed,
+      coins,
       doorOpen,
       doorClose,
       key_open,
@@ -87,7 +98,8 @@ export function useSoundHelper() {
       mainTheme,
       safeZoneMusic,
       mainThemeDungeon,
-      playRandomFootstep
+      playRandomFootstep,
+      playRandomBeep
     }
   };
 }

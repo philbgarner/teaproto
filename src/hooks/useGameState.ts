@@ -970,6 +970,7 @@ export function useGameState({
     if (xpGained > 0) {
       newPlayerXp += xpGained;
       stepMessage = `Collected ${xpGained} gold! (Total: ${newPlayerXp})`;
+      sounds.coins.play();
     }
     newXpDrops = remainingDrops;
 
