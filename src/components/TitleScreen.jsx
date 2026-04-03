@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
 import { Suspense } from "react";
 import { useSfx } from "../hooks/useSfx";
@@ -809,9 +810,15 @@ export function TitleScreen({ onNewGame, onTutorial }) {
         orthographic
         camera={{ zoom: 1, position: [0, 0, 100] }}
         className={styles.canvas}
-        gl={{ antialias: true, alpha: true }}
+        gl={{
+          antialias: true,
+          alpha: true,
+          toneMapping: THREE.LinearToneMapping,
+          toneMappingExposure: 1.0,
+        }}
       >
         <Suspense fallback={null}>
+          <ambientLight color={"0xffffff"} intensity={2} />
           <PreloadedScene
             onMenuReady={() => setMenuVisible(true)}
             onMusicReady={(fns) => {
