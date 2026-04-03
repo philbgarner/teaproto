@@ -2,7 +2,7 @@
 //
 // Factory functions for creating turn-system actors.
 
-import type { PlayerActor, MonsterActor } from "./turnTypes";
+import type { PlayerActor, MonsterActor, RpsEffect } from "./turnTypes";
 import type { MobilePlacement } from "../content";
 
 export const PLAYER_SPEED = 10;
@@ -51,6 +51,7 @@ export type MonsterTemplate = {
   defense: number;
   xp: number;
   speed: number;
+  rpsEffect: RpsEffect;
   /**
    * Billboard geometry size in map cells [width, height].
    * A map cell is 3×3 world units. Defaults to [1, 1].
@@ -74,6 +75,7 @@ export const DEFAULT_MONSTER_TEMPLATES: Record<string, MonsterTemplate> = {
     defense: 0,
     xp: 10,
     speed: 8,
+    rpsEffect: "none";
   },
   orc: {
     name: "Orc",
@@ -84,6 +86,7 @@ export const DEFAULT_MONSTER_TEMPLATES: Record<string, MonsterTemplate> = {
     defense: 1,
     xp: 25,
     speed: 6,
+    rpsEffect: "none";
   },
   troll: {
     name: "Troll",
@@ -94,6 +97,7 @@ export const DEFAULT_MONSTER_TEMPLATES: Record<string, MonsterTemplate> = {
     defense: 2,
     xp: 60,
     speed: 5,
+    rpsEffect: "none";
   },
   rat: {
     name: "Giant Rat",
@@ -104,6 +108,7 @@ export const DEFAULT_MONSTER_TEMPLATES: Record<string, MonsterTemplate> = {
     defense: 0,
     xp: 5,
     speed: 9,
+    rpsEffect: "none";
   },
   kobold: {
     name: "Kobold",
@@ -114,6 +119,7 @@ export const DEFAULT_MONSTER_TEMPLATES: Record<string, MonsterTemplate> = {
     defense: 0,
     xp: 8,
     speed: 9,
+    rpsEffect: "none";
   },
   // Humanoid adventurer types — geometry sizes set, uvRect to be filled once sprite sheet is ready
   rogue: {
@@ -126,6 +132,7 @@ export const DEFAULT_MONSTER_TEMPLATES: Record<string, MonsterTemplate> = {
     xp: 20,
     speed: 9,
     geometrySize: [1, 1],
+    rpsEffect: "poisoned"
   },
   warrior: {
     name: "Warrior",
@@ -137,6 +144,7 @@ export const DEFAULT_MONSTER_TEMPLATES: Record<string, MonsterTemplate> = {
     xp: 30,
     speed: 7,
     geometrySize: [1, 1],
+    rpsEffect: "bleeding"
   },
   mage: {
     name: "Mage",
@@ -148,17 +156,7 @@ export const DEFAULT_MONSTER_TEMPLATES: Record<string, MonsterTemplate> = {
     xp: 40,
     speed: 6,
     geometrySize: [2, 1],
-  },
-  // fallback for unknown types
-  monster: {
-    name: "Monster",
-    glyph: "m",
-    danger: 2,
-    hp: 8,
-    attack: 4,
-    defense: 1,
-    xp: 15,
-    speed: 7,
+    rpsEffect: "freezing"
   },
 };
 
@@ -193,6 +191,7 @@ export function createMonsterFromPlacement(
     alertState: "idle",
     searchTurnsLeft: 0,
     lastKnownPlayerPos: null,
+    rpsEffect: "none"
   };
 }
 
@@ -203,5 +202,5 @@ export function createMonstersFromMobiles(
   mobiles: MobilePlacement[],
   templates?: Record<string, MonsterTemplate>,
 ): MonsterActor[] {
-  return mobiles.map(m => createMonsterFromPlacement(m, templates));
+  return mobiles.map((m) => createMonsterFromPlacement(m, templates));
 }
