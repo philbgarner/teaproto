@@ -28,6 +28,7 @@ import {
   TILE_FLOOR,
   TILE_CEILING,
   TILE_WALL,
+  TILE_DIRT,
   CEILING_H,
   TILE_SIZE,
   FLOOR_TILE_MAP,
@@ -559,6 +560,8 @@ export default function App() {
                 ceilingTile={TILE_CEILING}
                 ceilingHeight={CEILING_H}
                 wallTile={TILE_WALL}
+                backgroundTile={TILE_DIRT}
+                boneTexture={gs.iconTexture ?? undefined}
                 renderRadius={28}
                 fov={60}
                 fogNear={4}
@@ -747,6 +750,8 @@ export default function App() {
             texture={gs.texture}
             atlas={gs.atlas}
             floorTile={TILE_FLOOR}
+            backgroundTile={TILE_DIRT}
+            boneTexture={gs.iconTexture ?? undefined}
             floorData={ds.floorData}
             floorTileMap={FLOOR_TILE_MAP}
             tileSize={TILE_SIZE}

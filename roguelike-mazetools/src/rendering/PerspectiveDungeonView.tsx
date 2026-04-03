@@ -927,6 +927,140 @@ function buildFaceInstances(
 // Inner scene (runs inside Canvas, can use R3F hooks)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Background sphere — shown when camera is inside a wall (ghost mode)
+// ---------------------------------------------------------------------------
+
+// Bone icon UV in the 256×256 icons.png sheet (tileSize=32, bone at pixel [224,64])
+const BONE_UV = {
+  x: 224 / 256,
+  y: (256 - 64 - 32) / 256, // flip to WebGL bottom-origin
+  w: 32 / 256,
+  h: 32 / 256,
+};
+
+function BackgroundSphere({
+  atlas,
+  texture,
+  floorTile,
+  boneTexture,
+  boneTileUv,
+}: {
+  atlas: TileAtlas;
+  texture: THREE.Texture;
+  floorTile: number;
+  boneTexture?: THREE.Texture;
+  boneTileUv?: { x: number; y: number; w: number; h: number };
+}) {
+  const tile = atlas.getTile(floorTile);
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useFrame(({ camera }) => {
+    meshRef.current?.position.copy(camera.position);
+  });
+
+  const mat = useMemo(() => {
+    const hasBones = !!(boneTexture && boneTileUv);
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uAtlas: { value: texture },
+        uTileOffset: { value: new THREE.Vector2(tile.uvX, tile.uvY) },
+        uTileSize: { value: new THREE.Vector2(tile.uvW, tile.uvH) },
+        uRepeat: { value: new THREE.Vector2(12, 6) },
+        uBoneAtlas: { value: boneTexture ?? null },
+        uBoneOffset: {
+          value: new THREE.Vector2(boneTileUv?.x ?? 0, boneTileUv?.y ?? 0),
+        },
+        uBoneSize: {
+          value: new THREE.Vector2(boneTileUv?.w ?? 0, boneTileUv?.h ?? 0),
+        },
+        uHasBones: { value: hasBones ? 1 : 0 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        void main() {
+          vUv = uv;
+          vWorldPos = normalize(position);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D uAtlas;
+        uniform vec2 uTileOffset;
+        uniform vec2 uTileSize;
+        uniform vec2 uRepeat;
+        uniform sampler2D uBoneAtlas;
+        uniform vec2 uBoneOffset;
+        uniform vec2 uBoneSize;
+        uniform int uHasBones;
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+
+        #define PI 3.14159265
+
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+        }
+
+        void main() {
+          // Tiled dirt background
+          vec2 tiled = fract(vUv * uRepeat);
+          vec2 atlasUv = uTileOffset + tiled * uTileSize;
+          vec4 col = texture2D(uAtlas, atlasUv);
+
+          // Sparse bone scatter using spherical coords from 3-D position
+          // (avoids UV seam / pole compression artifacts)
+          if (uHasBones == 1) {
+            vec3 n = vWorldPos;
+            float phi = atan(n.z, n.x);            // -PI .. PI
+            float theta = acos(clamp(n.y, -1.0, 1.0)); // 0 .. PI
+            vec2 sphereUv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
+
+            vec2 boneGridSize = vec2(10.0, 6.0);
+            vec2 cellId = floor(sphereUv * boneGridSize);
+            vec2 cellUv = fract(sphereUv * boneGridSize);
+
+            float presence = hash(cellId);
+            if (presence < 0.18) {
+              vec2 center = vec2(
+                mix(0.2, 0.8, hash(cellId + vec2(3.7, 0.0))),
+                mix(0.2, 0.8, hash(cellId + vec2(0.0, 5.3)))
+              );
+              float rotIdx = floor(hash(cellId + vec2(11.1, 2.3)) * 4.0);
+              vec2 d = cellUv - center;
+              if (rotIdx < 1.0) { /* 0 deg */ }
+              else if (rotIdx < 2.0) { d = vec2(-d.y,  d.x); }
+              else if (rotIdx < 3.0) { d = -d; }
+              else                   { d = vec2( d.y, -d.x); }
+
+              float boneHalf = 0.28;
+              vec2 boneUv = d / (boneHalf * 2.0) + 0.5;
+              if (boneUv.x >= 0.0 && boneUv.x <= 1.0 &&
+                  boneUv.y >= 0.0 && boneUv.y <= 1.0) {
+                vec4 bone = texture2D(uBoneAtlas, uBoneOffset + boneUv * uBoneSize);
+                col = mix(col, bone, bone.a);
+              }
+            }
+          }
+
+          gl_FragColor = col;
+        }
+      `,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [texture, tile.uvX, tile.uvY, tile.uvW, tile.uvH, boneTexture, boneTileUv]);
+
+  return (
+    <mesh ref={meshRef} renderOrder={-1}>
+      <sphereGeometry args={[60, 32, 24]} />
+      <primitive object={mat} attach="material" />
+    </mesh>
+  );
+}
+
 type SceneProps = {
   solidData: Uint8Array;
   width: number;
@@ -993,6 +1127,10 @@ type SceneProps = {
   ceilingData?: Uint8Array;
   /** Maps atlas ceilingType id → row-major tile ID. Index 0 = fallback to ceilingTile. */
   ceilingTileMap?: number[];
+  /** Tile ID used for the background sphere (visible inside walls). Defaults to floorTile. */
+  backgroundTile?: number;
+  /** Optional icons texture for scattering bone decorations on the background sphere. */
+  boneTexture?: THREE.Texture;
 };
 
 function DungeonScene({
@@ -1039,6 +1177,8 @@ function DungeonScene({
   wallTileMap,
   ceilingData,
   ceilingTileMap,
+  backgroundTile,
+  boneTexture,
 }: SceneProps) {
   const fogColorObj = useMemo(
     () => (fogColor ? new THREE.Color(fogColor) : undefined),
@@ -1132,7 +1272,13 @@ function DungeonScene({
 
   return (
     <>
-      <color attach="background" args={["#000000"]} />
+      <BackgroundSphere
+        atlas={atlas}
+        texture={texture}
+        floorTile={backgroundTile ?? floorTile}
+        boneTexture={boneTexture}
+        boneTileUv={boneTexture ? BONE_UV : undefined}
+      />
       {/* Ambient + directional light so tiles aren't pitch-black */}
       <ambientLight intensity={0.6} />
       <pointLight

@@ -146,6 +146,19 @@ export function useGameState({
     };
     img.src = `${import.meta.env.BASE_URL}textures/monsters.png`;
   }, []);
+  const [iconTexture, setIconTexture] = useState<THREE.Texture | null>(null);
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      const tex = new THREE.Texture(img);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      tex.needsUpdate = true;
+      setIconTexture(tex);
+    };
+    img.src = `${import.meta.env.BASE_URL}textures/icons.png`;
+  }, []);
 
   const teaomaticProto = useMemo(
     () => texture && makeTeaomaticProto(texture),
@@ -2392,6 +2405,7 @@ export function useGameState({
     atlas,
     texture,
     characterSpriteAtlas,
+    iconTexture,
     objectRegistry,
     // game state — hand items via ECS
     leftHandTea,

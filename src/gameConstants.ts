@@ -31,6 +31,7 @@ export const _defaultFloorEntry = atlasIndex.floorTypes.byName("Cobblestone");
 export const _defaultWallEntry = atlasIndex.wallTypes.byName("Cobblestone");
 export const _defaultCeilingEntry =
   atlasIndex.ceilingTypes.byName("Cobblestone");
+const _dirtFloorEntry = atlasIndex.floorTypes.byName("Dirt");
 
 export const TILE_FLOOR: number =
   _defaultFloorEntry && "uv" in _defaultFloorEntry
@@ -44,6 +45,10 @@ export const TILE_WALL: number =
   _defaultWallEntry && "uv" in _defaultWallEntry
     ? _atlasUvToId(_defaultWallEntry.uv as [number, number])
     : 0;
+export const TILE_DIRT: number =
+  _dirtFloorEntry && "uv" in _dirtFloorEntry
+    ? _atlasUvToId(_dirtFloorEntry.uv as [number, number])
+    : TILE_FLOOR;
 
 // Build maps: atlas type ID (1-based) → row-major tile ID in the full atlas sheet
 export const FLOOR_TILE_MAP: number[] = (

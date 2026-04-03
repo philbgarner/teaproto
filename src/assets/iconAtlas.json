@@ -3,5 +3,6 @@
   "coins": [
     { "id": 1, "name": "coins1", "uv": [32, 128] },
     { "id": 2, "name": "coins2", "uv": [64, 128] }
-  ]
+  ],
+  "bones": [{ "id": 1, "name": "bone", "uv": [224, 64] }]
 }
