@@ -190,7 +190,7 @@ export function useDungeonSetup({
         const ceilingOverlays = context.textures.ceilingOverlays.image.data; // ceiling overlays; read at oi+[0..3]
 
         // Example: place a Chair (atlas sprite id 4) against the wall on floor cells
-        if (!solid && distanceToWall === 0) {
+        if (!solid && distanceToWall === 1) {
           placeFurniture(x, y, "Chair");
         }
 
@@ -207,6 +207,7 @@ export function useDungeonSetup({
     dungeon.textures.floorType.needsUpdate = true;
     dungeon.textures.wallType.needsUpdate = true;
     dungeon.textures.ceilingType.needsUpdate = true;
+    console.log(`[furniture] generated ${furniture.length} items`, furniture);
     return furniture;
   }, [dungeon]);
 

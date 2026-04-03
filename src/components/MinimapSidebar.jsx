@@ -21,6 +21,7 @@ export function MinimapSidebar({
   hazardData,
   disarmedTraps,
   chests,
+  furniturePlacements,
   scale,
 }) {
   return (
@@ -45,6 +46,7 @@ export function MinimapSidebar({
           hazardData={hazardData}
           disarmedTraps={disarmedTraps}
           chests={chests}
+          furniturePlacements={furniturePlacements}
           scale={scale}
           className={styles.canvas}
         />

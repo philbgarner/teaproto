@@ -1090,6 +1090,7 @@ export default function App() {
             hazardData={ds.hazardData}
             disarmedTraps={gs.disarmedTraps}
             chests={gs.chests}
+            furniturePlacements={ds.initialFurniture}
           />
         </div>
 

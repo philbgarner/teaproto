@@ -118,6 +118,30 @@ function FloorTiles({ cells }: { cells: FloorCell[] }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Furniture dot — small dark grey square
+// ─────────────────────────────────────────────────────────────────────────────
+
+function FurnitureDot({
+  x,
+  z,
+  tileSize,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+}) {
+  const wx = (x + 0.5) * tileSize;
+  const wz = (z + 0.5) * tileSize;
+  const size = tileSize * 0.35;
+  return (
+    <mesh position={[wx, 0.02, wz]} rotation={[-HALF_PI, 0, 0]} renderOrder={1}>
+      <planeGeometry args={[size, size]} />
+      <meshBasicMaterial color="#555555" depthTest={false} />
+    </mesh>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Teaomatic floor overlay (cyan tinted tile)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -566,6 +590,7 @@ type SceneProps = {
   hazardData?: Uint8Array;
   disarmedTraps: Set<string>;
   chests: MinimapChest[];
+  furniturePlacements: { x: number; z: number }[];
   scale: number;
   setTooltip: (
     t: { pos: { x: number; y: number }; content: ReactNode } | null,
@@ -588,6 +613,7 @@ function MinimapScene({
   hazardData,
   disarmedTraps,
   chests,
+  furniturePlacements,
   scale,
   setTooltip,
 }: SceneProps) {
@@ -670,6 +696,10 @@ function MinimapScene({
     <>
       <color attach="background" args={["#050208"]} />
       <FloorTiles cells={floorCells} />
+
+      {furniturePlacements.map((f, i) => (
+        <FurnitureDot key={`furn_${i}`} x={f.x} z={f.z} tileSize={tileSize} />
+      ))}
 
       {stovePlacements.map((s) => (
         <StoveTile
@@ -802,6 +832,7 @@ export type MinimapProps = {
   hazardData?: Uint8Array;
   disarmedTraps?: Set<string>;
   chests?: MinimapChest[];
+  furniturePlacements?: { x: number; z: number }[];
   /** Orthographic zoom level. Defaults to 4.5. */
   scale?: number;
   // Legacy props kept for call-site compatibility
@@ -827,6 +858,7 @@ export function Minimap({
   hazardData,
   disarmedTraps = new Set(),
   chests = [],
+  furniturePlacements = [],
   scale = DEFAULT_ZOOM,
 }: MinimapProps) {
   const [tooltip, setTooltip] = useState<{
@@ -885,6 +917,7 @@ export function Minimap({
           hazardData={hazardData}
           disarmedTraps={disarmedTraps}
           chests={chests}
+          furniturePlacements={furniturePlacements}
           scale={scale}
           setTooltip={setTooltip}
         />
