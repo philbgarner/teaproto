@@ -1,16 +1,46 @@
 {
   "tileSize": 64,
   "architecture": [
-    { "id": 1, "name": "archVoid", "uv": [0, 0] },
-    { "id": 2, "name": "archCobble", "uv": [64, 0] },
-    { "id": 3, "name": "archVoid", "uv": [128, 0] },
-    { "id": 4, "name": "archDoor", "uv": [256, 0] },
-    { "id": 5, "name": "archBrick", "uv": [0, 64] },
-    { "id": 6, "name": "stoneColumn", "uv": [64, 64] },
-    { "id": 7, "name": "stoneColumnBase", "uv": [128, 64] },
-    { "id": 8, "name": "doorOpen", "uv": [64, 64] },
-    { "id": 9, "name": "doorClosed", "uv": [128, 64] },
-    { "id": 10, "name": "doorLocked", "uv": [256, 64] }
+    { "id": 1, "name": "archCobble", "uv": [64, 0] },
+    { "id": 2, "name": "gateSolid", "uv": [448, 0] },
+    { "id": 3, "name": "archBrick", "uv": [0, 64] },
+    { "id": 4, "name": "stoneColumn", "uv": [128, 128] },
+    { "id": 5, "name": "doubleStoneColumn", "uv": [64, 128] },
+    { "id": 6, "name": "doorOpen", "uv": [64, 64] },
+    { "id": 7, "name": "doorClosed", "uv": [128, 64] },
+    { "id": 8, "name": "doorLocked", "uv": [256, 64] },
+    { "id": 9, "name": "gate", "uv": [448, 64] },
+    { "id": 10, "name": "archConcrete", "uv": [128, 448] },
+    { "id": 11, "name": "archMetal", "uv": [320, 640] },
+    { "id": 12, "name": "doorMetalClosed", "uv": [384, 448] }
+  ],
+  "sprites": [
+    { "id": 1, "name": "teaomatic", "uv": [448, 320], "size": [64, 64] },
+    { "id": 2, "name": "machinePanelA", "uv": [448, 512] },
+    { "id": 3, "name": "machinePanelB", "uv": [448, 576] }
+  ],
+  "wallTypes": [
+    { "id": 0, "name": "none" },
+    { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
+    { "id": 2, "name": "Brick", "uv": [0, 128] },
+    { "id": 3, "name": "Concrete", "uv": [384, 128] },
+    { "id": 4, "name": "Plaster", "uv": [448, 192] },
+    { "id": 5, "name": "wallJacobean", "uv": [320, 0] },
+    { "id": 6, "name": "Dirt", "uv": [384, 256] },
+    { "id": 7, "name": "Plaster", "uv": [448, 192] },
+    { "id": 8, "name": "Grille", "uv": [384, 320] },
+    { "id": 9, "name": "metalPanel", "uv": [448, 384] },
+    { "id": 10, "name": "metalPanelSmooth", "uv": [448, 448] }
+  ],
+  "ceilingTypes": [
+    { "id": 0, "name": "none" },
+    { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
+    { "id": 2, "name": "Flagstone", "uv": [256, 128] },
+    { "id": 3, "name": "Concrete", "uv": [384, 128] },
+    { "id": 4, "name": "Steel", "uv": [320, 192] },
+    { "id": 5, "name": "Dirt", "uv": [384, 256] },
+    { "id": 6, "name": "Plaster", "uv": [448, 192] },
+    { "id": 7, "name": "Grille", "uv": [384, 320] }
   ],
   "floorTypes": [
     { "id": 0, "name": "none" },
@@ -19,68 +49,60 @@
     { "id": 3, "name": "Concrete", "uv": [384, 128] },
     { "id": 4, "name": "Steel", "uv": [321, 192] },
     { "id": 5, "name": "Dirt", "uv": [384, 256] },
-    { "id": 6, "name": "Grass", "uv": [128, 256] }
-  ],
-  "wallTypes": [
-    { "id": 0, "name": "none" },
-    { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
-    { "id": 1, "name": "Brick", "uv": [0, 128] },
-    { "id": 2, "name": "Concrete", "uv": [384, 128] },
-    { "id": 3, "name": "Plaster", "uv": [448, 192] }
-  ],
-  "ceilingTypes": [
-    { "id": 0, "name": "none" },
-    { "id": 1, "name": "Cobblestone", "uv": [192, 128] },
-    { "id": 2, "name": "Flagstone", "uv": [256, 128] },
-    { "id": 3, "name": "Concrete", "uv": [384, 128] },
-    { "id": 4, "name": "Steel", "uv": [321, 192] },
-    { "id": 5, "name": "Dirt", "uv": [384, 256] },
-    { "id": 6, "name": "Grass", "uv": [128, 256] }
-  ],
-  "ceilingOverlays": [
-    { "id": 1, "name": "trapGrid", "uv": [256, 192] },
-    { "id": 2, "name": "floorGrid", "uv": [192, 192] },
-    { "id": 3, "name": "dirtRust", "uv": [384, 192] }
+    { "id": 6, "name": "Grass", "uv": [128, 256] },
+    { "id": 7, "name": "floorParquet", "uv": [256, 0] },
+    { "id": 8, "name": "floorWood", "uv": [384, 0] },
+    { "id": 9, "name": "staircaseDown", "uv": [192, 448] },
+    { "id": 10, "name": "pool", "uv": [256, 512] },
+    { "id": 11, "name": "fancyTile", "uv": [320, 320] }
   ],
   "overlays": [
     { "id": 1, "name": "dartTrap", "uv": [320, 128] },
     { "id": 2, "name": "trapGrid", "uv": [256, 192] },
-    { "id": 3, "name": "floorGrid", "uv": [192, 192] },
-    { "id": 4, "name": "dirtRust", "uv": [384, 192] },
-    { "id": 5, "name": "tileOverlay", "uv": [448, 256] },
-    { "id": 6, "name": "spikeTrap", "uv": [320, 256] }
+    { "id": 3, "name": "dirtRust", "uv": [384, 192] },
+    { "id": 4, "name": "tileOverlay", "uv": [448, 256] },
+    { "id": 5, "name": "spikeTrap", "uv": [320, 256] }
+  ],
+  "ceilingOverlays": [
+    { "id": 1, "name": "trapGrid", "uv": [256, 192] },
+    { "id": 2, "name": "dirtRust", "uv": [384, 192] }
   ],
   "wallOverlays": [
     { "id": 1, "name": "dartTrap", "uv": [320, 128] },
     { "id": 2, "name": "buttonUnpressed", "uv": [192, 256] },
     { "id": 3, "name": "buttonPressed", "uv": [256, 256] },
-    { "id": 4, "name": "openEmptyDoorDark", "uv": [192, 0] }
+    { "id": 4, "name": "openEmptyDoorDark", "uv": [192, 0] },
+    { "id": 5, "name": "staircaseUp", "uv": [128, 0] },
+    { "id": 6, "name": "trapGrid", "uv": [256, 192] },
+    { "id": 7, "name": "dirtRust", "uv": [384, 192] },
+    { "id": 8, "name": "knob", "uv": [320, 64] },
+    { "id": 9, "name": "keyhole", "uv": [384, 64] },
+    { "id": 10, "name": "wainscoting", "uv": [192, 320] }
   ],
   "water": [
-    { "id": 1, "name": "waterTopLeft", "uv": [0, 128] },
-    { "id": 2, "name": "waterTop", "uv": [64, 128] },
-    { "id": 3, "name": "waterLeft", "uv": [0, 192] },
-    { "id": 4, "name": "waterCenter", "uv": [64, 192] },
-    { "id": 5, "name": "waterBottomLeft", "uv": [0, 256] },
-    { "id": 6, "name": "waterBottom", "uv": [64, 256] }
-  ],
-  "sprites": [
-    { "id": 1, "name": "teaomatic", "uv": [448, 320], "size": [64, 64] },
-    { "id": 2, "name": "machinePanelA", "uv": [448, 512] },
-    { "id": 3, "name": "machinePanelB", "uv": [448, 576] }
+    { "id": 1, "name": "water4corners", "uv": [0, 192] },
+    { "id": 2, "name": "water3top", "uv": [64, 192] },
+    { "id": 3, "name": "water3bottom", "uv": [128, 192] },
+    { "id": 4, "name": "water2vertical", "uv": [192, 192] },
+    { "id": 5, "name": "water3left", "uv": [0, 256] },
+    { "id": 6, "name": "water3right", "uv": [64, 256] },
+    { "id": 7, "name": "water2horizontal", "uv": [128, 256] }
   ],
   "aoOverlays": [
-    { "id": 1, "name": "aoEdgeTop", "uv": [0, 512] },
-    { "id": 2, "name": "aoEdgeRight", "uv": [64, 512] },
-    { "id": 3, "name": "aoEdgeBottom", "uv": [128, 512] },
-    { "id": 4, "name": "aoEdgeLeft", "uv": [192, 512] },
-    { "id": 5, "name": "aoCornerTopRight", "uv": [0, 576] },
-    { "id": 6, "name": "aoCornerBottomRight", "uv": [64, 576] },
-    { "id": 7, "name": "aoCornerBottomLeft", "uv": [128, 576] },
-    { "id": 8, "name": "aoCornerTopLeft", "uv": [192, 576] },
-    { "id": 9, "name": "aoInnerTopRight", "uv": [0, 640] },
-    { "id": 10, "name": "aoInnerBottomRight", "uv": [64, 640] },
-    { "id": 11, "name": "aoInnerBottomLeft", "uv": [128, 640] },
-    { "id": 12, "name": "aoInnerTopLeft", "uv": [192, 640] }
+    { "id": 1, "name": "ao4corners", "uv": [0, 512] },
+    { "id": 2, "name": "ao3left", "uv": [64, 512] },
+    { "id": 3, "name": "ao3right", "uv": [128, 512] },
+    { "id": 4, "name": "ao2horizontal", "uv": [192, 512] },
+    { "id": 5, "name": "ao3top", "uv": [0, 576] },
+    { "id": 6, "name": "ao2TLcorner", "uv": [64, 576] },
+    { "id": 7, "name": "ao2TRcorner", "uv": [128, 576] },
+    { "id": 8, "name": "ao1top", "uv": [192, 576] },
+    { "id": 9, "name": "ao3bottom", "uv": [0, 640] },
+    { "id": 10, "name": "ao2BLcorner", "uv": [64, 640] },
+    { "id": 11, "name": "ao2BRcorner", "uv": [128, 640] },
+    { "id": 12, "name": "ao1bottom", "uv": [192, 640] },
+    { "id": 13, "name": "ao2vertical", "uv": [0, 704] },
+    { "id": 14, "name": "ao1left", "uv": [64, 704] },
+    { "id": 15, "name": "ao1right", "uv": [128, 704] }
   ]
 }

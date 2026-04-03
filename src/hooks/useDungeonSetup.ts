@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import { generateBspDungeon } from "../../roguelike-mazetools/src/bsp";
-import { generateThemedRooms } from "../../roguelike-mazetools/src/content";
+import {
+  generateThemedRooms,
+  ThemedRoomCallback,
+} from "../../roguelike-mazetools/src/content";
+import type { BspDungeonOutputs } from "../../roguelike-mazetools/src/bsp";
 import { THEMES, THEME_KEYS } from "../themes";
 import {
   atlasIndex,
@@ -123,10 +127,63 @@ export function useDungeonSetup({
       themes[roomId as number] = (
         x: number,
         y: number,
-        ctx: { width: number },
+        context: BspDungeonOutputs,
       ) => {
-        const i = y * ctx.width + x;
-        if (solidDataArr[i] === 0) {
+        /*
+         * context: BspDungeonOutputs Is the data type for generated dungeon output data.
+         *
+         * `context.textures` — DataTexture map from dungeon generation (see DungeonOutputs in bsp.ts)
+         *
+         * solid           R8   — 255 = wall, 0 = floor
+         * regionId        R8   — which BSP room/corridor region this cell belongs to
+         * distanceToWall  R8   — distance from this cell to the nearest wall
+         * hazards         R8   — hazard data per cell
+         * temperature     R8   — 0 = coldest, 255 = hottest; floors default to 127
+         * floorType       R8   — atlas.json `floorTypes[id]`; 0 = wall/no floor; corridors inherit nearest room
+         * overlays        RGBA — bit-flags for floor overlays; R = IDs 1–8, G = 9–16, B = 17–24, A = 25–32
+         *                        IDs match atlas.json `overlays[id]`; all zeros by default
+         * wallType        R8   — atlas.json `wallTypes[id]`; 0 = floor/no wall; inherits nearest floor cell
+         * wallOverlays    RGBA — same encoding as `overlays` but for walls; IDs match `wallOverlays` in atlas.json
+         * ceilingType     R8   — atlas.json `ceilingTypes[id]`; 0 = unassigned; floor cells default to 1 (Cobblestone)
+         * ceilingOverlays RGBA — same encoding as `overlays` but for ceilings; IDs match `ceilingOverlays` in atlas.json
+         */
+
+        if (
+          !context ||
+          !context.textures.solid?.image?.data ||
+          !context.textures.regionId?.image?.data ||
+          !context.textures.distanceToWall?.image?.data ||
+          !context.textures.hazards?.image?.data ||
+          !context.textures.temperature?.image?.data ||
+          !context.textures.floorType?.image?.data ||
+          !context.textures.wallType?.image?.data ||
+          !context.textures.ceilingType?.image?.data ||
+          !context.textures.overlays?.image?.data ||
+          !context.textures.wallOverlays?.image?.data ||
+          !context.textures.ceilingOverlays?.image?.data ||
+          !floorDataArr ||
+          !ceilingDataArr ||
+          !wallDataArr
+        )
+          return;
+
+        const i = y * context.width + x;
+        const solid = context.textures.solid.image.data[i]; // R8: 255=wall, 0=floor
+        const regionId = context.textures.regionId.image.data[i]; // R8: BSP region id
+        const distanceToWall = context.textures.distanceToWall.image.data[i]; // R8: distance to nearest wall
+        const hazard = context.textures.hazards.image.data[i]; // R8: hazard value
+        const temperature = context.textures.temperature.image.data[i]; // R8: 0=cold, 255=hot, 127=default
+        const floorType = context.textures.floorType.image.data[i]; // R8: atlas floorTypes id
+        const wallType = context.textures.wallType.image.data[i]; // R8: atlas wallTypes id
+        const ceilingType = context.textures.ceilingType.image.data[i]; // R8: atlas ceilingTypes id
+        // RGBA overlay bit-flags — each channel stores 8 slots; R=IDs 1-8, G=9-16, B=17-24, A=25-32
+        const oi = i * 4;
+        const overlays = context.textures.overlays.image.data; // floor overlays; read at oi+[0..3]
+        const wallOverlays = context.textures.wallOverlays.image.data; // wall overlays; read at oi+[0..3]
+        const ceilingOverlays = context.textures.ceilingOverlays.image.data; // ceiling overlays; read at oi+[0..3]
+
+        // If this is a dug out cell (ie: not a wall)
+        if (!solid) {
           floorDataArr[i] = floorId;
           ceilingDataArr[i] = ceilingId;
         } else {
@@ -402,9 +459,7 @@ export function useDungeonSetup({
     });
     const startEntry = startRoom ? [toEntry(startRoom as any)] : [];
     const others = Array.from(dungeon.rooms.entries())
-      .filter(
-        ([id]) => id !== dungeon.endRoomId && id !== dungeon.startRoomId,
-      )
+      .filter(([id]) => id !== dungeon.endRoomId && id !== dungeon.startRoomId)
       .map(([, room]) => toEntry(room as any))
       .sort((a, b) => b.dist - a.dist);
     return [...startEntry, ...others];
@@ -466,7 +521,13 @@ export function useDungeonSetup({
         const cz = room.rect.y + Math.floor(room.rect.h / 2);
         const idx = cz * dungeonWidth + cx;
         if (solidData[idx] !== 0) continue;
-        chests.push({ id: `chest_${i}`, x: cx, z: cz, value: 10, mimic: rng() < 0.25 });
+        chests.push({
+          id: `chest_${i}`,
+          x: cx,
+          z: cz,
+          value: 10,
+          mimic: rng() < 0.25,
+        });
         break;
       }
     }
