@@ -1078,6 +1078,7 @@ function GhostWallMesh({
 
 // ---------------------------------------------------------------------------
 
+// UV mappings for different items in icon atlas
 const BONE_UV = {
   x: 224 / 256,
   y: (256 - 64 - 32) / 256, // flip to WebGL bottom-origin
@@ -1085,42 +1086,118 @@ const BONE_UV = {
   h: 32 / 256,
 };
 
+const SKULL_UV = {
+  x: 0 / 256,
+  y: (256 - 32 - 32) / 256, // flip to WebGL bottom-origin  
+  w: 32 / 256,
+  h: 32 / 256,
+};
+
+const PLANT_UV = {
+  x: 160 / 256,
+  y: (256 - 128 - 32) / 256, // flip to WebGL bottom-origin
+  w: 32 / 256,
+  h: 32 / 256,
+};
+
+const PLANTPOT_UV = {
+  x: 128 / 256,
+  y: (256 - 96 - 32) / 256, // flip to WebGL bottom-origin
+  w: 32 / 256,
+  h: 32 / 256,
+};
+
+// Data-driven item configuration
+interface ItemConfig {
+  probability: number;
+  size: number;
+  uvOffset: { x: number; y: number };
+}
+
+const ITEM_CONFIGS: Record<string, ItemConfig> = {
+  bone: {
+    probability: 0.15,
+    size: 0.08,
+    uvOffset: BONE_UV,
+  },
+  skull: {
+    probability: 0.10,
+    size: 0.16,
+    uvOffset: SKULL_UV,
+  },
+  plant: {
+    probability: 0.30,
+    size: 0.10,
+    uvOffset: PLANT_UV,
+  },
+  plantpot: {
+    probability: 0.05,
+    size: 0.12,
+    uvOffset: PLANTPOT_UV,
+  },
+};
+
+// Generate shader data from config
+const generateItemData = () => {
+  const items = Object.entries(ITEM_CONFIGS);
+  const probabilities = items.map(([_, config]) => config.probability);
+  const sizes = items.map(([_, config]) => config.size);
+  const uvOffsets = items.map(([_, config]) => config.uvOffset);
+  
+  return {
+    itemCount: items.length,
+    probabilities,
+    sizes,
+    uvOffsets,
+  };
+};
+
 function BackgroundSphere({
   atlas,
   texture,
   floorTile,
-  boneTexture,
-  boneTileUv,
+  itemTexture,
+  itemTileUv,
 }: {
   atlas: TileAtlas;
   texture: THREE.Texture;
   floorTile: number;
-  boneTexture?: THREE.Texture;
-  boneTileUv?: { x: number; y: number; w: number; h: number };
+  itemTexture?: THREE.Texture;
+  itemTileUv?: { x: number; y: number; w: number; h: number };
 }) {
   const tile = atlas.getTile(floorTile);
   const meshRef = useRef<THREE.Mesh>(null);
+  
+  // Generate item data once
+  const itemData = useMemo(() => generateItemData(), []);
 
   useFrame(({ camera }) => {
     meshRef.current?.position.copy(camera.position);
   });
 
   const mat = useMemo(() => {
-    const hasBones = !!(boneTexture && boneTileUv);
+    const hasItems = !!(itemTexture && itemTileUv);
+    const { itemCount, probabilities, sizes, uvOffsets } = itemData;
+    
     return new THREE.ShaderMaterial({
       uniforms: {
         uAtlas: { value: texture },
         uTileOffset: { value: new THREE.Vector2(tile.uvX, tile.uvY) },
         uTileSize: { value: new THREE.Vector2(tile.uvW, tile.uvH) },
         uRepeat: { value: new THREE.Vector2(12, 6) },
-        uBoneAtlas: { value: boneTexture ?? null },
-        uBoneOffset: {
-          value: new THREE.Vector2(boneTileUv?.x ?? 0, boneTileUv?.y ?? 0),
+        uItemAtlas: { value: itemTexture ?? null },
+        uItemSize: { value: new THREE.Vector2(32.0/256, 32.0/256) },
+        uHasItems: { value: hasItems ? 1 : 0 },
+        // New data-driven uniforms
+        uItemCount: { value: itemCount },
+        uProbabilities: { value: probabilities },
+        uSizes: { value: sizes },
+        uUvOffsetsX: { 
+          value: uvOffsets.map(offset => offset.x) 
         },
-        uBoneSize: {
-          value: new THREE.Vector2(boneTileUv?.w ?? 0, boneTileUv?.h ?? 0),
+        uUvOffsetsY: { 
+          value: uvOffsets.map(offset => offset.y) 
         },
-        uHasBones: { value: hasBones ? 1 : 0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -1136,14 +1213,19 @@ function BackgroundSphere({
         uniform vec2 uTileOffset;
         uniform vec2 uTileSize;
         uniform vec2 uRepeat;
-        uniform sampler2D uBoneAtlas;
-        uniform vec2 uBoneOffset;
-        uniform vec2 uBoneSize;
-        uniform int uHasBones;
+        uniform sampler2D uItemAtlas;
+        uniform vec2 uItemSize;
+        uniform int uHasItems;
+        uniform int uItemCount;
+        uniform float uProbabilities[8];
+        uniform float uSizes[8];
+        uniform float uUvOffsetsX[8];
+        uniform float uUvOffsetsY[8];
         varying vec2 vUv;
         varying vec3 vWorldPos;
 
         #define PI 3.14159265
+        #define MAX_ITEMS 8
 
         float hash(vec2 p) {
           return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -1155,37 +1237,57 @@ function BackgroundSphere({
           vec2 atlasUv = uTileOffset + tiled * uTileSize;
           vec4 col = texture2D(uAtlas, atlasUv);
 
-          // Sparse bone scatter using spherical coords from 3-D position
-          // (avoids UV seam / pole compression artifacts)
-          if (uHasBones == 1) {
+          // Data-driven item scatter
+          if (uHasItems == 1) {
             vec3 n = vWorldPos;
             float phi = atan(n.z, n.x);            // -PI .. PI
             float theta = acos(clamp(n.y, -1.0, 1.0)); // 0 .. PI
             vec2 sphereUv = vec2(phi / (2.0 * PI) + 0.5, theta / PI);
 
-            vec2 boneGridSize = vec2(10.0, 6.0);
-            vec2 cellId = floor(sphereUv * boneGridSize);
-            vec2 cellUv = fract(sphereUv * boneGridSize);
+            // Single unified grid system for all items
+            vec2 itemGridSize = vec2(24.0, 16.0); // Unified grid (384 cells total)
+            vec2 cellId = floor(sphereUv * itemGridSize);
+            vec2 cellUv = fract(sphereUv * itemGridSize);
 
-            float presence = hash(cellId);
-            if (presence < 0.18) {
-              vec2 center = vec2(
-                mix(0.2, 0.8, hash(cellId + vec2(3.7, 0.0))),
-                mix(0.2, 0.8, hash(cellId + vec2(0.0, 5.3)))
-              );
-              float rotIdx = floor(hash(cellId + vec2(11.1, 2.3)) * 4.0);
-              vec2 d = cellUv - center;
-              if (rotIdx < 1.0) { /* 0 deg */ }
-              else if (rotIdx < 2.0) { d = vec2(-d.y,  d.x); }
-              else if (rotIdx < 3.0) { d = -d; }
-              else                   { d = vec2( d.y, -d.x); }
-
-              float boneHalf = 0.28;
-              vec2 boneUv = d / (boneHalf * 2.0) + 0.5;
-              if (boneUv.x >= 0.0 && boneUv.x <= 1.0 &&
-                  boneUv.y >= 0.0 && boneUv.y <= 1.0) {
-                vec4 bone = texture2D(uBoneAtlas, uBoneOffset + boneUv * uBoneSize);
-                col = mix(col, bone, bone.a);
+            // Determine item type based on cell hash
+            float itemType = hash(cellId + vec2(1.7, 8.9));
+            
+            // Loop through items using data-driven approach
+            float cumulativeProb = 0.0;
+            for (int i = 0; i < MAX_ITEMS; i++) {
+              if (i >= uItemCount) break;
+              
+              cumulativeProb += uProbabilities[i];
+              
+              if (itemType < cumulativeProb) {
+                // Calculate position and rotation
+                vec2 center = vec2(
+                  mix(0.2, 0.8, hash(cellId + vec2(3.7, float(i) * 0.1))),
+                  mix(0.2, 0.8, hash(cellId + vec2(0.0, float(i) * 0.2)))
+                );
+                float angle = hash(cellId + vec2(7.3, float(i) * 0.3)) * 2.0 * PI;
+                vec2 d = cellUv - center;
+                vec2 rotated = vec2(
+                  d.x * cos(angle) - d.y * sin(angle),
+                  d.x * sin(angle) + d.y * cos(angle)
+                );
+                
+                // Get item size
+                float itemHalf = uSizes[i];
+                vec2 itemUv = rotated / (itemHalf * 2.0) + 0.5;
+                
+                // Check if within bounds
+                if (itemUv.x >= 0.0 && itemUv.x <= 1.0 &&
+                    itemUv.y >= 0.0 && itemUv.y <= 1.0) {
+                   
+                  // Get UV offset for this item type
+                  vec2 uvOffset = vec2(uUvOffsetsX[i], uUvOffsetsY[i]);
+                   
+                  // Sample and blend
+                  vec4 itemColor = texture2D(uItemAtlas, uvOffset + itemUv * uItemSize);
+                  col = mix(col, itemColor, itemColor.a);
+                }
+                break; // Found matching item type
               }
             }
           }
@@ -1197,7 +1299,7 @@ function BackgroundSphere({
       depthWrite: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [texture, tile.uvX, tile.uvY, tile.uvW, tile.uvH, boneTexture, boneTileUv]);
+  }, [texture, tile.uvX, tile.uvY, tile.uvW, tile.uvH, itemTexture, itemTileUv]);
 
   return (
     <mesh ref={meshRef} renderOrder={-1}>
@@ -1275,8 +1377,8 @@ type SceneProps = {
   ceilingTileMap?: number[];
   /** Tile ID used for the background sphere (visible inside walls). Defaults to floorTile. */
   backgroundTile?: number;
-  /** Optional icons texture for scattering bone decorations on the background sphere. */
-  boneTexture?: THREE.Texture;
+  /** Optional icons texture for scattering item decorations on the background sphere. */
+  itemTexture?: THREE.Texture;
   /**
    * When set, renders an ectoplasmic cyan ghost-wall overlay on vertical wall
    * faces within this world-space radius of the camera.  Pass undefined (or 0)
@@ -1331,7 +1433,7 @@ function DungeonScene({
   ceilingData,
   ceilingTileMap,
   backgroundTile,
-  boneTexture,
+  itemTexture,
   ghostWallRadius,
 }: SceneProps) {
   const fogColorObj = useMemo(
@@ -1430,8 +1532,8 @@ function DungeonScene({
         atlas={atlas}
         texture={texture}
         floorTile={backgroundTile ?? floorTile}
-        boneTexture={boneTexture}
-        boneTileUv={boneTexture ? BONE_UV : undefined}
+        itemTexture={itemTexture}
+        itemTileUv={itemTexture ? BONE_UV : undefined}
       />
       {/* Ambient + directional light so tiles aren't pitch-black */}
       <ambientLight intensity={0.6} />
