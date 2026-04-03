@@ -19,6 +19,7 @@ import { RECIPES } from "../tea";
 import type { Tea } from "../tea";
 import { useSettings } from "../SettingsContext";
 import type { Entity } from "../../roguelike-mazetools/src/examples/ECS/Components";
+import { getChestKeyCount } from "../../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
 import { useMusic } from "./useMusic";
 import { useMessage } from "./useMessage";
 import {
@@ -1159,7 +1160,7 @@ export function useGameState({
             isBlocked: (x: number, y: number) => {
               const isLockedDoor =
                 doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                adv.template !== "rogue";
+                adv.template !== "rogue" && (adv.keys ?? 0) === 0;
               return (
                 isLockedDoor ||
                 (mobPlayerOccupied.has(`${x}_${y}`) &&
@@ -1235,6 +1236,12 @@ export function useGameState({
             };
           }
           newLoot += adventurerLootPerChestRef.current;
+          if (pickedChest.ecsData) {
+            const keyCount = getChestKeyCount(pickedChest.ecsData.registry, pickedChest.ecsData.chestEntity);
+            if (keyCount > 0) {
+              adv = { ...adv, keys: (adv.keys ?? 0) + keyCount };
+            }
+          }
         }
 
         // Check state transition
@@ -1276,7 +1283,7 @@ export function useGameState({
                 isBlocked: (x: number, y: number) => {
                   const isLockedDoor =
                     doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                    adv.template !== "rogue";
+                    adv.template !== "rogue" && (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
                 fourDir: true,
@@ -1303,25 +1310,10 @@ export function useGameState({
                 inCombat: false,
               };
             }
-            // Chest exists but is unreachable — count the stuck turn
-            adv = {
-              ...adv,
-              dread: newDread,
-              loot: newLoot,
-              state: newAdvState,
-              noLootTurns: (adv.noLootTurns ?? 0) + 1,
-            };
-            return {
-              adv,
-              intendedX: adv.x,
-              intendedZ: adv.z,
-              debugPath: [],
-              isAttack: false,
-              inCombat: false,
-            };
+            // Chest unreachable (locked door, no key) — wander to find accessible loot
           }
 
-          // No chests at all — count the stuck turn and wander
+          // No reachable chests — count the stuck turn and wander
           const newNoLootTurns = (adv.noLootTurns ?? 0) + 1;
           const nonEndRoomsArray = [...dungeon.rooms.entries()].filter(
             ([id]: any) => id !== dungeon.endRoomId,
@@ -1341,7 +1333,7 @@ export function useGameState({
                 isBlocked: (x: number, y: number) => {
                   const isLockedDoor =
                     doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                    adv.template !== "rogue";
+                    adv.template !== "rogue" && (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
                 fourDir: true,
@@ -1420,7 +1412,7 @@ export function useGameState({
           isBlocked: (x: number, y: number) => {
             const isLockedDoor =
               doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-              adv.template !== "rogue";
+              adv.template !== "rogue" && (adv.keys ?? 0) === 0;
             return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
           },
           fourDir: true,
@@ -1544,9 +1536,12 @@ export function useGameState({
         const key = `${adv.x}_${adv.z}`;
         const state = doorUpdates.get(key);
         if (state === undefined) continue;
-        if (state === "locked" && adv.template === "rogue") {
+        if (state === "locked" && (adv.template === "rogue" || (adv.keys ?? 0) > 0)) {
           doorUpdates.set(key, "open");
           anyDoorChanged = true;
+          if (adv.template !== "rogue" && (adv.keys ?? 0) > 0) {
+            adv.keys = (adv.keys ?? 0) - 1;
+          }
         } else if (state !== "locked" && state !== "open") {
           doorUpdates.set(key, "open");
           anyDoorChanged = true;

@@ -18,6 +18,8 @@ import {
   MOB_TYPES,
 } from "../gameConstants";
 import { makeRng } from "../gameUtils";
+import { ComponentRegistry } from "../../roguelike-mazetools/src/examples/ECS/Registry";
+import { createChestInstance } from "../../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
 import { RECIPES } from "../tea";
 
 export interface DungeonSetupSettings {
@@ -191,7 +193,7 @@ export function useDungeonSetup({
 
         // Example: place a Chair (atlas sprite id 4) against the wall on floor cells
         if (!solid && distanceToWall === 1) {
-          placeFurniture(x, y, "Chair");
+          //placeFurniture(x, y, "Chair");
         }
 
         // If this is a dug out cell (ie: not a wall)
@@ -535,12 +537,16 @@ export function useDungeonSetup({
         const cz = room.rect.y + Math.floor(room.rect.h / 2);
         const idx = cz * dungeonWidth + cx;
         if (solidData[idx] !== 0) continue;
+        const chestRegistry = new ComponentRegistry();
+        chestRegistry.initializeRegistry();
+        const chestEntity = createChestInstance(chestRegistry);
         chests.push({
           id: `chest_${i}`,
           x: cx,
           z: cz,
           value: 10,
           mimic: rng() < 0.25,
+          ecsData: { registry: chestRegistry, chestEntity },
         });
         break;
       }
