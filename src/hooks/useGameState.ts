@@ -160,6 +160,20 @@ export function useGameState({
     () => texture && makeDoorProto(texture, ARCH_BRICK_UV[0], ARCH_BRICK_UV[1]),
     [texture],
   );
+  const doorOpenProto = useMemo(
+    () => texture && makeDoorProto(texture, DOOR_OPEN_UV[0], DOOR_OPEN_UV[1]),
+    [texture],
+  );
+  const doorClosedProto = useMemo(
+    () =>
+      texture && makeDoorProto(texture, DOOR_CLOSED_UV[0], DOOR_CLOSED_UV[1]),
+    [texture],
+  );
+  const doorLockedProto = useMemo(
+    () =>
+      texture && makeDoorProto(texture, DOOR_LOCKED_UV[0], DOOR_LOCKED_UV[1]),
+    [texture],
+  );
   const objectRegistry = useMemo(
     () => ({
       ...(teaomaticProto && { stove: () => teaomaticProto.clone(true) }),
@@ -167,8 +181,24 @@ export function useGameState({
         door_cobble: () => doorCobbleProto.clone(true),
       }),
       ...(doorBrickProto && { door_brick: () => doorBrickProto.clone(true) }),
+      ...(doorOpenProto && {
+        door_state_open: () => doorOpenProto.clone(true),
+      }),
+      ...(doorClosedProto && {
+        door_state_closed: () => doorClosedProto.clone(true),
+      }),
+      ...(doorLockedProto && {
+        door_state_locked: () => doorLockedProto.clone(true),
+      }),
     }),
-    [teaomaticProto, doorCobbleProto, doorBrickProto],
+    [
+      teaomaticProto,
+      doorCobbleProto,
+      doorBrickProto,
+      doorOpenProto,
+      doorClosedProto,
+      doorLockedProto,
+    ],
   );
 
   // ---------------------------------------------------------------------------
@@ -403,6 +433,18 @@ export function useGameState({
 
   const [showSettings, setShowSettings] = useState(false);
   const [showTempTint, setShowTempTint] = useState(false);
+
+  // Door states
+  type DoorState = "open" | "closed" | "locked";
+  const [doorStates, setDoorStates] = useState<Map<string, DoorState>>(() => {
+    const m = new Map<string, DoorState>();
+    for (const d of doorPlacements) {
+      m.set(`${d.x}_${d.z}`, "closed");
+    }
+    return m;
+  });
+  const doorStatesRef = useRef(doorStates);
+  doorStatesRef.current = doorStates;
 
   // Chests state
   const [chests, setChests] = useState<any[]>([]);
@@ -935,7 +977,7 @@ export function useGameState({
       return solidData[z * dungeonWidth + x] === 0;
     }
 
-    // Closed doors block LOS. A door is open if any creature occupies its cell.
+    // Closed/locked doors block LOS. Open doors never block.
     const stepOccupied = new Set([
       `${pgx}_${pgz}`,
       ...newMobPositions.map((p) => `${p.x}_${p.z}`),
@@ -943,12 +985,24 @@ export function useGameState({
     ]);
     const closedDoorCells = new Set(
       doorPlacements
-        .filter(
-          (d) =>
-            d.type.startsWith("door") && !stepOccupied.has(`${d.x}_${d.z}`),
-        )
+        .filter((d) => {
+          const state = doorStatesRef.current.get(`${d.x}_${d.z}`) ?? "closed";
+          if (state === "open") return false;
+          if (state === "locked") return true;
+          return !stepOccupied.has(`${d.x}_${d.z}`);
+        })
         .map((d) => `${d.x}_${d.z}`),
     );
+
+    // Auto-open door when player steps onto it
+    const playerDoorKey = `${pgx}_${pgz}`;
+    if (doorStatesRef.current.has(playerDoorKey)) {
+      const playerDoorState =
+        doorStatesRef.current.get(playerDoorKey) ?? "closed";
+      if (playerDoorState !== "locked") {
+        setDoorStates((prev) => new Map(prev).set(playerDoorKey, "open"));
+      }
+    }
     function isWalkableForLos(x: number, z: number): boolean {
       if (!isWalkable(x, z)) return false;
       return !closedDoorCells.has(`${x}_${z}`);
@@ -1078,9 +1132,16 @@ export function useGameState({
           { x: adv.x, y: adv.z },
           { x: combatTarget.x, y: combatTarget.z },
           {
-            isBlocked: (x: number, y: number) =>
-              mobPlayerOccupied.has(`${x}_${y}`) &&
-              !(x === combatTarget!.x && y === combatTarget!.z),
+            isBlocked: (x: number, y: number) => {
+              const isLockedDoor =
+                doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
+                adv.template !== "rogue";
+              return (
+                isLockedDoor ||
+                (mobPlayerOccupied.has(`${x}_${y}`) &&
+                  !(x === combatTarget!.x && y === combatTarget!.z))
+              );
+            },
             fourDir: true,
           },
         );
@@ -1175,8 +1236,12 @@ export function useGameState({
               { x: adv.x, y: adv.z },
               { x: chestTarget.x, y: chestTarget.z },
               {
-                isBlocked: (x: number, y: number) =>
-                  mobPlayerOccupied.has(`${x}_${y}`),
+                isBlocked: (x: number, y: number) => {
+                  const isLockedDoor =
+                    doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
+                    adv.template !== "rogue";
+                  return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
+                },
                 fourDir: true,
               },
             );
@@ -1236,8 +1301,12 @@ export function useGameState({
               { x: adv.x, y: adv.z },
               { x: wx, y: wz },
               {
-                isBlocked: (x: number, y: number) =>
-                  mobPlayerOccupied.has(`${x}_${y}`),
+                isBlocked: (x: number, y: number) => {
+                  const isLockedDoor =
+                    doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
+                    adv.template !== "rogue";
+                  return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
+                },
                 fourDir: true,
               },
             );
@@ -1311,8 +1380,12 @@ export function useGameState({
         { x: adv.x, y: adv.z },
         { x: stoveTarget.x, y: stoveTarget.z },
         {
-          isBlocked: (x: number, y: number) =>
-            mobPlayerOccupied.has(`${x}_${y}`),
+          isBlocked: (x: number, y: number) => {
+            const isLockedDoor =
+              doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
+              adv.template !== "rogue";
+            return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
+          },
           fourDir: true,
         },
       );
@@ -1423,6 +1496,26 @@ export function useGameState({
         }
         return { ...adv, x: intendedX, z: intendedZ, debugPath };
       });
+    }
+
+    // --- Adventurers open doors they've stepped onto ---
+    {
+      const doorUpdates = new Map(doorStatesRef.current);
+      let anyDoorChanged = false;
+      for (const adv of newAdventurers) {
+        if (!adv.alive) continue;
+        const key = `${adv.x}_${adv.z}`;
+        const state = doorUpdates.get(key);
+        if (state === undefined) continue;
+        if (state === "locked" && adv.template === "rogue") {
+          doorUpdates.set(key, "open");
+          anyDoorChanged = true;
+        } else if (state !== "locked" && state !== "open") {
+          doorUpdates.set(key, "open");
+          anyDoorChanged = true;
+        }
+      }
+      if (anyDoorChanged) setDoorStates(doorUpdates);
     }
 
     // --- Adventurers pick up loot they've walked onto ---
@@ -1872,6 +1965,10 @@ export function useGameState({
       }
       const mi = mobPositions.findIndex((p) => p.x === tx && p.z === tz);
       if (mi !== -1) return { type: "mob" as const, mobIdx: mi };
+      const doorKey = `${tx}_${tz}`;
+      if (doorStatesRef.current.has(doorKey)) {
+        return { type: "door" as const, doorKey };
+      }
       return null;
     },
     [stovePlacements, mobPositions, hazardData, dungeonWidth],
@@ -2069,6 +2166,25 @@ export function useGameState({
               `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
             );
           }
+        }
+      } else if (facingTarget.type === "door") {
+        const state =
+          doorStatesRef.current.get(facingTarget.doorKey) ?? "closed";
+        if (state === "open") {
+          setDoorStates((prev) =>
+            new Map(prev).set(facingTarget.doorKey, "closed"),
+          );
+          showMsg("You close the door.");
+        } else if (state === "closed") {
+          setDoorStates((prev) =>
+            new Map(prev).set(facingTarget.doorKey, "locked"),
+          );
+          showMsg("You lock the door.");
+        } else {
+          setDoorStates((prev) =>
+            new Map(prev).set(facingTarget.doorKey, "open"),
+          );
+          showMsg("You unlock the door.");
         }
       }
     }
@@ -2382,5 +2498,7 @@ export function useGameState({
     damageNumbers,
     // trap state
     disarmedTraps,
+    // door state
+    doorStates,
   };
 }

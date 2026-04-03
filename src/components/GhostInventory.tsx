@@ -5,18 +5,26 @@ interface GhostInventoryProps {
   columnsPerRow?: number;
 }
 
-function LeftHandEmpty() {
+interface HandEmptyProps {
+  position: string;
+}
+
+function HandEmpty({ position }: HandEmptyProps) {
   return (
     <div
       style={{
         backgroundImage: `${import.meta.env.BASE_URL}textures/icons.png`,
         width: "32px",
         height: "32px",
-        backgroundPosition: "64px 64px",
+        backgroundPosition: position,
         backgroundSize: "256px 256px",
       }}
     ></div>
   );
+}
+
+function LeftHandEmpty() {
+  return <HandEmpty position={"64px 64px"} />;
 }
 
 export default function GhostInventory({
@@ -67,7 +75,7 @@ export default function GhostInventory({
               )}
             </>
           ) : (
-            "(left)"
+            <LeftHandEmpty />
           )}
         </button>
         <button

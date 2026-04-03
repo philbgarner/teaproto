@@ -405,7 +405,12 @@ export default function App() {
       blocked: gs.showRecipeMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
       canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
-      blockedPositions: ds.stovePlacements,
+      blockedPositions: [
+        ...ds.stovePlacements,
+        ...ds.doorPlacements.filter(
+          (d: any) => gs.doorStates.get(`${d.x}_${d.z}`) === "locked",
+        ),
+      ],
       keybindings,
       startYaw: ds.spawnYaw,
     },
@@ -437,6 +442,16 @@ export default function App() {
         return `${state.brewing.recipe.name} is ready! — Press [space] to collect`;
       return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press [space] for status`;
     }
+    if (facingTarget.type === "door") {
+      const interactKey =
+        keybindings.interact[0] === " " ? "space" : keybindings.interact[0];
+      const state = gs.doorStates.get(facingTarget.doorKey) ?? "closed";
+      if (state === "open")
+        return `Open door — Press [${interactKey}] to close`;
+      if (state === "closed")
+        return `Closed door — Press [${interactKey}] to lock`;
+      return `Locked door — Press [${interactKey}] to unlock`;
+    }
     const mob = ds.initialMobs[facingTarget.mobIdx];
     const preferredRecipe = RECIPES.find(
       (r) => r.id === mob?.preferredRecipeId,
@@ -449,6 +464,7 @@ export default function App() {
   }, [
     facingTarget,
     gs.stoveStates,
+    gs.doorStates,
     ds.initialMobs,
     gs.mobSatiations,
     keybindings,
@@ -462,6 +478,26 @@ export default function App() {
   const mobileAttackDirs = useMemo(
     () => [...gs.mobAttackDirs, ...gs.advAttackDirs],
     [gs.mobAttackDirs, gs.advAttackDirs],
+  );
+
+  // Door visual planes — one per door placement, type based on current door state.
+  const doorVisualObjects = useMemo(
+    () =>
+      ds.doorPlacements.map((door: any) => ({
+        x: door.x,
+        z: door.z,
+        type: `door_state_${gs.doorStates.get(`${door.x}_${door.z}`) ?? "closed"}`,
+        offsetX: door.offsetX ?? 0,
+        offsetZ: door.offsetZ ?? 0,
+        offsetY: door.offsetY,
+        yaw: door.yaw,
+      })),
+    [ds.doorPlacements, gs.doorStates],
+  );
+
+  const allObjects = useMemo(
+    () => [...ds.objects, ...doorVisualObjects],
+    [ds.objects, doorVisualObjects],
   );
 
   // Cells currently occupied by player or creatures — used to open doors.
@@ -528,7 +564,7 @@ export default function App() {
                 fogNear={4}
                 fogFar={28}
                 tileSize={TILE_SIZE}
-                objects={ds.objects}
+                objects={allObjects}
                 objectRegistry={gs.objectRegistry}
                 objectOccupiedKeys={doorOccupiedKeys}
                 mobiles={gs.mobiles}
