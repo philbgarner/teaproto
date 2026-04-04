@@ -91,6 +91,7 @@ export interface UseGameStateParams {
   traversalFactor: number;
   adventurerDreadRate: number;
   adventurerLootPerChest: number;
+  winRounds: number;
   keybindings: any;
 }
 
@@ -122,6 +123,7 @@ export function useGameState({
   traversalFactor,
   adventurerDreadRate,
   adventurerLootPerChest,
+  winRounds,
   keybindings,
 }: UseGameStateParams) {
   // Tile atlas + texture
@@ -1781,7 +1783,7 @@ export function useGameState({
     }
 
     // --- Win condition ---
-    if (newRound >= WIN_ROUNDS) {
+    if (newRound >= winRounds) {
       setGameState("won");
       return;
     }

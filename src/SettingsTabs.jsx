@@ -36,6 +36,8 @@ export default function SettingsTabs({
   setAdventurerDreadRate,
   adventurerLootPerChest,
   setAdventurerLootPerChest,
+  winRounds,
+  setWinRounds,
   dungeonSeed,
   setDungeonSeed,
   dungeonWidth,
@@ -176,6 +178,14 @@ export default function SettingsTabs({
               step={0.1}
               onChange={setTrapDensity}
               format={(v) => `${v.toFixed(1)}×`}
+            />
+            <SliderRow
+              label="Rounds to win"
+              value={winRounds}
+              min={1}
+              max={50}
+              step={1}
+              onChange={(v) => setWinRounds(Math.round(v))}
             />
           </>
         )}

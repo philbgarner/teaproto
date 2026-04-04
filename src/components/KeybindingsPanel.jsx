@@ -18,6 +18,7 @@ const ACTION_LABELS = {
   optionNext: "Menu: next option",
   optionPrev: "Menu: prev option",
   optionSelect: "Menu: select option",
+  openMenu: "Open menu",
 };
 
 const KEY_DISPLAY = {

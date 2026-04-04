@@ -67,8 +67,7 @@ function MobEntry({ mob, onSummon, summonDisabled }) {
       : null;
   const effectColor = mob.rpsEffect ? RPS_COLORS[mob.rpsEffect] : undefined;
 
-  const hpFrac =
-    mob.hp !== undefined && mob.maxHp ? mob.hp / mob.maxHp : null;
+  const hpFrac = mob.hp !== undefined && mob.maxHp ? mob.hp / mob.maxHp : null;
   const armorFrac =
     mob.satiation !== undefined && mob.maxSatiation
       ? mob.satiation / mob.maxSatiation
@@ -82,9 +81,11 @@ function MobEntry({ mob, onSummon, summonDisabled }) {
           className={styles.summonBtn}
           disabled={summonDisabled}
           onClick={onSummon}
-          title={summonDisabled ? "Cannot summon here" : "Summon to your location"}
+          title={
+            summonDisabled ? "Cannot summon here" : "Summon to your location"
+          }
         >
-          ▶
+          ⊹
         </button>
       </div>
       {effectLabel && (

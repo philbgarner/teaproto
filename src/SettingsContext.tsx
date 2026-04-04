@@ -67,6 +67,8 @@ interface SettingsContextValue {
   setAdventurerDreadRate: Dispatch<SetStateAction<number>>;
   adventurerLootPerChest: number;
   setAdventurerLootPerChest: Dispatch<SetStateAction<number>>;
+  winRounds: number;
+  setWinRounds: Dispatch<SetStateAction<number>>;
   torchColor: string;
   setTorchColor: Dispatch<SetStateAction<string>>;
   torchIntensity: number;
@@ -122,6 +124,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [traversalFactor, setTraversalFactor] = useState(2.0);
   const [adventurerDreadRate, setAdventurerDreadRate] = useState(1.0);
   const [adventurerLootPerChest, setAdventurerLootPerChest] = useState(10);
+  const [winRounds, setWinRounds] = useState(10);
   const [torchColor, setTorchColor] = useState<string>(() => {
     try {
       return localStorage.getItem("torchColor") ?? DEFAULT_TORCH_HEX;
@@ -178,6 +181,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAdventurerDreadRate,
         adventurerLootPerChest,
         setAdventurerLootPerChest,
+        winRounds,
+        setWinRounds,
         torchColor,
         setTorchColor,
         torchIntensity,

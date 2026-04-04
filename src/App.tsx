@@ -40,7 +40,6 @@ import {
   SPIKE_TRAP_OVERLAY_ID,
   PLAYER_MAX_HP,
   ROUND_COUNTDOWN_THRESHOLD,
-  WIN_ROUNDS,
   ATLAS_SHEET_W,
   ATLAS_SHEET_H,
   atlasIndex,
@@ -665,11 +664,14 @@ export default function App() {
     setAdventurerDreadRate,
     adventurerLootPerChest,
     setAdventurerLootPerChest,
+    winRounds,
+    setWinRounds,
     torchColor,
     setTorchColor,
     torchIntensity,
     setTorchIntensity,
     trapDensity,
+    setTrapDensity,
     keybindings,
     setKeybindings,
   } = useSettings();
@@ -714,6 +716,7 @@ export default function App() {
     traversalFactor,
     adventurerDreadRate,
     adventurerLootPerChest,
+    winRounds,
     keybindings,
   });
 
@@ -1157,8 +1160,12 @@ export default function App() {
             setAdventurerDreadRate,
             adventurerLootPerChest,
             setAdventurerLootPerChest,
+            winRounds,
+            setWinRounds,
             maxDoors,
             setMaxDoors,
+            trapDensity,
+            setTrapDensity,
             torchColor,
             setTorchColor,
             torchIntensity,
@@ -1184,6 +1191,8 @@ export default function App() {
               127 + Math.round(gs.roomTempRise.get(regionId) ?? 0),
             );
           })()}
+          openMenuKeys={keybindings.openMenu}
+          onOpenSettings={() => gs.setShowSettings(true)}
         />
       </div>
 
@@ -1192,7 +1201,7 @@ export default function App() {
         gameOverReason={gs.gameOverReason}
         currentRound={gs.currentRound}
         turnCount={gs.turnCount}
-        winRounds={WIN_ROUNDS}
+        winRounds={winRounds}
         onPlayAgain={() => {
           setDungeonSeed((s) => s);
           const freshSatiations = ds.initialMobs.map(() => 40);

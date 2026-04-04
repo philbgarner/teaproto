@@ -36,6 +36,7 @@ const TUTORIAL_GAME_SETTINGS = {
   traversalFactor: 2.0,
   adventurerDreadRate: 0,
   adventurerLootPerChest: 0,
+  winRounds: 999999,
 };
 
 // ── Inner view ── keyed by lessonIndex so useEotBCamera resets each lesson ──
