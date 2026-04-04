@@ -1157,7 +1157,8 @@ export function useGameState({
             isBlocked: (x: number, y: number) => {
               const isLockedDoor =
                 doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                adv.template !== "rogue" && (adv.keys ?? 0) === 0;
+                adv.template !== "rogue" &&
+                (adv.keys ?? 0) === 0;
               return (
                 isLockedDoor ||
                 (mobPlayerOccupied.has(`${x}_${y}`) &&
@@ -1234,7 +1235,10 @@ export function useGameState({
           }
           newLoot += adventurerLootPerChestRef.current;
           if (pickedChest.ecsData) {
-            const keyCount = getChestKeyCount(pickedChest.ecsData.registry, pickedChest.ecsData.chestEntity);
+            const keyCount = getChestKeyCount(
+              pickedChest.ecsData.registry,
+              pickedChest.ecsData.chestEntity,
+            );
             if (keyCount > 0) {
               adv = { ...adv, keys: (adv.keys ?? 0) + keyCount };
             }
@@ -1280,7 +1284,8 @@ export function useGameState({
                 isBlocked: (x: number, y: number) => {
                   const isLockedDoor =
                     doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                    adv.template !== "rogue" && (adv.keys ?? 0) === 0;
+                    adv.template !== "rogue" &&
+                    (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
                 fourDir: true,
@@ -1330,7 +1335,8 @@ export function useGameState({
                 isBlocked: (x: number, y: number) => {
                   const isLockedDoor =
                     doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                    adv.template !== "rogue" && (adv.keys ?? 0) === 0;
+                    adv.template !== "rogue" &&
+                    (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
                 fourDir: true,
@@ -1410,7 +1416,8 @@ export function useGameState({
           isBlocked: (x: number, y: number) => {
             const isLockedDoor =
               doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-              adv.template !== "rogue" && (adv.keys ?? 0) === 0;
+              adv.template !== "rogue" &&
+              (adv.keys ?? 0) === 0;
             return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
           },
           fourDir: true,
@@ -1534,7 +1541,10 @@ export function useGameState({
         const key = `${adv.x}_${adv.z}`;
         const state = doorUpdates.get(key);
         if (state === undefined) continue;
-        if (state === "locked" && (adv.template === "rogue" || (adv.keys ?? 0) > 0)) {
+        if (
+          state === "locked" &&
+          (adv.template === "rogue" || (adv.keys ?? 0) > 0)
+        ) {
           doorUpdates.set(key, "open");
           anyDoorChanged = true;
           if (adv.template !== "rogue" && (adv.keys ?? 0) > 0) {
@@ -1637,7 +1647,8 @@ export function useGameState({
           if (summonAstar && summonAstar.path.length > 1) {
             const step = summonAstar.path[1];
             const blockedByMob = newMobPositions.some(
-              (p: any, j: number) => j !== i && p.x === step.x && p.z === step.y,
+              (p: any, j: number) =>
+                j !== i && p.x === step.x && p.z === step.y,
             );
             const blockedByPlayer = step.x === pgx && step.y === pgz;
             if (!blockedByMob && !blockedByPlayer) {
@@ -2201,38 +2212,13 @@ export function useGameState({
           mobSatiationsRef.current = next;
           setMobSatiations(next);
         }
-        if (tea.temperature < lo) {
-          applyMobSatiation(10);
-          showSpeechBubble(
-            mobBubbleId,
-            `This ${tea.name} is too cold... How disappointing.`,
-          );
-          sounds.beep_failure.play();
-        } else if (tea.temperature > hi) {
-          applyMobSatiation(30);
-          showSpeechBubble(
-            mobBubbleId,
-            `Ouch! This ${tea.name} is scalding hot! Dreadfully disappointing.`,
-          );
-          sounds.beep_failure.play();
-        } else {
-          const isPreferred = mob.preferredRecipeId === tea.recipe.id;
-          const bonus = isPreferred ? 100 * (supersatiationBonus / 100) : 0;
-          applyMobSatiation(100 + bonus);
-          if (isPreferred) {
-            showSpeechBubble(
-              mobBubbleId,
-              `My favourite! This ${tea.name} is absolutely perfect — I am overjoyed!`,
-            );
-            sounds.twinkle.play();
-          } else {
-            showSpeechBubble(
-              mobBubbleId,
-              `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
-            );
-            sounds.twinkle.play();
-          }
-        }
+
+        applyMobSatiation(100);
+        showSpeechBubble(
+          mobBubbleId,
+          `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
+        );
+        sounds.twinkle.play();
       } else if (facingTarget.type === "door") {
         const state =
           doorStatesRef.current.get(facingTarget.doorKey) ?? "closed";
@@ -2318,7 +2304,7 @@ export function useGameState({
       if (!showRecipeMenu) return;
       e.preventDefault();
       const num = parseInt(e.key);
-      if (num >= 1 && num <= RECIPES.length) {   
+      if (num >= 1 && num <= RECIPES.length) {
         const recipe = RECIPES[num - 1];
         if (
           recipe.ingredientId &&
@@ -2561,7 +2547,9 @@ export function useGameState({
     onBlockedMove,
     spawnAdventurersForRound,
     getFacingTarget,
-    summonMob: (mobIdx: number) => { mobSummonSet.current.add(mobIdx); },
+    summonMob: (mobIdx: number) => {
+      mobSummonSet.current.add(mobIdx);
+    },
     // refs for cross-hook wiring
     logicalRef,
     doMoveRef,
