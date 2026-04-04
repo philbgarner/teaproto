@@ -1,3 +1,5 @@
+import { ObjectId } from "../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
+
 export interface Tea {
   id: string;
   name: string;
@@ -15,6 +17,12 @@ export interface Recipe {
   ingredientName: string | null;
   countersEffect: "bleeding" | "freezing" | "poisoned" | null;
 }
+
+export const IngredientToOjectId: Record<string, ObjectId> = {
+  "frost-leaf": ObjectId.FROST_LEAF,
+  "hot-pepper": ObjectId.HOT_PEPPER,
+  "wild-herb": ObjectId.WILD_HERB,
+};
 
 export const RECIPES: Recipe[] = [
   {

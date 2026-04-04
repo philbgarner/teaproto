@@ -877,7 +877,6 @@ export function GameView({
     gs.mobSatiations,
     keybindings,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
-  console.log("recipes", RECIPES, "ingredients", gs.ingredients);
   return (
     <>
       <div
@@ -1068,6 +1067,8 @@ export function GameView({
                     };
                     gs.ingredientsRef.current = newIng;
                     gs.setIngredients(newIng);
+                    gs.setIngredientsECS(newIng);
+                    console.log("new ing", newIng);
                   }
                   gs.setStoveStates((prev: Map<string, any>) => {
                     const next = new Map(prev);

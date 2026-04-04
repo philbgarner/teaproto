@@ -15,13 +15,12 @@ import {
   cancelPassageTraversal,
 } from "../../roguelike-mazetools/src/turn/passageTraversal";
 import hotkeys from "hotkeys-js";
-import { RECIPES } from "../tea";
+import { IngredientToOjectId, RECIPES } from "../tea";
 import type { Tea } from "../tea";
 import { useSettings } from "../SettingsContext";
 import type { Entity } from "../../roguelike-mazetools/src/examples/ECS/Components";
 import { useSoundHelper } from "../hooks/useSoundHelper";
-import { getChestKeyCount } from "../../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
-import { useMusic } from "./useMusic";
+import { getChestKeyCount, getObjectDefinition } from "../../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
 import { useMessage } from "./useMessage";
 import {
   ATLAS_SHEET_W,
@@ -239,13 +238,46 @@ export function useGameState({
     registry,
     leftHand: leftHandInventory,
     rightHand: rightHandInventory,
+    playerInventory: playerInventory,
   } = playerData.ecsData;
 
   // Version counter — incremented whenever ECS hand state mutates so React re-renders.
   const [handsVersion, setHandsVersion] = useState(0);
+  const [playerInvVersion, setPlayerInvVersion] = useState(0);
 
   function getHandInventory(hand: "left" | "right"): Entity {
     return hand === "left" ? leftHandInventory : rightHandInventory;
+  }
+
+  function getPlayerInventorySlot(slot: number): Entity | null {
+    const inv = registry.components.inventory.get(playerInventory);
+    if (!inv?.slots[slot]) return null;
+    return inv.slots[slot];
+  }
+
+  function setIngredientsECS(ingredients: Record<string, number>): void {
+    console.log("set ECS ingredients");
+    for (const [ingredientId, quantity] of Object.entries(ingredients)) {
+      let slotEntity: Entity | null = null;
+      switch(ingredientId) {
+        case "frost-leaf":
+          slotEntity = getPlayerInventorySlot(0);
+          break;
+        case "hot-pepper":
+          slotEntity = getPlayerInventorySlot(1);
+          break;
+        case "wild-herb":
+          slotEntity = getPlayerInventorySlot(2);
+          break;
+      }
+      if (slotEntity) {
+        const itemToAdd = getObjectDefinition(registry, IngredientToOjectId[ingredientId]);
+        console.log("Adding item to slot", itemToAdd, quantity);
+        registry.removeObjectFromSlot(slotEntity);
+        registry.addObjectToSlot(slotEntity, itemToAdd, quantity);
+      }
+    }
+    setPlayerInvVersion((v) => v + 1);
   }
 
   function getTeaFromHandInventory(handInventory: Entity): Tea | null {
@@ -559,6 +591,14 @@ export function useGameState({
   });
   playerHandsRef.current = { left: leftHandTea, right: rightHandTea };
 
+  // Sync ref kept in step with ECS player inventory state so onStep can read without a dep
+  const playerInventoryRef = useRef<(Entity | null)[]>([]);
+  const currentPlayerInventory = useMemo(() => {
+    const inv = registry.components.inventory.get(playerInventory);
+    return inv?.slots ?? [];
+  }, [playerInventory, playerInvVersion]);
+  playerInventoryRef.current = currentPlayerInventory;
+
   const adventurerDreadRateRef = useRef(1.0);
   adventurerDreadRateRef.current = adventurerDreadRate;
   const adventurerLootPerChestRef = useRef(10);
@@ -663,6 +703,7 @@ export function useGameState({
       "wild-herb": startIngredientAmount,
       "frost-leaf": startIngredientAmount,
     };
+    setIngredientsECS(ingredientsRef.current);
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
     mobHpsRef.current = freshHps;
@@ -1947,6 +1988,7 @@ export function useGameState({
     playerHpRef.current = newPlayerHp;
     ingredientsRef.current = newIngredients;
     ingredientDropsRef.current = newIngredientDrops;
+    setIngredientsECS(newIngredients);
     chestsRef.current = newChests;
     mobSatiationsRef.current = newMobSatiations;
     mobHpsRef.current = newMobHps;
@@ -2550,6 +2592,7 @@ export function useGameState({
           };
           ingredientsRef.current = newIng;
           setIngredients(newIng);
+          setIngredientsECS(newIng);
         }
         setStoveStates((prev) => {
           const next = new Map(prev);
@@ -2602,6 +2645,7 @@ export function useGameState({
         };
         ingredientsRef.current = newIng;
         setIngredients(newIng);
+        setIngredientsECS(newIng);
       }
       setStoveStates((prev) => {
         const next = new Map(prev);
@@ -2854,6 +2898,7 @@ export function useGameState({
     playerHpRef,
     ingredients,
     setIngredients,
+    setIngredientsECS,
     ingredientsRef,
     ingredientDrops,
     setIngredientDrops,
@@ -2868,6 +2913,7 @@ export function useGameState({
     mobHpsRef,
     ruinedNotifiedRef,
     playerHandsRef, // { left: Tea|null, right: Tea|null } kept in sync with ECS
+    playerInventoryRef, // (Entity|null)[] kept in sync with ECS player inventory
     exploredMaskRef,
     passagesRef,
     // passage state
