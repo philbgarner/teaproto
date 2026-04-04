@@ -89,7 +89,7 @@ function IngredientSlot({ slot, registry }) {
             {name}
           </div>
           <div className={ghostStyles.ingredientQuantity}>
-            x{99}
+            x{quantity}
           </div>
         </>
       ) : (
