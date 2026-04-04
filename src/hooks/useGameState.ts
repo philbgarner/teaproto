@@ -2664,6 +2664,7 @@ export function useGameState({
     const optionPrevKeys = (keybindings.optionPrev ?? []).join(",");
     const optionSelectKeys = (keybindings.optionSelect ?? []).join(",");
     const summonKeys = (keybindings.summon ?? []).join(",");
+    const cancelKeys = (keybindings.cancel ?? []).join(",");
 
     if (interactKeys) hotkeys(interactKeys, interactHandler as any);
     if (waitKeys) hotkeys(waitKeys, waitHandler as any);
@@ -2677,8 +2678,8 @@ export function useGameState({
       hotkeys(optionSelectKeys, recipeOptionSelectHandler as any);
     if (optionSelectKeys)
       hotkeys(optionSelectKeys, summonOptionSelectHandler as any);
-    hotkeys("escape", recipeCloseHandler as any);
-    hotkeys("escape", summonCloseHandler as any);
+    if (cancelKeys) hotkeys(cancelKeys, recipeCloseHandler as any);
+    if (cancelKeys) hotkeys(cancelKeys, summonCloseHandler as any);
     hotkeys("1,2,3,4,5,6,7,8,9", recipeSelectHandler as any);
     hotkeys("1,2,3,4,5,6,7,8,9", summonSelectHandler as any);
     if (summonKeys) hotkeys(summonKeys, summonOpenHandler as any);
@@ -2702,8 +2703,8 @@ export function useGameState({
         hotkeys.unbind(optionSelectKeys, recipeOptionSelectHandler as any);
       if (optionSelectKeys)
         hotkeys.unbind(optionSelectKeys, summonOptionSelectHandler as any);
-      hotkeys.unbind("escape", recipeCloseHandler as any);
-      hotkeys.unbind("escape", summonCloseHandler as any);
+      if (cancelKeys) hotkeys.unbind(cancelKeys, recipeCloseHandler as any);
+      if (cancelKeys) hotkeys.unbind(cancelKeys, summonCloseHandler as any);
       hotkeys.unbind("1,2,3,4,5,6,7,8,9", recipeSelectHandler as any);
       hotkeys.unbind("1,2,3,4,5,6,7,8,9", summonSelectHandler as any);
       if (summonKeys) hotkeys.unbind(summonKeys, summonOpenHandler as any);

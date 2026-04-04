@@ -17,6 +17,7 @@ export const DEFAULT_KEYBINDINGS = {
   optionSelect: ["space"],
   openMenu: ["m"],
   summon: ["n"],
+  cancel: ["x"],
 };
 
 function loadKeybindings() {

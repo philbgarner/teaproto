@@ -132,7 +132,7 @@ export function RecipeMenu({
       <div style={{ marginTop: 10, color: "#555", fontSize: 11 }}>
         {fmtKeys(keybindings?.optionPrev)}/{fmtKeys(keybindings?.optionNext)} to
         navigate · {fmtKeys(keybindings?.optionSelect)} to select · number to
-        pick · esc to cancel
+        pick · {fmtKeys(keybindings?.cancel)} to cancel
       </div>
     </div>
   );
