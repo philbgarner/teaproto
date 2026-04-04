@@ -19,6 +19,7 @@ import { RECIPES } from "../tea";
 import type { Tea } from "../tea";
 import { useSettings } from "../SettingsContext";
 import type { Entity } from "../../roguelike-mazetools/src/examples/ECS/Components";
+import { useSoundHelper } from "../hooks/useSoundHelper";
 import { getChestKeyCount } from "../../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
 import { useMusic } from "./useMusic";
 import { useMessage } from "./useMessage";
@@ -258,6 +259,7 @@ export function useGameState({
     recipe: (typeof RECIPES)[number],
     temperature: number,
   ) {
+    sounds.teacup.play();
     const handInventory = getHandInventory(hand);
     const entity = registry.createEntity();
     registry.components.description.add(entity, { name: recipe.name });
@@ -274,6 +276,7 @@ export function useGameState({
   }
 
   function removeTeaFromHand(hand: "left" | "right") {
+    sounds.teacup.play();
     const handInventory = getHandInventory(hand);
     const inv = registry.components.inventory.get(handInventory);
     if (!inv?.slots[0]) return;
@@ -572,13 +575,7 @@ export function useGameState({
   }, [traversalFactor]);
   const traversalStartRef = useRef({ totalSteps: 0, factor: 2.0 });
 
-  const { play: playMainTheme } = useMusic(
-    `${import.meta.env.BASE_URL}music/MUS_1_MainTheme_Cozy.ogg`,
-    {
-      volume: 1.0,
-      loop: true,
-    },
-  );
+  const { sounds } = useSoundHelper();
 
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
@@ -649,7 +646,7 @@ export function useGameState({
     );
     setPassageTraversal({ kind: "idle" });
 
-    playMainTheme();
+    sounds.mainThemeDungeon.play();
     showMsg(
       "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
     );
@@ -887,6 +884,7 @@ export function useGameState({
           next.set(key, {
             brewing: { ...state.brewing, stepsRemaining: 0, ready: true },
           });
+          sounds.tea_ready.play();
         } else {
           next.set(key, {
             brewing: { ...state.brewing, stepsRemaining: steps },
@@ -969,6 +967,7 @@ export function useGameState({
     if (xpGained > 0) {
       newPlayerXp += xpGained;
       stepMessage = `Collected ${xpGained} gold! (Total: ${newPlayerXp})`;
+      sounds.coins.play();
     }
     newXpDrops = remainingDrops;
 
@@ -1016,8 +1015,9 @@ export function useGameState({
     if (doorStatesRef.current.has(playerDoorKey)) {
       const playerDoorState =
         doorStatesRef.current.get(playerDoorKey) ?? "closed";
-      if (playerDoorState !== "locked") {
+      if (playerDoorState === "closed") {
         setDoorStates((prev) => new Map(prev).set(playerDoorKey, "open"));
+        sounds.slideUp.play();
       }
     }
     function isWalkableForLos(x: number, z: number): boolean {
@@ -2050,6 +2050,7 @@ export function useGameState({
             showMsg("Passage locked.");
           }
           setPassageMask(newMask);
+          sounds.twinkle.play();
           return;
         }
       }
@@ -2098,6 +2099,7 @@ export function useGameState({
           showMsg(
             `Brewing ${state.brewing.recipe.name}... ${state.brewing.stepsRemaining} steps remaining.`,
           );
+          sounds.denySelection.play();
         }
       } else if (facingTarget.type === "trap") {
         const key = `${facingTarget.x}_${facingTarget.z}`;
@@ -2106,6 +2108,7 @@ export function useGameState({
         disarmedTrapsRef.current = newDisarmed;
         setDisarmedTraps(new Set(newDisarmed));
         showMsg("You reset the spike trap.");
+        sounds.trap_armed.play();
       } else if (facingTarget.type === "mob") {
         const mob = initialMobs[facingTarget.mobIdx];
         const hand = leftHandTea ? "left" : rightHandTea ? "right" : null;
@@ -2175,12 +2178,14 @@ export function useGameState({
             mobBubbleId,
             `This ${tea.name} is too cold... How disappointing.`,
           );
+          sounds.beep_failure.play();
         } else if (tea.temperature > hi) {
           applyMobSatiation(30);
           showSpeechBubble(
             mobBubbleId,
             `Ouch! This ${tea.name} is scalding hot! Dreadfully disappointing.`,
           );
+          sounds.beep_failure.play();
         } else {
           const isPreferred = mob.preferredRecipeId === tea.recipe.id;
           const bonus = isPreferred ? 100 * (supersatiationBonus / 100) : 0;
@@ -2190,11 +2195,13 @@ export function useGameState({
               mobBubbleId,
               `My favourite! This ${tea.name} is absolutely perfect — I am overjoyed!`,
             );
+            sounds.twinkle.play();
           } else {
             showSpeechBubble(
               mobBubbleId,
               `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
             );
+            sounds.twinkle.play();
           }
         }
       } else if (facingTarget.type === "door") {
@@ -2204,16 +2211,19 @@ export function useGameState({
           setDoorStates((prev) =>
             new Map(prev).set(facingTarget.doorKey, "closed"),
           );
+          sounds.slideDown.play();
           showMsg("You close the door.");
         } else if (state === "closed") {
           setDoorStates((prev) =>
             new Map(prev).set(facingTarget.doorKey, "locked"),
           );
+          sounds.key_close.play();
           showMsg("You lock the door.");
         } else {
           setDoorStates((prev) =>
             new Map(prev).set(facingTarget.doorKey, "open"),
           );
+          sounds.slideUp.play();
           showMsg("You unlock the door.");
         }
       }
@@ -2279,7 +2289,7 @@ export function useGameState({
       if (!showRecipeMenu) return;
       e.preventDefault();
       const num = parseInt(e.key);
-      if (num >= 1 && num <= RECIPES.length) {
+      if (num >= 1 && num <= RECIPES.length) {   
         const recipe = RECIPES[num - 1];
         if (
           recipe.ingredientId &&
@@ -2312,17 +2322,20 @@ export function useGameState({
         showMsg(
           `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
         );
+        sounds.acceptSelection.play();
       }
     };
 
     const recipeOptionNextHandler = (e: KeyboardEvent) => {
       if (!showRecipeMenu) return;
       e.preventDefault();
+      sounds.selectionChanged.play();
       setRecipeMenuCursor((c) => (c + 1) % RECIPES.length);
     };
     const recipeOptionPrevHandler = (e: KeyboardEvent) => {
       if (!showRecipeMenu) return;
       e.preventDefault();
+      sounds.selectionChanged.play();
       setRecipeMenuCursor((c) => (c - 1 + RECIPES.length) % RECIPES.length);
     };
     const recipeOptionSelectHandler = (e: KeyboardEvent) => {
@@ -2361,6 +2374,7 @@ export function useGameState({
       showMsg(
         `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
       );
+      sounds.acceptSelection.play();
     };
 
     const interactKeys = keybindings.interact.join(",");
