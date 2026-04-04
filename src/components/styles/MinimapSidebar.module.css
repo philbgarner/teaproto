@@ -158,6 +158,10 @@
     letter-spacing: 0.02em;
 }
 
+.hpRow {
+    margin-bottom: 0.5rem;
+}
+
 .barTrack {
     height: 3px;
     background: #252220;

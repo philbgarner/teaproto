@@ -33,9 +33,10 @@ export function StatusBar({
   camera,
   facing,
   playerXp,
-  ingredients,
   openMenuKeys,
   summonMonsterKeys,
+  discardLeftKeys,
+  discardRightKeys,
   onOpenSettings,
 }) {
   const [showMenu, setShowMenu] = useState(false);
@@ -67,7 +68,7 @@ export function StatusBar({
       },
     },
   ];
-  console.log("ingredients", ingredients);
+
   return (
     <>
       <div className={styles.bar}>
@@ -76,14 +77,15 @@ export function StatusBar({
         </span>
         <span className={styles.facing}>Facing: {facing}</span>
         <span className={styles.xp}>Gold: {playerXp}</span>
-        <span className={styles.ingredients}>
-          Hot Peppers: {ingredients["hot-pepper"]} · Herbs:{" "}
-          {ingredients["wild-herb"]} · Frost Leaves: {ingredients["frost-leaf"]}
-          {ingredients.dust}
-        </span>
         <span className={styles.roomTemp}>
           {(openMenuKeys?.[0] ?? "m").toUpperCase()}: Menu
         </span>
+          <span className={styles.roomTemp}>
+          {(discardLeftKeys?.[0] ?? "z").toUpperCase()}: Discard Left
+          </span>
+          <span className={styles.roomTemp}>
+          {(discardRightKeys?.[0] ?? "x").toUpperCase()}: Discard Right
+          </span>
         {summonMonsterKeys?.[0] && (
           <span className={styles.roomTemp}>
             {summonMonsterKeys[0].toUpperCase()}: Summon

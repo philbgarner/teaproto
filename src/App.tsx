@@ -157,6 +157,8 @@ export default function App() {
       onOpenSettings={() => gs.setShowSettings(true)}
       openMenuKeys={keybindings.openMenu}
       summonMonsterKeys={keybindings.summon}
+      discardLeftKeys={keybindings.discardLeft}
+      discardRightKeys={keybindings.discardRight}
       settingsModal={
         <DifficultyModal
           visible={gs.showSettings}

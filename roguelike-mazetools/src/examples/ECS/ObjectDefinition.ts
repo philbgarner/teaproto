@@ -2,9 +2,9 @@ import { Entity } from "./Components";
 import { ComponentRegistry } from "./Registry";
 
 
-const PLAYER_INVENTORY_SIZE = 6
-const ENEMY_INVENTORY_SIZE = 3
-const CHEST_INVENTORY_SIZE = 4
+const PLAYER_INVENTORY_SIZE = 3;
+const ENEMY_INVENTORY_SIZE = 3;
+const CHEST_INVENTORY_SIZE = 4;
 
 export enum ObjectId {
     PLAYER = 0,
@@ -15,17 +15,21 @@ export enum ObjectId {
     SWORD = 5,
     BANDAGE = 6,
     TEA_CUP = 7,
-    KEY = 8
+    KEY = 8,
+    FROST_LEAF = 9,
+    HOT_PEPPER = 10,
+    WILD_HERB = 11,
 }
 
 // Chest loot generation constants
-const CHEST_SLOT_FILL_CHANCE = 0.6
-const BANDAGE_SPAWN_CHANCE = 0.4
-const SWORD_SPAWN_CHANCE = 0.3
-const TEA_CUP_SPAWN_CHANCE = 0.3
-const KEY_SPAWN_CHANCE = 0.3
-const BANDAGE_MIN_COUNT = 3
-const BANDAGE_MAX_COUNT = 8
+const CHEST_SLOT_FILL_CHANCE = 0.6;
+const BANDAGE_SPAWN_CHANCE = 0.4;
+const SWORD_SPAWN_CHANCE = 0.3;
+const TEA_CUP_SPAWN_CHANCE = 0.3;
+const KEY_SPAWN_CHANCE = 0.3;
+const BANDAGE_MIN_COUNT = 3;
+const BANDAGE_MAX_COUNT = 8;
+const MAX_HERB_COUNT = 99;
 
 // Define possible chest items with their spawn chances
 const POSSIBLE_CHEST_ITEMS = [
@@ -41,6 +45,12 @@ export enum TeaContent {
     BLACK = "Black"
 }
 
+export enum HerbType {
+    FROST_LEAF = ObjectId.FROST_LEAF,
+    HOT_PEPPER = ObjectId.HOT_PEPPER,
+    WILD_HERB = ObjectId.WILD_HERB
+}
+
 // Handle Object defintion entities
 export function initializeObjectDefinitions(registry: ComponentRegistry) {
     addPlayerDefinition(registry);
@@ -52,6 +62,9 @@ export function initializeObjectDefinitions(registry: ComponentRegistry) {
     addBandageDefinition(registry);
     addTeaCupDefinition(registry);
     addKeyDefinition(registry);
+    addFrostLeafDefinition(registry);
+    addHotPepperDefinition(registry);
+    addWildHerbDefinition(registry);
 }
 
 function createObjectDefinition(registry: ComponentRegistry, objectType: ObjectId, name: string) {
@@ -114,6 +127,27 @@ function addTeaCupDefinition(registry: ComponentRegistry) {
 
 function addKeyDefinition(registry: ComponentRegistry) {
     createObjectDefinition(registry, ObjectId.KEY, "Dungeon Key");
+}
+
+function addFrostLeafDefinition(registry: ComponentRegistry) {
+    const entityId = createObjectDefinition(registry, ObjectId.FROST_LEAF, "Frost Leaf");
+    registry.components.stackable.add(entityId, {
+        maxStack: MAX_HERB_COUNT,
+    });
+}
+
+function addHotPepperDefinition(registry: ComponentRegistry) {
+    const entityId = createObjectDefinition(registry, ObjectId.HOT_PEPPER, "Hot Pepper");
+    registry.components.stackable.add(entityId, {
+        maxStack: MAX_HERB_COUNT,
+    });
+}
+
+function addWildHerbDefinition(registry: ComponentRegistry) {
+    const entityId = createObjectDefinition(registry, ObjectId.WILD_HERB, "Wild Herb");
+    registry.components.stackable.add(entityId, {
+        maxStack: MAX_HERB_COUNT,
+    });
 }
 
 export function getObjectDefinition(registry: ComponentRegistry, objectType: ObjectId): Entity {
@@ -206,14 +240,6 @@ export function initializePlayerInventory(registry: ComponentRegistry, player: E
     
     const inventory = registry.components.inventory.get(playerInventory);
     if (!inventory) return;
-    
-    // Add 5 bandages to first available slot
-    const bandageEntity = getObjectDefinition(registry, ObjectId.BANDAGE);
-    registry.addObjectToInventory(playerInventory, bandageEntity, 5);
-    
-    // Add sword to first available slot
-    const swordEntity = getObjectDefinition(registry, ObjectId.SWORD);
-    registry.addObjectToInventory(playerInventory, swordEntity, 1);
 }
 
 export function initializeEnemyInventory(registry: ComponentRegistry, enemy: Entity) {

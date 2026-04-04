@@ -9,10 +9,10 @@ const RPS_COLORS = {
   bleeding: "#ff3333",
 };
 
-const RPS_LABELS = {
-  poisoned: "Poisoned",
-  freezing: "Frozen",
-  bleeding: "Bleeding",
+const RPS_ICONS = {
+  poisoned: "poison_drop_imaya.png",
+  freezing: "flake_imaya.png",
+  bleeding: "blood_drop_imaya.png",
 };
 
 const IMG_MAPPING = {
@@ -21,28 +21,32 @@ const IMG_MAPPING = {
   "Spicy Tea": "tea-spicy.png",
 };
 
+const ING_MAPPING = {
+  "Frost Leaf": "frost_leaf.png",
+  "Hot Pepper": "hot_pepper.png",
+  "Wild Herb": "wild_herb.png",
+};
+
 function HandSlot({ items, registry, side }) {
   const item = items[0];
   const name = item ? registry.getSlotObjectName(item) : null;
   const isEmpty = !name;
 
   return (
-    <button
-      className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""}`}
-      style={{ maxWidth: "50%" }}
-      disabled={isEmpty}
-    >
-      {!isEmpty ? (
-        <>
-          <span className={ghostStyles.itemName}>
-            <img src={`textures/${IMG_MAPPING[name]}`} />
-            <span>{name}</span>
-          </span>
-        </>
-      ) : (
-        <span style={{ fontSize: "0.65rem", color: "#5a5450" }}>{side}</span>
+    <div className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""} ${ghostStyles.handSlot}`}>
+      <div className={ghostStyles.itemImage}>
+        {!isEmpty ? (
+          <img src={`textures/${IMG_MAPPING[name]}`} />
+        ) : (
+          <img src={`textures/hand_${side}.png`} />
+        )}
+      </div>
+      {!isEmpty && (
+        <div className={ghostStyles.itemText}>
+          {name}
+        </div>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -60,30 +64,95 @@ function HandsRow() {
       : [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "row" }}>
+    <div className={ghostStyles.handsRow}>
       <HandSlot items={leftHandItems} registry={registry} side="left" />
       <HandSlot items={rightHandItems} registry={registry} side="right" />
     </div>
   );
 }
 
+function IngredientSlot({ slot, registry }) {
+  const name = registry.getSlotObjectName(slot) ?? null;
+  const isEmpty = !name;
+  const quantity = registry.getSlotQuantity(slot);
+
+  return (
+    <div
+      className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""} ${ghostStyles.ingredientSlot}`}
+    >
+      {!isEmpty ? (
+        <>
+          <div className={ghostStyles.ingredientImage}>
+            <img src={`textures/${ING_MAPPING[name]}`} />
+          </div>
+          <div className={ghostStyles.ingredientName}>
+            {name}
+          </div>
+          <div className={ghostStyles.ingredientQuantity}>
+            x{99}
+          </div>
+        </>
+      ) : (
+        <div className={ghostStyles.emptyIngredient}>
+          empty
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IngredientRow() {
+  const { playerData } = useSettings();
+  const { registry, playerInventory } = playerData.ecsData;
+
+  const inventory = registry.components.inventory.get(playerInventory);
+
+  return (
+    <div className={ghostStyles.ingredientRow}>
+      <IngredientSlot slot={inventory.slots[0]} registry={registry} />
+      <IngredientSlot slot={inventory.slots[1]} registry={registry} />
+      <IngredientSlot slot={inventory.slots[2]} registry={registry} />
+    </div>
+  );
+}
+
 function MobEntry({ mob, onSummon, summonDisabled }) {
-  const effectLabel =
-    mob.rpsEffect && mob.rpsEffect !== "none"
-      ? RPS_LABELS[mob.rpsEffect]
-      : null;
   const effectColor = mob.rpsEffect ? RPS_COLORS[mob.rpsEffect] : undefined;
+  const effectIcon = mob.rpsEffect && mob.rpsEffect !== "none" ? RPS_ICONS[mob.rpsEffect] : null;
 
   const hpFrac = mob.hp !== undefined && mob.maxHp ? mob.hp / mob.maxHp : null;
   const armorFrac =
     mob.satiation !== undefined && mob.maxSatiation
-      ? mob.satiation / mob.maxSatiation
+      ? Math.min(1, mob.satiation / mob.maxSatiation)
       : null;
 
   return (
     <div className={styles.mobEntry}>
       <div className={styles.mobNameRow}>
-        <span className={styles.mobName}>{mob.name ?? "Monster"}</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", flex: 1, gap: "0.25rem", minWidth: 0 }}>
+          {effectIcon && (
+            <img 
+              src={`textures/${effectIcon}`} 
+              style={{ 
+                width: "24px", 
+                height: "24px", 
+                imageRendering: "pixelated",
+                flexShrink: 0
+              }} 
+            />
+          )}
+          <span 
+            className={styles.mobName} 
+            style={{ 
+              color: effectColor || "inherit",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap"
+            }}
+          >
+            {mob.name ?? "Monster"}
+          </span>
+        </div>
         <button
           className={styles.summonBtn}
           disabled={summonDisabled}
@@ -95,11 +164,6 @@ function MobEntry({ mob, onSummon, summonDisabled }) {
           ⊹
         </button>
       </div>
-      {effectLabel && (
-        <div className={styles.mobRow} style={{ color: effectColor }}>
-          {effectLabel}
-        </div>
-      )}
       {mob.satiation !== undefined && (
         <div className={styles.mobRow}>
           <span style={{ color: "#9a8060" }}>Armor </span>
@@ -115,7 +179,7 @@ function MobEntry({ mob, onSummon, summonDisabled }) {
         </div>
       )}
       {mob.hp !== undefined && mob.maxHp !== undefined && (
-        <div className={styles.mobRow}>
+        <div className={`${styles.mobRow} ${styles.hpRow}`}>
           <span style={{ color: "#9a8060" }}>HP </span>
           <span style={{ color: "#ff4444" }}>
             {mob.hp.toFixed(0)}/{mob.maxHp}
@@ -196,6 +260,7 @@ export function MinimapSidebar({
       </div>
       <div className={styles.controls}></div>
       <HandsRow />
+      <IngredientRow />
       {mobs.length > 0 && (
         <div className={styles.mobRoster}>
           {mobs.map((mob, i) => (
