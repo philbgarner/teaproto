@@ -159,14 +159,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   });
   const [keybindings, setKeybindings] = useKeybindings();
-  const [showActionLog, setShowActionLog] = useState<boolean>(() => {
-    try {
-      const stored = localStorage.getItem("showActionLog");
-      return stored !== null ? stored === "true" : true;
-    } catch {
-      return true;
-    }
-  });
+  const [showActionLog, setShowActionLog] = useState<boolean>(false);
   const [musicVolume, setMusicVolume] = useState<number>(() => {
     try {
       const stored = localStorage.getItem("musicVolume");
