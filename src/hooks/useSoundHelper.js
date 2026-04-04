@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSfx } from './useSfx';
 import { useMusic } from './useMusic';
 import { useSettings } from '../SettingsContext';
@@ -64,6 +65,19 @@ export function useSoundHelper() {
     const randomChoice = choices[Math.floor(Math.random() * choices.length)];
     randomChoice.play();
   };
+
+  useEffect(() => {
+    [birds, mainTheme, safeZoneMusic, mainThemeDungeon].forEach(s => s.setVolume(musicVolume));
+  }, [musicVolume]);
+
+  useEffect(() => {
+    [
+      buttonClick, uiClick, selectionChanged, acceptSelection, denySelection,
+      lightning, thunder, teacup, twinkle, invert_twinkle, tea_ready,
+      beep_failure, trap_armed, coins, doorOpen, doorClose, key_open, key_close,
+      slideUp, slideDown, ...steps, beep_talk_1, beep_talk_2,
+    ].forEach(s => s.setVolume(sfxVolume));
+  }, [sfxVolume]);
 
   return {
     sounds: {

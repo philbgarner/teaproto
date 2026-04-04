@@ -26,5 +26,9 @@ export function useSfx(src, { volume = 1.0, volumeMultiplier = 1.0 } = {}) {
     setTimeout(() => h.stop(), duration);
   }
 
-  return { play, stop, fadeOut };
+  function setVolume(multiplier) {
+    howlRef.current.volume(baseVolumeRef.current * multiplier);
+  }
+
+  return { play, stop, fadeOut, setVolume };
 }

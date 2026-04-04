@@ -35,5 +35,9 @@ export function useMusic(src, { volume = 1.0, loop = false, volumeMultiplier = 1
     h.fade(0, baseVolumeRef.current * volumeMultiplier, duration);
   }
 
-  return { play, stop, fadeOut, fadeIn };
+  function setVolume(multiplier) {
+    howlRef.current.volume(baseVolumeRef.current * multiplier);
+  }
+
+  return { play, stop, fadeOut, fadeIn, setVolume };
 }
