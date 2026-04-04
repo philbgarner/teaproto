@@ -390,6 +390,119 @@ function CoinDropMeshes({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Ingredient drop 3D mesh
+// ---------------------------------------------------------------------------
+
+const INGREDIENT_UV_RECTS: Record<string, THREE.Vector4> = {
+  "hot-pepper": new THREE.Vector4(
+    224 / _ICONS_W,
+    1 - (128 + _ICON_PX) / _ICONS_H,
+    _ICON_PX / _ICONS_W,
+    _ICON_PX / _ICONS_H,
+  ),
+  "frost-leaf": new THREE.Vector4(
+    192 / _ICONS_W,
+    1 - (128 + _ICON_PX) / _ICONS_H,
+    _ICON_PX / _ICONS_W,
+    _ICON_PX / _ICONS_H,
+  ),
+  "wild-herb": new THREE.Vector4(
+    160 / _ICONS_W,
+    1 - (128 + _ICON_PX) / _ICONS_H,
+    _ICON_PX / _ICONS_W,
+    _ICON_PX / _ICONS_H,
+  ),
+};
+
+function IngredientDropMeshes({
+  drops,
+  tileSize = 1,
+  fogNear = 4,
+  fogFar = 28,
+  torchColor,
+  torchIntensity,
+}: {
+  drops: { dropKey: string; id: string; x: number; z: number }[];
+  tileSize?: number;
+  fogNear?: number;
+  fogFar?: number;
+  torchColor?: string;
+  torchIntensity?: number;
+}) {
+  const texture = useLoader(
+    THREE.TextureLoader,
+    `${import.meta.env.BASE_URL}textures/icons.png`,
+  );
+
+  const mats = useMemo(() => {
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+    return Object.fromEntries(
+      Object.entries(INGREDIENT_UV_RECTS).map(([id, uvRect]) => [
+        id,
+        new THREE.ShaderMaterial({
+          uniforms: {
+            uAtlas: { value: texture },
+            uUvRect: { value: uvRect },
+            uFogColor: { value: new THREE.Color(0, 0, 0) },
+            uFogNear: { value: fogNear },
+            uFogFar: { value: fogFar },
+            uTime: { value: 0 },
+            ...makeTorchUniforms(),
+          },
+          vertexShader: COIN_VERT,
+          fragmentShader: COIN_FRAG,
+          transparent: true,
+          alphaTest: 0.5,
+          side: THREE.DoubleSide,
+        }),
+      ]),
+    );
+  }, [texture, fogNear, fogFar]);
+
+  const torchColorObj = useMemo(
+    () => (torchColor ? new THREE.Color(torchColor) : undefined),
+    [torchColor],
+  );
+  useEffect(() => {
+    if (torchColorObj)
+      Object.values(mats).forEach(
+        (m) => (m.uniforms.uTorchColor.value = torchColorObj),
+      );
+  }, [torchColorObj, mats]);
+  useEffect(() => {
+    if (torchIntensity !== undefined)
+      Object.values(mats).forEach(
+        (m) => (m.uniforms.uTorchIntensity.value = torchIntensity),
+      );
+  }, [torchIntensity, mats]);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    Object.values(mats).forEach((m) => (m.uniforms.uTime.value = t));
+  });
+
+  return (
+    <>
+      {drops.map((drop) => {
+        const mat = mats[drop.id];
+        if (!mat) return null;
+        return (
+          <CoinBillboard
+            key={drop.dropKey}
+            drop={drop}
+            tileSize={tileSize}
+            mat={mat}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 function ChestBillboard({
   chest,
   tileSize,
@@ -869,6 +982,14 @@ export function GameView({
                 />
                 <CoinDropMeshes
                   drops={gs.xpDrops ?? []}
+                  tileSize={TILE_SIZE}
+                  fogNear={4}
+                  fogFar={28}
+                  torchColor={torchColor}
+                  torchIntensity={torchIntensity}
+                />
+                <IngredientDropMeshes
+                  drops={gs.ingredientDrops ?? []}
                   tileSize={TILE_SIZE}
                   fogNear={4}
                   fogFar={28}
