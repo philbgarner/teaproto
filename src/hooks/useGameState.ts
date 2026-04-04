@@ -681,7 +681,7 @@ export function useGameState({
 
     sounds.mainThemeDungeon.play();
     showMsg(
-      "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
+      "You have an Iced Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
     );
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
 
