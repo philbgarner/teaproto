@@ -1,25 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettings } from "./SettingsContext";
 import { useDungeonTutorialSetup } from "./hooks/useDungeonTutorialSetup";
 import { useGameState } from "./hooks/useGameState";
 import { useEotBCamera } from "./hooks/useEotBCamera";
-import { PerspectiveDungeonView } from "../roguelike-mazetools/src/rendering/PerspectiveDungeonView";
-import { StatusBar } from "./components/StatusBar";
-import { RecipeMenu } from "./components/RecipeMenu";
-import { MinimapSidebar } from "./components/MinimapSidebar";
-import {
-  TILE_FLOOR,
-  TILE_CEILING,
-  TILE_WALL,
-  CEILING_H,
-  TILE_SIZE,
-  FLOOR_TILE_MAP,
-  WALL_TILE_MAP,
-  CEILING_TILE_MAP,
-  PASSAGE_OVERLAY_IDS,
-  PLAYER_MAX_HP,
-} from "./gameConstants";
-import { cardinalDir } from "./gameUtils";
+import { GameView } from "./components/GameView";
 import { RECIPES } from "./tea";
 import { LESSON_CONFIGS } from "./tutorial/lessons";
 import { buildPassageMask } from "../roguelike-mazetools/src/rendering/hiddenPassagesMask";
@@ -82,250 +66,43 @@ function LessonView({
     },
   );
 
-  // Wire game-state refs to this camera instance
   gs.logicalRef.current = camLogicalRef.current;
   gs.doMoveRef.current = doMove;
-
   const facingTarget = gs.getFacingTarget(camLogicalRef);
   gs.facingTargetRef.current = facingTarget;
 
-  // Report camera steps for lesson-completion checks in Tutorial
   useEffect(() => {
     onCameraStep(camera.x, camera.z);
   }, [camera.x, camera.z]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const promptText = useMemo(() => {
-    if (!facingTarget) return null;
-    if (facingTarget.type === "stove") {
-      const state = gs.stoveStates.get(facingTarget.stoveKey);
-      if (!state?.brewing) return "Teaomatic — Press [space] to brew tea";
-      if (state.brewing.ready)
-        return `${state.brewing.recipe.name} is ready! — Press [space] to collect`;
-      return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press [space] for status`;
-    }
-    const mob = ds.initialMobs[facingTarget.mobIdx];
-    const isUnconscious = gs.mobSatiations[facingTarget.mobIdx] <= 0;
-    if (isUnconscious)
-      return `${mob?.name} is unconscious — Press [space] to offer tea to revive`;
-    const preferredRecipe = RECIPES.find((r) => r.id === mob?.preferredRecipeId);
-    return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press [space] to offer tea`;
-  }, [facingTarget, gs.stoveStates, ds.initialMobs, gs.mobSatiations]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const doorOccupiedKeys = useMemo(() => {
-    const keys = new Set<string>();
-    keys.add(`${Math.floor(camera.x)}_${Math.floor(camera.z)}`);
-    for (const pos of gs.mobPositions) keys.add(`${pos.x}_${pos.z}`);
-    return keys;
-  }, [camera.x, camera.z, gs.mobPositions]);
-
-  const msgBox = (
-    <div
-      style={{
-        position: "absolute",
-        top: 20,
-        left: "50%",
-        transform: "translateX(-50%)",
-        backgroundColor: "#2a2720",
-        outline: "1px solid #1a1814",
-        boxShadow:
-          "inset 0 2px 0 0 #6a6058, inset 2px 0 0 0 #5a5248, inset 0 -2px 0 0 #141210, inset -2px 0 0 0 #1a1814, inset 0 4px 16px rgba(0,0,0,0.6), 0 6px 24px rgba(0,0,0,0.9)",
-        backgroundImage:
-          "repeating-conic-gradient(rgba(0,0,0,0.04) 0% 25%, transparent 0% 50%)",
-        backgroundSize: "4px 4px",
-        padding: "12px 28px",
-        fontSize: 17,
-        fontFamily: '"Metamorphous", serif',
-        letterSpacing: "0.06em",
-        maxWidth: 560,
-        textAlign: "center" as const,
-        pointerEvents: "none" as const,
-      }}
-    >
-      {/* Invisible full text holds the final size */}
-      <span style={{ visibility: "hidden", userSelect: "none" }}>{gs.message}</span>
-      {/* Typed text overlaid on top */}
-      <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#e0b870", padding: "12px 28px" }}>{gs.displayedText}</span>
-    </div>
-  );
-
-  const promptBox = (
-    <div
-      style={{
-        position: "absolute",
-        bottom: 70,
-        left: "50%",
-        transform: "translateX(-50%)",
-        backgroundColor: "#2e2c29",
-        outline: "1px solid #1e1c1a",
-        boxShadow:
-          "inset 0 2px 0 0 #5a5450, inset 2px 0 0 0 #504a46, inset 0 -2px 0 0 #1a1816, inset -2px 0 0 0 #1e1c1a, inset 0 4px 12px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.8)",
-        backgroundImage:
-          "repeating-conic-gradient(rgba(0,0,0,0.03) 0% 25%, transparent 0% 50%)",
-        backgroundSize: "4px 4px",
-        padding: "6px 14px",
-        fontSize: 13,
-        color: "#c8a060",
-        fontFamily: '"Metamorphous", serif',
-        letterSpacing: "0.05em",
-        pointerEvents: "none" as const,
-        whiteSpace: "nowrap" as const,
-      }}
-    >
-      {promptText}
-    </div>
-  );
-
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        width: "100vw",
-        height: "100vh",
-        background: "#000",
-        color: "#ccc",
-        fontFamily: "'Metamorphous', serif",
-      }}
-    >
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <div style={{ flex: 1, position: "relative", outline: "1px solid #1a1816" }}>
-          {/* Inset bevel */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              pointerEvents: "none",
-              zIndex: 10,
-              boxShadow:
-                "inset 0 6px 0 0 #1a1816, inset 6px 0 0 0 #1e1c1a, inset 0 -6px 0 0 #7a7268, inset -6px 0 0 0 #6a6258, inset 0 18px 40px rgba(0,0,0,0.7), inset 0 -6px 12px rgba(255,255,255,0.03)",
-            }}
-          />
-
-          {gs.texture && ds.solidData && (
-            <PerspectiveDungeonView
-              solidData={ds.solidData}
-              width={config.dungeonW}
-              height={config.dungeonH}
-              cameraX={camera.x}
-              cameraZ={camera.z}
-              yaw={camera.yaw}
-              atlas={gs.atlas}
-              texture={gs.texture}
-              floorTile={TILE_FLOOR}
-              ceilingTile={TILE_CEILING}
-              ceilingHeight={CEILING_H}
-              wallTile={TILE_WALL}
-              renderRadius={28}
-              fov={60}
-              fogNear={4}
-              fogFar={28}
-              tileSize={TILE_SIZE}
-              objects={ds.objects}
-              objectRegistry={gs.objectRegistry}
-              objectOccupiedKeys={doorOccupiedKeys}
-              mobiles={gs.mobiles}
-              spriteAtlas={gs.characterSpriteAtlas}
-              adventurerSpriteAtlas={gs.characterSpriteAtlas}
-              passageMask={gs.passageMask ?? undefined}
-              passageOverlayIds={PASSAGE_OVERLAY_IDS}
-              speechBubbles={gs.message ? gs.activeSpeechBubbles.map((b) => ({ ...b, inverted: true })) : gs.activeSpeechBubbles}
-              torchColor={torchColor}
-              torchIntensity={torchIntensity}
-              floorData={ds.floorData}
-              wallData={ds.wallData}
-              ceilingData={ds.ceilingData}
-              floorTileMap={FLOOR_TILE_MAP}
-              wallTileMap={WALL_TILE_MAP}
-              ceilingTileMap={CEILING_TILE_MAP}
-              style={{ width: "100%", height: "100%" }}
-            />
-          )}
-
-          {promptText && !gs.showRecipeMenu && promptBox}
-
-          {gs.showRecipeMenu && (
-            <RecipeMenu
-              recipes={RECIPES}
-              ingredients={gs.ingredients}
-              showMsg={gs.showMsg}
-              selectedIndex={gs.recipeMenuCursor}
-              keybindings={keybindings}
-              onSelectRecipe={(recipe: any) => {
-                if (recipe.ingredientId) {
-                  const newIng = {
-                    ...gs.ingredientsRef.current,
-                    [recipe.ingredientId]:
-                      gs.ingredientsRef.current[recipe.ingredientId] - 1,
-                  };
-                  gs.ingredientsRef.current = newIng;
-                  gs.setIngredients(newIng);
-                }
-                gs.setStoveStates((prev: Map<string, any>) => {
-                  const next = new Map(prev);
-                  next.set(gs.activeStoveKey, {
-                    brewing: { recipe, stepsRemaining: recipe.timeToBrew, ready: false },
-                  });
-                  return next;
-                });
-                gs.setShowRecipeMenu(false);
-                gs.showMsg(
-                  `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
-                );
-                sounds.acceptSelection.play();
-              }}
-              onCancel={() => gs.setShowRecipeMenu(false)}
-            />
-          )}
-
-          {gs.message && msgBox}
-
-          {/* Tutorial lesson badge */}
-          <div
-            style={{
-              position: "absolute",
-              top: 16,
-              right: 16,
-              fontSize: 11,
-              color: "#6a6258",
-              fontFamily: '"Metamorphous", serif',
-              letterSpacing: "0.08em",
-              pointerEvents: "none",
-            }}
-          >
-            Tutorial — Lesson {lessonIndex + 1} / {LESSON_CONFIGS.length}
-          </div>
+    <GameView
+      gs={gs}
+      ds={ds}
+      camera={camera}
+      facingTarget={facingTarget}
+      dungeonWidth={config.dungeonW}
+      dungeonHeight={config.dungeonH}
+      torchColor={torchColor}
+      torchIntensity={torchIntensity}
+      keybindings={keybindings}
+      topRight={
+        <div
+          style={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            fontSize: 11,
+            color: "#6a6258",
+            fontFamily: '"Metamorphous", serif',
+            letterSpacing: "0.08em",
+            pointerEvents: "none",
+          }}
+        >
+          Tutorial — Lesson {lessonIndex + 1} / {LESSON_CONFIGS.length}
         </div>
-
-        <MinimapSidebar
-          solidData={ds.solidData}
-          dungeonWidth={config.dungeonW}
-          dungeonHeight={config.dungeonH}
-          camera={camera}
-          exploredMaskRef={gs.exploredMaskRef}
-          texture={gs.texture}
-          atlas={gs.atlas}
-          floorTile={TILE_FLOOR}
-          floorData={ds.floorData}
-          floorTileMap={FLOOR_TILE_MAP}
-          tileSize={TILE_SIZE}
-        />
-      </div>
-
-      <StatusBar
-        camera={camera}
-        facing={cardinalDir(camera.yaw)}
-        playerHp={gs.playerHp}
-        playerMaxHp={PLAYER_MAX_HP}
-        playerXp={gs.playerXp}
-        ingredients={gs.ingredients}
-        currentRoomTemp={(() => {
-          const gx = Math.floor(camera.x);
-          const gz = Math.floor(camera.z);
-          const regionId = gs.regionIdData[gz * config.dungeonW + gx];
-          return Math.min(255, 127 + Math.round(gs.roomTempRise.get(regionId) ?? 0));
-        })()}
-      />
-    </div>
+      }
+    />
   );
 }
 
@@ -368,7 +145,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     spawnYaw: ds.spawnYaw,
     stovePlacements: ds.stovePlacements,
     doorPlacements: [],
-    hazardData: new Uint8Array(config.dungeonW * config.dungeonH),
+    hazardData: ds.hazardData,
     dungeonSeed: 0x1337 + lessonIndex,
     dungeonWidth: config.dungeonW,
     dungeonHeight: config.dungeonH,
@@ -461,9 +238,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
   // Lesson 2: player picks up tea from the Teaomatic
   useEffect(() => {
     if (lessonIndex !== 1 || lessonDoneRef.current) return;
-    // Read the ref so we see the synchronous clear written by the per-lesson
-    // init effect, not the stale state value from the previous render.
-    const hands = gs.playerHandsRef.current; // stays in sync with ECS each render
+    const hands = gs.playerHandsRef.current;
     if (hands.left || hands.right) {
       lessonDoneRef.current = true;
       gs.showMsg("You almost feel like a person again.");

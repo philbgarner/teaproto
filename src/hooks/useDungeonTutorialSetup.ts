@@ -174,6 +174,11 @@ export function useDungeonTutorialSetup(lessonIndex: number) {
     [lessonIndex], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  const hazardData = useMemo(
+    () => new Uint8Array(config.dungeonW * config.dungeonH),
+    [lessonIndex], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   return {
     dungeon,
     solidData,
@@ -188,6 +193,8 @@ export function useDungeonTutorialSetup(lessonIndex: number) {
     doorPlacements: [] as any[],
     objects,
     initialMobs,
+    hazardData,
+    initialFurniture: [] as any[],
     adventurerSpawnRooms: [] as { x: number; z: number; dist: number }[],
     initialIngredientDrops: [] as any[],
     initialChests: [] as any[],
