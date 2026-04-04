@@ -199,16 +199,16 @@ const COIN_GEO = new THREE.PlaneGeometry(1, 1);
 // Chest billboard
 // ---------------------------------------------------------------------------
 
-const _CHAR_W = 512;
-const _CHAR_H = 512;
+const _CHAR_W = 1024;
+const _CHAR_H = 352;
 const CHEST_UV_RECT = new THREE.Vector4(
-  384 / _CHAR_W,
+  896 / _CHAR_W,
   1 - 64 / _CHAR_H,
   64 / _CHAR_W,
   64 / _CHAR_H,
 );
 const MIMIC_UV_RECT = new THREE.Vector4(
-  448 / _CHAR_W,
+  960 / _CHAR_W,
   1 - 64 / _CHAR_H,
   64 / _CHAR_W,
   64 / _CHAR_H,
