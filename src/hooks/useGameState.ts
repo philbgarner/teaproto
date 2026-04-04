@@ -233,7 +233,7 @@ export function useGameState({
   // ---------------------------------------------------------------------------
   // ECS hand inventory
   // ---------------------------------------------------------------------------
-  const { playerData } = useSettings();
+  const { playerData, setDungeonStats } = useSettings();
   const {
     registry,
     leftHand: leftHandInventory,
@@ -655,6 +655,18 @@ export function useGameState({
 
   const { sounds } = useSoundHelper();
 
+  const dungeonStatsRef = useRef({
+    adventurersDefeated: 0,
+    teaomaticDestroyedBy: null as string | null,
+    monstersResuscitated: 0,
+    monstersFellUnconscious: 0,
+    damageToAdventurers: 0,
+    damageToMonsters: 0,
+    danceWithMonsters: 0,
+    danceWithAdventurers: 0,
+    ingredientsPickedUp: 0,
+  });
+
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
     const freshSatiations = initialMobs.map(() => 40);
@@ -733,6 +745,18 @@ export function useGameState({
       buildPassageMask(dungeon.width, dungeon.height, { passages }),
     );
     setPassageTraversal({ kind: "idle" });
+
+    dungeonStatsRef.current = {
+      adventurersDefeated: 0,
+      teaomaticDestroyedBy: null,
+      monstersResuscitated: 0,
+      monstersFellUnconscious: 0,
+      damageToAdventurers: 0,
+      damageToMonsters: 0,
+      danceWithMonsters: 0,
+      danceWithAdventurers: 0,
+      ingredientsPickedUp: 0,
+    };
 
     sounds.mainThemeDungeon.play();
     showMsg(
@@ -936,12 +960,14 @@ export function useGameState({
           );
           mobSatiationsRef.current = nextSatiations;
           setMobSatiations(nextSatiations);
+          dungeonStatsRef.current.danceWithMonsters++;
         } else if (ds.advId !== null) {
           showSpeechBubble(
             ds.advId,
             "Most peculiar... dancing with a phantom!",
             6000,
           );
+          dungeonStatsRef.current.danceWithAdventurers++;
         }
       }
       danceStateRef.current = { mobIdx: null, advId: null, count: 0 };
@@ -1114,6 +1140,7 @@ export function useGameState({
           [drop.id]: (newIngredients[drop.id] ?? 0) + 1,
         };
         stepMessage = `Collected ${drop.name}!`;
+        dungeonStatsRef.current.ingredientsPickedUp++;
       } else {
         remainingIngDrops.push(drop);
       }
@@ -1261,7 +1288,9 @@ export function useGameState({
             );
             if (newMobHps[combatTarget.idx] <= 0) {
               stepMessage = `${initialMobs[combatTarget.idx].name} has fallen unconscious!`;
+              dungeonStatsRef.current.monstersFellUnconscious++;
             }
+            dungeonStatsRef.current.damageToMonsters += damage;
           }
           if ((adv as any).rpsEffect && (adv as any).rpsEffect !== "none") {
             newMobRpsEffects[combatTarget.idx] = (adv as any).rpsEffect;
@@ -1760,8 +1789,10 @@ export function useGameState({
         x: adv.x,
         z: adv.z,
       });
+      dungeonStatsRef.current.damageToAdventurers += SPIKE_TRAP_DAMAGE;
       if (newHp <= 0) {
         newAdventurers[i] = { ...adv, alive: false, hp: 0 };
+        dungeonStatsRef.current.adventurersDefeated++;
         const dreadFactor =
           (adv.dreadThreshold ?? 0) > 0
             ? Math.min(1, (adv.dread ?? 0) / adv.dreadThreshold)
@@ -1902,8 +1933,10 @@ export function useGameState({
             dz: adv.z - mobPos.z,
           });
           advHitEvents.push({ advId: adv.id, damage, x: adv.x, z: adv.z });
+          dungeonStatsRef.current.damageToAdventurers += damage;
           if (newHp <= 0) {
             newAdventurers[j] = { ...adv, alive: false, hp: 0 };
+            dungeonStatsRef.current.adventurersDefeated++;
             const dreadFactor =
               (adv.dreadThreshold ?? 0) > 0
                 ? Math.min(1, (adv.dread ?? 0) / adv.dreadThreshold)
@@ -1960,6 +1993,8 @@ export function useGameState({
     for (const adv of newAdventurers) {
       if (!adv.alive) continue;
       if (stoveSet.has(`${adv.x}_${adv.z}`)) {
+        dungeonStatsRef.current.teaomaticDestroyedBy = adv.name;
+        setDungeonStats({ ...dungeonStatsRef.current });
         setGameState("gameover");
         setGameOverReason(`The ${adv.name} smashed your tea station!`);
         return;
@@ -1968,6 +2003,7 @@ export function useGameState({
 
     // --- Player HP game-over ---
     if (newPlayerHp <= 0) {
+      setDungeonStats({ ...dungeonStatsRef.current });
       setGameState("gameover");
       setGameOverReason("You have been defeated by the adventurers!");
       return;
@@ -1975,6 +2011,7 @@ export function useGameState({
 
     // --- Win condition ---
     if (newRound >= winRounds) {
+      setDungeonStats({ ...dungeonStatsRef.current });
       setGameState("won");
       return;
     }
@@ -2450,10 +2487,14 @@ export function useGameState({
         function applyMobHpRestore(amount: number) {
           const maxHp = mob.hp ?? MOB_HP;
           const next = [...mobHpsRef.current!];
+          const wasUnconscious = next[facingTarget.mobIdx] <= 0;
           next[facingTarget.mobIdx] = Math.min(
             maxHp,
             next[facingTarget.mobIdx] + amount,
           );
+          if (wasUnconscious && amount > 0) {
+            dungeonStatsRef.current.monstersResuscitated++;
+          }
           mobHpsRef.current = next;
           setMobHps(next);
         }

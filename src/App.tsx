@@ -66,6 +66,7 @@ export default function App({ onReturnToTitle }: { onReturnToTitle?: () => void 
     setMusicVolume,
     sfxVolume,
     setSfxVolume,
+    dungeonStats,
   } = useSettings();
 
   const [forceReset, setForceReset] = useState(0);
@@ -266,6 +267,7 @@ export default function App({ onReturnToTitle }: { onReturnToTitle?: () => void 
           turnCount={gs.turnCount}
           winRounds={winRounds}
           seed={dungeonSeed}
+          dungeonStats={dungeonStats}
           onPlaySameSeed={() => setForceReset(prev => prev + 1)}
           onPlayNewSeed={() => {
             setDungeonSeed(Math.floor(Math.random() * 999999));

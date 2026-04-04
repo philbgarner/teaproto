@@ -1,20 +1,11 @@
+import styles from "./styles/SettingsTabs.module.css";
+
 /**
  * Full-screen overlay shown when the game ends (win or loss). Displays a
- * summary, the dungeon seed, and options to replay or return to the title.
+ * summary, dungeon stats, the dungeon seed, and options to replay or return
+ * to the title.
  *
  * Only renders when `gameState` is not `"playing"`.
- *
- * @param {{
- *   gameState: "playing" | "gameover" | "won",
- *   gameOverReason: string|null,
- *   currentRound: number,
- *   turnCount: number,
- *   winRounds: number,
- *   seed: number,
- *   onPlaySameSeed: () => void,
- *   onPlayNewSeed: () => void,
- *   onReturnToTitle: () => void,
- * }} props
  */
 export function GameOverOverlay({
   gameState,
@@ -23,6 +14,7 @@ export function GameOverOverlay({
   turnCount,
   winRounds,
   seed,
+  dungeonStats,
   onPlaySameSeed,
   onPlayNewSeed,
   onReturnToTitle,
@@ -32,16 +24,18 @@ export function GameOverOverlay({
   const won = gameState === "won";
   const accent = won ? "#5d5" : "#c44";
 
-  const btnBase = {
-    color: "#fff",
-    border: "none",
-    borderRadius: 4,
-    padding: "10px 20px",
-    fontSize: 14,
-    cursor: "pointer",
-    fontFamily: "'Metamorphous', serif",
-    flex: 1,
-  };
+  const statRows = dungeonStats
+    ? [
+        { label: "Adventurers defeated", value: dungeonStats.adventurersDefeated },
+        { label: "Monsters fell unconscious", value: dungeonStats.monstersFellUnconscious },
+        { label: "Monsters resuscitated", value: dungeonStats.monstersResuscitated },
+        { label: "Damage dealt to adventurers", value: dungeonStats.damageToAdventurers },
+        { label: "Damage taken by monsters", value: dungeonStats.damageToMonsters },
+        { label: "Dances with monsters", value: dungeonStats.danceWithMonsters },
+        { label: "Dances with adventurers", value: dungeonStats.danceWithAdventurers },
+        { label: "Ingredients collected", value: dungeonStats.ingredientsPickedUp },
+      ]
+    : [];
 
   return (
     <div
@@ -61,51 +55,64 @@ export function GameOverOverlay({
           background: "#111",
           border: `2px solid ${accent}`,
           borderRadius: 8,
-          padding: "40px 52px",
-          textAlign: "center",
-          maxWidth: 440,
+          padding: "32px 40px",
+          maxWidth: 460,
           width: "90vw",
+          maxHeight: "90vh",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          overflowY: "auto",
         }}
       >
+        {/* Title */}
         <div
           style={{
             fontSize: 32,
             fontWeight: "bold",
             color: won ? "#5d5" : "#f44",
-            marginBottom: 16,
+            textAlign: "center",
           }}
         >
           {won ? "Victory!" : "Game Over"}
         </div>
 
+        {/* Description */}
         {won ? (
-          <div style={{ color: "#aaa", marginBottom: 16, lineHeight: 1.6 }}>
-            You survived {winRounds} rounds of adventurers and kept the dungeon
-            cozy.
+          <div style={{ color: "#aaa", lineHeight: 1.6, textAlign: "center", fontSize: 14 }}>
+            You survived {winRounds} rounds of adventurers and kept the dungeon cozy.
             <br />
             The monsters are very grateful.
           </div>
         ) : (
-          <div style={{ color: "#aaa", marginBottom: 16, lineHeight: 1.6 }}>
+          <div style={{ color: "#aaa", lineHeight: 1.6, textAlign: "center", fontSize: 14 }}>
             {gameOverReason}
             <br />
             <span style={{ fontSize: 12, color: "#666" }}>
-              Survived {currentRound} round{currentRound !== 1 ? "s" : ""} ·{" "}
-              {turnCount} turns
+              Survived {currentRound} round{currentRound !== 1 ? "s" : ""} · {turnCount} turns
             </span>
+            {dungeonStats?.teaomaticDestroyedBy && (
+              <>
+                <br />
+                <span style={{ fontSize: 12, color: "#888" }}>
+                  Destroyed by: {dungeonStats.teaomaticDestroyedBy}
+                </span>
+              </>
+            )}
           </div>
         )}
 
+        {/* Seed */}
         <div
           style={{
-            marginBottom: 28,
-            padding: "8px 16px",
+            padding: "6px 14px",
             background: "#1a1a1a",
             borderRadius: 4,
             border: "1px solid #333",
             fontSize: 13,
             color: "#888",
             letterSpacing: 1,
+            textAlign: "center",
           }}
         >
           Seed:{" "}
@@ -114,22 +121,62 @@ export function GameOverOverlay({
           </span>
         </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {/* Stats */}
+        {statRows.length > 0 && (
+          <div className={styles.root} style={{ gap: 0 }}>
+            <div
+              className={styles.seedHeader}
+              style={{ marginBottom: 8, letterSpacing: "0.1em", color: "#7a6848" }}
+            >
+              run stats
+            </div>
+            <div className={styles.content} style={{ gap: 4, padding: 0, maxHeight: 220 }}>
+              {statRows.map(({ label, value }) => (
+                <div
+                  key={label}
+                  className={styles.sliderRow}
+                  style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}
+                >
+                  <span className={styles.sliderLabel} style={{ marginBottom: 0 }}>
+                    {label}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "0.82rem",
+                      color: "#c8a060",
+                      marginLeft: 12,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Buttons */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             onClick={onPlaySameSeed}
-            style={{ ...btnBase, background: won ? "#2a5" : "#922" }}
+            className={styles.seedBtn}
+            style={{ flex: 1, padding: "10px 12px", fontSize: 13, color: won ? "#7fc87f" : "#c87878" }}
           >
             Same Seed
           </button>
           <button
             onClick={onPlayNewSeed}
-            style={{ ...btnBase, background: "#446" }}
+            className={styles.seedBtn}
+            style={{ flex: 1, padding: "10px 12px", fontSize: 13 }}
           >
             New Seed
           </button>
           <button
             onClick={onReturnToTitle}
-            style={{ ...btnBase, background: "#333" }}
+            className={styles.seedBtn}
+            style={{ flex: 1, padding: "10px 12px", fontSize: 13 }}
           >
             Title Screen
           </button>
