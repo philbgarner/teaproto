@@ -447,6 +447,7 @@ attribute vec4  aUvRectBody;   // x, y, w, h in normalized texture space
 attribute vec4  aUvRectHead;   // x, y, w, h in normalized texture space
 attribute float aUnconscious;  // 1.0 if unconscious, else 0.0
 attribute vec4  aOutlineColor; // RGBA outline colour; alpha=0 means no outline
+attribute float aHeadOffset;   // normalized UV x offset for head state (0=normal, 64px=angry, 128px=dead)
 varying vec2  vUv;
 varying float vTileId;
 varying float vFogDist;
@@ -456,6 +457,7 @@ varying vec4  vUvRectBody;
 varying vec4  vUvRectHead;
 varying float vUnconscious;
 varying vec4  vOutlineColor;
+varying float vHeadOffset;
 
 void main() {
   vUv = uv;
@@ -465,6 +467,7 @@ void main() {
   vUvRectHead = aUvRectHead;
   vUnconscious = aUnconscious;
   vOutlineColor = aOutlineColor;
+  vHeadOffset = aHeadOffset;
   vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);
   vWorldPos = worldPos.xz;
   vec4 eyePos = viewMatrix * worldPos;
@@ -489,6 +492,7 @@ varying vec4  vUvRectBody;
 varying vec4  vUvRectHead;
 varying float vUnconscious;
 varying vec4  vOutlineColor; // RGBA per-instance outline colour; alpha=0 = no outline
+varying float vHeadOffset;   // normalized UV x offset for head state
 
 ${TORCH_HASH_GLSL}
 ${TORCH_FNS_GLSL}
@@ -515,7 +519,7 @@ void main() {
   if (vUvRectHead.z > 0.0) {
     float bob = (vUnconscious < 0.5) ? abs(sin(uTime * 1.53)) * 0.0024 : 0.0;
     headUvBase = vec2(
-      vUvRectHead.x + vUv.x * vUvRectHead.z,
+      vUvRectHead.x + vUv.x * vUvRectHead.z + vHeadOffset * uTexelSize.x,
       vUvRectHead.y + vUv.y * vUvRectHead.w + bob + 0.0025
     );
     headColor = texture2D(uAtlas, headUvBase);
@@ -595,6 +599,7 @@ function SceneMobiles({
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const isDamagedRef = useRef<THREE.InstancedBufferAttribute | null>(null);
+  const headOffsetRef = useRef<THREE.InstancedBufferAttribute | null>(null);
   const attackStartRef = useRef<Map<number, number>>(new Map());
   const count = placements.length;
 
@@ -641,10 +646,15 @@ function SceneMobiles({
     geo.setAttribute("aIsDamaged", isDamagedAttr);
     isDamagedRef.current = isDamagedAttr;
 
+    const headOffsetArr = new Float32Array(count).fill(64);
+    const headOffsetAttr = new THREE.InstancedBufferAttribute(headOffsetArr, 1);
+    geo.setAttribute("aHeadOffset", headOffsetAttr);
+    headOffsetRef.current = headOffsetAttr;
+
     const outlineColorArr = new Float32Array(count * 4);
     placements.forEach((p, i) => {
       const c = p.outlineColor ?? [0, 0, 0, 0];
-      outlineColorArr[i * 4]     = c[0];
+      outlineColorArr[i * 4] = c[0];
       outlineColorArr[i * 4 + 1] = c[1];
       outlineColorArr[i * 4 + 2] = c[2];
       outlineColorArr[i * 4 + 3] = c[3];
@@ -654,7 +664,7 @@ function SceneMobiles({
       new THREE.InstancedBufferAttribute(outlineColorArr, 4),
     );
 
-    const imgEl = atlas.texture.image as (HTMLImageElement | null);
+    const imgEl = atlas.texture.image as HTMLImageElement | null;
     const texW = imgEl?.naturalWidth ?? imgEl?.width ?? 256;
     const texH = imgEl?.naturalHeight ?? imgEl?.height ?? 256;
 
@@ -712,6 +722,29 @@ function SceneMobiles({
         }
       }
       if (changed) isDamagedRef.current.needsUpdate = true;
+    }
+
+    // Update per-instance head state offset (normal=0, angry=64px, dead=128px)
+    if (headOffsetRef.current) {
+      const arr = headOffsetRef.current.array as Float32Array;
+      let changed = false;
+      for (let i = 0; i < count; i++) {
+        const p = placements[i];
+        let offset = 0.0;
+        if (p.type !== "adventurer") {
+          const geomW = p.geometrySize?.[0] ?? 1;
+          if (p.unconscious) {
+            offset = 128.0 * geomW;
+          } else if (attackDirs?.[i]) {
+            offset = 64.0 * geomW;
+          }
+        }
+        if (arr[i] !== offset) {
+          arr[i] = offset;
+          changed = true;
+        }
+      }
+      if (changed) headOffsetRef.current.needsUpdate = true;
     }
 
     const camPos = camera.position;
