@@ -873,14 +873,13 @@ export function useGameState({
             "Thank you for the dance, dear ghost!",
             6000,
           );
-          setMobSatiations((prev) => {
-            const next = [...prev];
-            next[ds.mobIdx!] = Math.min(
-              150,
-              next[ds.mobIdx!] + danceSatiationBoost,
-            );
-            return next;
-          });
+          const nextSatiations = [...mobSatiationsRef.current!];
+          nextSatiations[ds.mobIdx!] = Math.min(
+            150,
+            nextSatiations[ds.mobIdx!] + danceSatiationBoost,
+          );
+          mobSatiationsRef.current = nextSatiations;
+          setMobSatiations(nextSatiations);
         } else if (ds.advId !== null) {
           showSpeechBubble(
             ds.advId,
@@ -1752,8 +1751,7 @@ export function useGameState({
               (p: any, j: number) =>
                 j !== i && p.x === step.x && p.z === step.y,
             );
-            const blockedByPlayer = step.x === pgx && step.y === pgz;
-            if (!blockedByMob && !blockedByPlayer) {
+            if (!blockedByMob) {
               newMobPositions[i] = { x: step.x, z: step.y };
             }
           }
