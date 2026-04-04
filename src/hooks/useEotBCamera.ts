@@ -10,7 +10,7 @@ export interface CameraState {
 
 export interface EotBCameraOptions {
   onStep?: () => void;
-  onTurn?: () => void;
+  onRotation?: () => void;
   blocked?: boolean;
   onBlockedMove?: (dx: number, dz: number) => void;
   canPhaseWalls?: boolean;
@@ -35,7 +35,7 @@ export function useEotBCamera(
   startZ: number,
   {
     onStep,
-    onTurn,
+    onRotation,
     blocked,
     onBlockedMove,
     canPhaseWalls,
@@ -72,7 +72,7 @@ export function useEotBCamera(
   const [prevStartZ, setPrevStartZ] = useState(startZ);
   const solidRef = useRef(solidData);
   const onStepRef = useRef(onStep);
-  const onTurnRef = useRef(onTurn);
+  const onRotationRef = useRef(onRotation);
   const blockedRef = useRef(blocked);
   const blockedPositionsRef = useRef(blockedPositions ?? []);
   const onBlockedMoveRef = useRef(onBlockedMove);
@@ -105,8 +105,8 @@ export function useEotBCamera(
     onStepRef.current = onStep;
   }, [onStep]);
   useEffect(() => {
-    onTurnRef.current = onTurn;
-  }, [onTurn]);
+    onRotationRef.current = onRotation;
+  }, [onRotation]);
   useEffect(() => {
     blockedRef.current = blocked;
   }, [blocked]);
@@ -209,14 +209,14 @@ export function useEotBCamera(
       e.preventDefault();
       const { x, z, yaw } = logicalRef.current;
       beginAnim(x, z, yaw + Math.PI / 2, false);
-      onTurnRef.current?.();
+      onRotationRef.current?.();
     };
     const turnRightHandler = (e: KeyboardEvent) => {
       if (guard()) return;
       e.preventDefault();
       const { x, z, yaw } = logicalRef.current;
       beginAnim(x, z, yaw - Math.PI / 2, false);
-      onTurnRef.current?.();
+      onRotationRef.current?.();
     };
 
     const bindings: [string[], (e: KeyboardEvent) => void][] = [

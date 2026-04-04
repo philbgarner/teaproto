@@ -643,11 +643,9 @@ export function useGameState({
     setMobAttackDirs(initialMobs.map(() => null));
     setAdvAttackDirs([]);
     setDamageNumbers([]);
-    setIngredients({
-      "hot-pepper": startIngredientAmount,
-      "wild-herb": startIngredientAmount,
-      "frost-leaf": startIngredientAmount,
-    });
+    setDisarmedTraps(new Set());
+    disarmedTrapsRef.current = new Set();
+    setIngredients({ rations: 0, herbs: 0, dust: 0 });
     setIngredientDrops([...initialIngredientDrops]);
     setChests([...initialChests]);
     chestsRef.current = [...initialChests];
@@ -1113,6 +1111,7 @@ export function useGameState({
       if (playerDoorState === "closed") {
         setDoorStates((prev) => new Map(prev).set(playerDoorKey, "open"));
         sounds.slideUp.play();
+        showMsg("You open the door.");
       }
     }
     function isWalkableForLos(x: number, z: number): boolean {
@@ -2301,9 +2300,9 @@ export function useGameState({
   const facingTargetRef = useRef<any>(null);
 
   useEffect(() => {
-    const facingTarget = facingTargetRef.current;
-
     function doInteract() {
+      // Read fresh facing target from ref to avoid closure issues
+      const facingTarget = facingTargetRef.current;
       if (!facingTarget) return;
       if (gameState !== "playing") return;
 
@@ -2465,7 +2464,7 @@ export function useGameState({
             new Map(prev).set(facingTarget.doorKey, "open"),
           );
           sounds.slideUp.play();
-          showMsg("You unlock the door.");
+          showMsg("You open the door.");
         }
       }
     }
