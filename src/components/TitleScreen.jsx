@@ -881,6 +881,7 @@ export function TitleScreen({ onNewGame, onTutorial }) {
                   settings.setAdventurerLootPerChest(10);
                   settings.setWinRounds(10);
                   settings.setDanceSatiationBoost(5);
+                  settings.setTeaSatiationAmount(100);
                   settings.setTrapDensity(1.0);
                   settings.setMaxDoors(3);
                 }}

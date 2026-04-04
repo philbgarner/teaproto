@@ -19,6 +19,7 @@ const TUTORIAL_GAME_SETTINGS = {
   adventurerDreadRate: 0,
   adventurerLootPerChest: 0,
   winRounds: 999999,
+  teaSatiationAmount: 100,
 };
 
 // ── Inner view ── keyed by lessonIndex so useEotBCamera resets each lesson ──

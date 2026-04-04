@@ -40,6 +40,8 @@ export default function SettingsTabs({
   setWinRounds,
   danceSatiationBoost,
   setDanceSatiationBoost,
+  teaSatiationAmount,
+  setTeaSatiationAmount,
   onResetToDefaults,
   dungeonSeed,
   setDungeonSeed,
@@ -198,6 +200,14 @@ export default function SettingsTabs({
               step={1}
               onChange={(v) => setDanceSatiationBoost(Math.round(v))}
               format={(v) => `+${v}`}
+            />
+            <SliderRow
+              label="Tea satiation"
+              value={teaSatiationAmount}
+              min={10}
+              max={200}
+              step={5}
+              onChange={(v) => setTeaSatiationAmount(Math.round(v))}
             />
             {onResetToDefaults && (
               <button

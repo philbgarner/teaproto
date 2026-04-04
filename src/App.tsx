@@ -46,6 +46,8 @@ export default function App() {
     setWinRounds,
     danceSatiationBoost,
     setDanceSatiationBoost,
+    teaSatiationAmount,
+    setTeaSatiationAmount,
     torchColor,
     setTorchColor,
     torchIntensity,
@@ -98,6 +100,7 @@ export default function App() {
     adventurerLootPerChest,
     winRounds,
     danceSatiationBoost,
+    teaSatiationAmount,
     keybindings,
   });
 
@@ -164,11 +167,14 @@ export default function App() {
               setAdventurerLootPerChest(10);
               setWinRounds(10);
               setDanceSatiationBoost(5);
+              setTeaSatiationAmount(100);
               setTrapDensity(1.0);
               setMaxDoors(3);
             },
             danceSatiationBoost,
             setDanceSatiationBoost,
+            teaSatiationAmount,
+            setTeaSatiationAmount,
             tempDropPerStep,
             setTempDropPerStep,
             heatingPerStep,

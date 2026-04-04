@@ -95,6 +95,7 @@ export interface UseGameStateParams {
   adventurerLootPerChest: number;
   winRounds: number;
   danceSatiationBoost: number;
+  teaSatiationAmount: number;
   keybindings: any;
 }
 
@@ -130,6 +131,7 @@ export function useGameState({
   adventurerLootPerChest,
   winRounds,
   danceSatiationBoost,
+  teaSatiationAmount,
   keybindings,
 }: UseGameStateParams) {
   // Tile atlas + texture
@@ -2290,11 +2292,25 @@ export function useGameState({
           setMobSatiations(next);
         }
 
-        applyMobSatiation(100);
-        showSpeechBubble(
-          mobBubbleId,
-          `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
-        );
+        const currentRpsEffect = mobRpsEffectsRef.current[facingTarget.mobIdx];
+        const countersEffect = tea.recipe.countersEffect;
+        if (countersEffect && currentRpsEffect === countersEffect) {
+          const nextRpsEffects = [...mobRpsEffectsRef.current];
+          nextRpsEffects[facingTarget.mobIdx] = "none";
+          mobRpsEffectsRef.current = nextRpsEffects;
+          setMobRpsEffects(nextRpsEffects);
+          applyMobSatiation(Math.round(teaSatiationAmount * (1 + supersatiationBonus / 100)));
+          showSpeechBubble(
+            mobBubbleId,
+            `This ${tea.name} is exactly what I needed — I feel so much better!`,
+          );
+        } else {
+          applyMobSatiation(teaSatiationAmount);
+          showSpeechBubble(
+            mobBubbleId,
+            `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
+          );
+        }
         sounds.twinkle.play();
       } else if (facingTarget.type === "door") {
         const state =
@@ -2612,6 +2628,7 @@ export function useGameState({
     showSpeechBubble,
     onStep,
     supersatiationBonus,
+    teaSatiationAmount,
     ingredients,
     gameState,
     keybindings,

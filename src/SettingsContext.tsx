@@ -71,6 +71,8 @@ interface SettingsContextValue {
   setWinRounds: Dispatch<SetStateAction<number>>;
   danceSatiationBoost: number;
   setDanceSatiationBoost: Dispatch<SetStateAction<number>>;
+  teaSatiationAmount: number;
+  setTeaSatiationAmount: Dispatch<SetStateAction<number>>;
   torchColor: string;
   setTorchColor: Dispatch<SetStateAction<string>>;
   torchIntensity: number;
@@ -128,6 +130,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [adventurerLootPerChest, setAdventurerLootPerChest] = useState(10);
   const [winRounds, setWinRounds] = useState(10);
   const [danceSatiationBoost, setDanceSatiationBoost] = useState(5);
+  const [teaSatiationAmount, setTeaSatiationAmount] = useState(100);
   const [torchColor, setTorchColor] = useState<string>(() => {
     try {
       return localStorage.getItem("torchColor") ?? DEFAULT_TORCH_HEX;
@@ -188,6 +191,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setWinRounds,
         danceSatiationBoost,
         setDanceSatiationBoost,
+        teaSatiationAmount,
+        setTeaSatiationAmount,
         torchColor,
         setTorchColor,
         torchIntensity,
