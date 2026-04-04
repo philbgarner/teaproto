@@ -1,6 +1,4 @@
-import { useMemo, useRef, useEffect, useState } from "react";
-import * as THREE from "three";
-import { useLoader, useFrame } from "@react-three/fiber";
+import { useState } from "react";
 import { useSettings } from "./SettingsContext";
 import { useDungeonSetup } from "./hooks/useDungeonSetup";
 import { useGameState } from "./hooks/useGameState";
@@ -8,7 +6,6 @@ import { useEotBCamera } from "./hooks/useEotBCamera";
 import { GameView } from "./components/GameView";
 import { GameOverOverlay } from "./components/GameOverOverlay";
 import { DifficultyModal } from "./components/DifficultyModal";
-import { PLAYER_MAX_HP } from "./gameConstants";
 import "./App.css";
 
 export default function App() {
@@ -268,67 +265,10 @@ export default function App() {
           turnCount={gs.turnCount}
           winRounds={winRounds}
           onPlayAgain={() => {
-            setDungeonSeed((s: number) => s);
-            const freshSatiations = ds.initialMobs.map(() => 40);
-            gs.clearHands();
-            gs.setMobSatiations(freshSatiations);
-            gs.setRoomTempRise(new Map());
-            gs.setStoveStates(new Map());
-            gs.setShowRecipeMenu(false);
-            gs.setActiveStoveKey(null);
-            gs.setMessage(null);
-            gs.setAdventurers([]);
-            gs.setCurrentRound(0);
-            gs.setTurnCount(0);
-            gs.setRoundCountdown(turnsPerRound);
-            gs.setPlayerXp(0);
-            gs.setXpDrops([]);
-            gs.setPlayerHp(PLAYER_MAX_HP);
-            gs.setIngredients({
-              "hot-pepper": 0,
-              "wild-herb": 0,
-              "frost-leaf": 0,
-            });
-            gs.setIngredientDrops([...ds.initialIngredientDrops]);
-            gs.setChests([...ds.initialChests]);
-            gs.chestsRef.current = [...ds.initialChests];
-            gs.setGameState("playing");
-            gs.setGameOverReason(null);
-            gs.adventurersRef.current = [];
-            gs.currentRoundRef.current = 0;
-            gs.turnCountRef.current = 0;
-            gs.roundCountdownRef.current = turnsPerRound;
-            gs.playerXpRef.current = 0;
-            gs.xpDropsRef.current = [];
-            gs.playerHpRef.current = PLAYER_MAX_HP;
-            gs.ingredientsRef.current = {
-              "hot-pepper": 0,
-              "wild-herb": 0,
-              "frost-leaf": 0,
-            };
-            gs.ingredientDropsRef.current = [...ds.initialIngredientDrops];
-            gs.mobSatiationsRef.current = freshSatiations;
-            const freshPositions = ds.initialMobs.map((m: any) => ({
-              x: m.x,
-              z: m.z,
-            }));
-            gs.setMobPositions(freshPositions);
-            gs.mobPositionsRef.current = freshPositions;
-            gs.ruinedNotifiedRef.current = new Set();
-          }}
-        />
-      </div>
-
-      <GameOverOverlay
-        gameState={gs.gameState}
-        gameOverReason={gs.gameOverReason}
-        currentRound={gs.currentRound}
-        turnCount={gs.turnCount}
-        winRounds={WIN_ROUNDS}
-        onPlayAgain={() => {
           setForceReset(prev => prev + 1);
         }}
       />
-    </>
+      }
+    />
   );
 }
