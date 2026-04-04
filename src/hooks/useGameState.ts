@@ -20,7 +20,10 @@ import type { Tea } from "../tea";
 import { useSettings } from "../SettingsContext";
 import type { Entity } from "../../roguelike-mazetools/src/examples/ECS/Components";
 import { useSoundHelper } from "../hooks/useSoundHelper";
-import { getChestKeyCount, getObjectDefinition } from "../../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
+import {
+  getChestKeyCount,
+  getObjectDefinition,
+} from "../../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
 import { useMessage } from "./useMessage";
 import {
   ATLAS_SHEET_W,
@@ -255,11 +258,39 @@ export function useGameState({
     return inv.slots[slot];
   }
 
+  /**
+   * Apply a new ingredient map as the single source of truth.
+   *
+   * Ingredients are stored in three places that must stay in sync:
+   *   1. `ingredientsRef`  — a mutable ref used for synchronous reads inside
+   *      event handlers and game-step callbacks where a React state read would
+   *      return a stale closure value.
+   *   2. `ingredients` (React state) — the reactive copy that triggers UI
+   *      re-renders (e.g. RecipeMenu showing current quantities).
+   *   3. ECS inventory slots — the game-world representation that drives the
+   *      3D inventory display and any ECS systems that inspect item quantities.
+   *
+   * Historically these were updated at each call site independently, which led
+   * to subtle bugs: the reset path set React state to zeroed placeholder keys
+   * but only wrote correct values to the ref and ECS, so the RecipeMenu showed
+   * 0 for every ingredient until the first game step forced a re-sync.
+   *
+   * Always call `applyIngredients` instead of touching any of the three
+   * directly. React state is the declared source of truth; the ref and ECS
+   * write are derived side-effects that happen atomically here so no call site
+   * can accidentally omit one of them.
+   */
+  function applyIngredients(next: Record<string, number>): void {
+    ingredientsRef.current = next;
+    setIngredients(next);
+    setIngredientsECS(next);
+  }
+
   function setIngredientsECS(ingredients: Record<string, number>): void {
     console.log("set ECS ingredients");
     for (const [ingredientId, quantity] of Object.entries(ingredients)) {
       let slotEntity: Entity | null = null;
-      switch(ingredientId) {
+      switch (ingredientId) {
         case "frost-leaf":
           slotEntity = getPlayerInventorySlot(0);
           break;
@@ -271,7 +302,10 @@ export function useGameState({
           break;
       }
       if (slotEntity) {
-        const itemToAdd = getObjectDefinition(registry, IngredientToOjectId[ingredientId]);
+        const itemToAdd = getObjectDefinition(
+          registry,
+          IngredientToOjectId[ingredientId],
+        );
         console.log("Adding item to slot", itemToAdd, quantity);
         registry.removeObjectFromSlot(slotEntity);
         registry.addObjectToSlot(slotEntity, itemToAdd, quantity);
@@ -392,7 +426,8 @@ export function useGameState({
   const [activeStoveKey, setActiveStoveKey] = useState<string | null>(null);
   const [showSummonMenu, setShowSummonMenu] = useState(false);
   const [summonMenuCursor, setSummonMenuCursor] = useState(0);
-  const { message, displayedText, setMessage, showMsg, messageLog, logDialog } = useMessage();
+  const { message, displayedText, setMessage, showMsg, messageLog, logDialog } =
+    useMessage();
   const ruinedNotifiedRef = useRef(new Set<string>());
 
   // ---------------------------------------------------------------------------
@@ -433,7 +468,9 @@ export function useGameState({
         const idx = parseInt(entityId.slice(4), 10);
         speakerName = initialMobs[idx]?.name;
       } else {
-        speakerName = adventurersRef.current.find((a) => a.id === entityId)?.name;
+        speakerName = adventurersRef.current.find(
+          (a) => a.id === entityId,
+        )?.name;
       }
       logDialog(speakerName ?? entityId, text);
     },
@@ -697,7 +734,6 @@ export function useGameState({
     setDamageNumbers([]);
     setDisarmedTraps(new Set());
     disarmedTrapsRef.current = new Set();
-    setIngredients({ rations: 0, herbs: 0, dust: 0 });
     setIngredientDrops([...initialIngredientDrops]);
     setChests([...initialChests]);
     chestsRef.current = [...initialChests];
@@ -710,12 +746,11 @@ export function useGameState({
     playerXpRef.current = 0;
     xpDropsRef.current = [];
     playerHpRef.current = PLAYER_MAX_HP;
-    ingredientsRef.current = {
+    applyIngredients({
       "hot-pepper": startIngredientAmount,
       "wild-herb": startIngredientAmount,
       "frost-leaf": startIngredientAmount,
-    };
-    setIngredientsECS(ingredientsRef.current);
+    });
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
     mobHpsRef.current = freshHps;
@@ -2023,9 +2058,8 @@ export function useGameState({
     playerXpRef.current = newPlayerXp;
     xpDropsRef.current = newXpDrops;
     playerHpRef.current = newPlayerHp;
-    ingredientsRef.current = newIngredients;
+    applyIngredients(newIngredients);
     ingredientDropsRef.current = newIngredientDrops;
-    setIngredientsECS(newIngredients);
     chestsRef.current = newChests;
     mobSatiationsRef.current = newMobSatiations;
     mobHpsRef.current = newMobHps;
@@ -2040,7 +2074,6 @@ export function useGameState({
     setPlayerXp(newPlayerXp);
     setXpDrops([...newXpDrops]);
     setPlayerHp(newPlayerHp);
-    setIngredients(newIngredients);
     setIngredientDrops([...newIngredientDrops]);
     setChests([...newChests]);
     setMobSatiations(newMobSatiations);
@@ -2631,9 +2664,7 @@ export function useGameState({
             [recipe.ingredientId]:
               ingredientsRef.current[recipe.ingredientId] - 1,
           };
-          ingredientsRef.current = newIng;
-          setIngredients(newIng);
-          setIngredientsECS(newIng);
+          applyIngredients(newIng);
         }
         setStoveStates((prev) => {
           const next = new Map(prev);
@@ -2684,9 +2715,7 @@ export function useGameState({
           [recipe.ingredientId]:
             ingredientsRef.current[recipe.ingredientId] - 1,
         };
-        ingredientsRef.current = newIng;
-        setIngredients(newIng);
-        setIngredientsECS(newIng);
+        applyIngredients(newIng);
       }
       setStoveStates((prev) => {
         const next = new Map(prev);
@@ -2938,8 +2967,7 @@ export function useGameState({
     setPlayerHp,
     playerHpRef,
     ingredients,
-    setIngredients,
-    setIngredientsECS,
+    applyIngredients,
     ingredientsRef,
     ingredientDrops,
     setIngredientDrops,
