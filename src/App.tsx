@@ -1,3 +1,6 @@
+import { useMemo, useRef, useEffect, useState } from "react";
+import * as THREE from "three";
+import { useLoader, useFrame } from "@react-three/fiber";
 import { useSettings } from "./SettingsContext";
 import { useDungeonSetup } from "./hooks/useDungeonSetup";
 import { useGameState } from "./hooks/useGameState";
@@ -60,7 +63,15 @@ export default function App() {
     setTrapDensity,
     keybindings,
     setKeybindings,
+    showActionLog,
+    setShowActionLog,
+    musicVolume,
+    setMusicVolume,
+    sfxVolume,
+    setSfxVolume,
   } = useSettings();
+
+  const [forceReset, setForceReset] = useState(0);
 
   const ds = useDungeonSetup({
     dungeonSeed,
@@ -72,6 +83,7 @@ export default function App() {
     maxRoomSize,
     maxDoors,
     trapDensity,
+    forceReset,
   });
 
   const gs = useGameState({
@@ -122,9 +134,12 @@ export default function App() {
     ds.spawnZ,
     {
       onStep: gs.onStep,
-      onTurn: gs.onTurn,
-      blocked:
-        gs.showRecipeMenu || gs.showSummonMenu || gs.gameState !== "playing",
+      onRotation: () => {
+        // Update facing target immediately when player rotates
+        const facingTarget = gs.getFacingTarget(camLogicalRef);
+        gs.facingTargetRef.current = facingTarget;
+      },
+      blocked: gs.showRecipeMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
       canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
       blockedPositions: [
@@ -236,6 +251,12 @@ export default function App() {
             setTorchIntensity,
             keybindings,
             setKeybindings,
+            showActionLog,
+            setShowActionLog,
+            musicVolume,
+            setMusicVolume,
+            sfxVolume,
+            setSfxVolume,
           }}
         />
       }
@@ -296,7 +317,18 @@ export default function App() {
             gs.ruinedNotifiedRef.current = new Set();
           }}
         />
-      }
-    />
+      </div>
+
+      <GameOverOverlay
+        gameState={gs.gameState}
+        gameOverReason={gs.gameOverReason}
+        currentRound={gs.currentRound}
+        turnCount={gs.turnCount}
+        winRounds={WIN_ROUNDS}
+        onPlayAgain={() => {
+          setForceReset(prev => prev + 1);
+        }}
+      />
+    </>
   );
 }

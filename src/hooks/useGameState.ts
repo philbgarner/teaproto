@@ -392,7 +392,7 @@ export function useGameState({
   const [activeStoveKey, setActiveStoveKey] = useState<string | null>(null);
   const [showSummonMenu, setShowSummonMenu] = useState(false);
   const [summonMenuCursor, setSummonMenuCursor] = useState(0);
-  const { message, displayedText, setMessage, showMsg } = useMessage();
+  const { message, displayedText, setMessage, showMsg, messageLog, logDialog } = useMessage();
   const ruinedNotifiedRef = useRef(new Set<string>());
 
   // ---------------------------------------------------------------------------
@@ -427,8 +427,17 @@ export function useGameState({
         speechBubblesRef.current = nextRef;
         delete speechBubbleTimersRef.current[entityId];
       }, duration);
+
+      let speakerName: string | undefined;
+      if (entityId.startsWith("mob_")) {
+        const idx = parseInt(entityId.slice(4), 10);
+        speakerName = initialMobs[idx]?.name;
+      } else {
+        speakerName = adventurersRef.current.find((a) => a.id === entityId)?.name;
+      }
+      logDialog(speakerName ?? entityId, text);
     },
-    [],
+    [initialMobs, logDialog],
   );
   // Map<regionId, cumulativeRise> — only regions containing cozy objects heat up
   const [roomTempRise, setRoomTempRise] = useState<Map<number, number>>(
@@ -614,6 +623,10 @@ export function useGameState({
     mobHpsRef.current = initialMobs.map((m) => m.hp ?? MOB_HP);
   }
   const mobRpsEffectsRef = useRef<string[]>(initialMobs.map(() => "none"));
+  const [mobHasMet, setMobHasMet] = useState<boolean[]>(() =>
+    initialMobs.map(() => false),
+  );
+  const mobHasMetRef = useRef<boolean[]>(initialMobs.map(() => false));
   const mobSummonSet = useRef<Map<number, { x: number; z: number }>>(new Map());
 
   // Dance tracking: counts consecutive q/e turns while sharing a cell with a mob/adventurer
@@ -670,11 +683,9 @@ export function useGameState({
     setMobAttackDirs(initialMobs.map(() => null));
     setAdvAttackDirs([]);
     setDamageNumbers([]);
-    setIngredients({
-      "hot-pepper": startIngredientAmount,
-      "wild-herb": startIngredientAmount,
-      "frost-leaf": startIngredientAmount,
-    });
+    setDisarmedTraps(new Set());
+    disarmedTrapsRef.current = new Set();
+    setIngredients({ rations: 0, herbs: 0, dust: 0 });
     setIngredientDrops([...initialIngredientDrops]);
     setChests([...initialChests]);
     chestsRef.current = [...initialChests];
@@ -702,6 +713,9 @@ export function useGameState({
     ruinedNotifiedRef.current = new Set();
     adventurerSightingsRef.current = new Set();
     mobSummonSet.current = new Map();
+    const freshHasMet = initialMobs.map(() => false);
+    mobHasMetRef.current = freshHasMet;
+    setMobHasMet(freshHasMet);
     firstTeaDeliveredRef.current = false;
 
     // Pre-explore exactly: kitchen (startRoomId) + one monster room + connecting corridor
@@ -722,7 +736,7 @@ export function useGameState({
 
     sounds.mainThemeDungeon.play();
     showMsg(
-      "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
+      "You have an Iced Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
     );
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -757,6 +771,7 @@ export function useGameState({
             CHAR_SHEET_H,
           ),
           unconscious: mobHps[i] <= 0,
+          satiation: mobSatiations[i],
           outlineColor:
             RPS_OUTLINE_COLOR[mobRpsEffects[i]] ??
             ([0, 0, 0, 0] as [number, number, number, number]),
@@ -914,14 +929,13 @@ export function useGameState({
             "Thank you for the dance, dear ghost!",
             6000,
           );
-          setMobSatiations((prev) => {
-            const next = [...prev];
-            next[ds.mobIdx!] = Math.min(
-              150,
-              next[ds.mobIdx!] + danceSatiationBoost,
-            );
-            return next;
-          });
+          const nextSatiations = [...mobSatiationsRef.current!];
+          nextSatiations[ds.mobIdx!] = Math.min(
+            150,
+            nextSatiations[ds.mobIdx!] + danceSatiationBoost,
+          );
+          mobSatiationsRef.current = nextSatiations;
+          setMobSatiations(nextSatiations);
         } else if (ds.advId !== null) {
           showSpeechBubble(
             ds.advId,
@@ -1053,6 +1067,28 @@ export function useGameState({
     const { x: px, z: pz } = logicalRef.current;
     const pgx = Math.floor(px);
     const pgz = Math.floor(pz);
+
+    // --- Mark mobs as met when player steps directly beside them ---
+    {
+      const positions = mobPositionsRef.current;
+      const hasMet = mobHasMetRef.current;
+      let changed = false;
+      for (let i = 0; i < positions.length; i++) {
+        if (!hasMet[i]) {
+          const dx = Math.abs(positions[i].x - pgx);
+          const dz = Math.abs(positions[i].z - pgz);
+          if (dx + dz <= 1) {
+            hasMet[i] = true;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        mobHasMetRef.current = [...hasMet];
+        setMobHasMet([...hasMet]);
+      }
+    }
+
     const remainingDrops: any[] = [];
     let xpGained = 0;
     for (const drop of newXpDrops) {
@@ -1116,6 +1152,7 @@ export function useGameState({
       if (playerDoorState === "closed") {
         setDoorStates((prev) => new Map(prev).set(playerDoorKey, "open"));
         sounds.slideUp.play();
+        showMsg("You open the door.");
       }
     }
     function isWalkableForLos(x: number, z: number): boolean {
@@ -1793,8 +1830,7 @@ export function useGameState({
               (p: any, j: number) =>
                 j !== i && p.x === step.x && p.z === step.y,
             );
-            const blockedByPlayer = step.x === pgx && step.y === pgz;
-            if (!blockedByMob && !blockedByPlayer) {
+            if (!blockedByMob) {
               newMobPositions[i] = { x: step.x, z: step.y };
             }
           }
@@ -2306,9 +2342,9 @@ export function useGameState({
   const facingTargetRef = useRef<any>(null);
 
   useEffect(() => {
-    const facingTarget = facingTargetRef.current;
-
     function doInteract() {
+      // Read fresh facing target from ref to avoid closure issues
+      const facingTarget = facingTargetRef.current;
       if (!facingTarget) return;
       if (gameState !== "playing") return;
 
@@ -2470,7 +2506,7 @@ export function useGameState({
             new Map(prev).set(facingTarget.doorKey, "open"),
           );
           sounds.slideUp.play();
-          showMsg("You unlock the door.");
+          showMsg("You open the door.");
         }
       }
     }
@@ -2672,6 +2708,10 @@ export function useGameState({
         showMsg("Can't summon here — a monster is already here.");
         return;
       }
+      if (!mobHasMetRef.current[summonMenuCursor]) {
+        showMsg(`You haven't met ${initialMobs[summonMenuCursor].name} yet.`);
+        return;
+      }
       mobSummonSet.current.set(summonMenuCursor, { x: pgx, z: pgz });
       showMsg(`${initialMobs[summonMenuCursor].name} is on its way!`);
       setShowSummonMenu(false);
@@ -2695,6 +2735,10 @@ export function useGameState({
           showMsg("Can't summon here — a monster is already here.");
           return;
         }
+        if (!mobHasMetRef.current[num - 1]) {
+          showMsg(`You haven't met ${initialMobs[num - 1].name} yet.`);
+          return;
+        }
         mobSummonSet.current.set(num - 1, { x: pgx, z: pgz });
         showMsg(`${initialMobs[num - 1].name} is on its way!`);
         setShowSummonMenu(false);
@@ -2710,6 +2754,7 @@ export function useGameState({
     const optionPrevKeys = (keybindings.optionPrev ?? []).join(",");
     const optionSelectKeys = (keybindings.optionSelect ?? []).join(",");
     const summonKeys = (keybindings.summon ?? []).join(",");
+    const cancelKeys = (keybindings.cancel ?? []).join(",");
 
     if (interactKeys) hotkeys(interactKeys, interactHandler as any);
     if (waitKeys) hotkeys(waitKeys, waitHandler as any);
@@ -2723,8 +2768,8 @@ export function useGameState({
       hotkeys(optionSelectKeys, recipeOptionSelectHandler as any);
     if (optionSelectKeys)
       hotkeys(optionSelectKeys, summonOptionSelectHandler as any);
-    hotkeys("escape", recipeCloseHandler as any);
-    hotkeys("escape", summonCloseHandler as any);
+    if (cancelKeys) hotkeys(cancelKeys, recipeCloseHandler as any);
+    if (cancelKeys) hotkeys(cancelKeys, summonCloseHandler as any);
     hotkeys("1,2,3,4,5,6,7,8,9", recipeSelectHandler as any);
     hotkeys("1,2,3,4,5,6,7,8,9", summonSelectHandler as any);
     if (summonKeys) hotkeys(summonKeys, summonOpenHandler as any);
@@ -2748,8 +2793,8 @@ export function useGameState({
         hotkeys.unbind(optionSelectKeys, recipeOptionSelectHandler as any);
       if (optionSelectKeys)
         hotkeys.unbind(optionSelectKeys, summonOptionSelectHandler as any);
-      hotkeys.unbind("escape", recipeCloseHandler as any);
-      hotkeys.unbind("escape", summonCloseHandler as any);
+      if (cancelKeys) hotkeys.unbind(cancelKeys, recipeCloseHandler as any);
+      if (cancelKeys) hotkeys.unbind(cancelKeys, summonCloseHandler as any);
       hotkeys.unbind("1,2,3,4,5,6,7,8,9", recipeSelectHandler as any);
       hotkeys.unbind("1,2,3,4,5,6,7,8,9", summonSelectHandler as any);
       if (summonKeys) hotkeys.unbind(summonKeys, summonOpenHandler as any);
@@ -2814,6 +2859,7 @@ export function useGameState({
     displayedText,
     setMessage,
     showMsg,
+    messageLog,
     speechBubbles,
     showSpeechBubble,
     roomTempRise,
@@ -2887,6 +2933,7 @@ export function useGameState({
     summonMob: (mobIdx: number, targetX: number, targetZ: number) => {
       mobSummonSet.current.set(mobIdx, { x: targetX, z: targetZ });
     },
+    mobHasMet,
     // refs for cross-hook wiring
     logicalRef,
     doMoveRef,
