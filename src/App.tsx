@@ -1089,6 +1089,7 @@ export default function App() {
             dungeonWidth={dungeonWidth}
             dungeonHeight={dungeonHeight}
             camera={camera}
+            summonMob={gs.summonMob}
             exploredMaskRef={gs.exploredMaskRef}
             texture={gs.texture}
             atlas={gs.atlas}

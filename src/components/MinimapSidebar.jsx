@@ -60,7 +60,7 @@ function HandsRow() {
   );
 }
 
-function MobEntry({ mob }) {
+function MobEntry({ mob, onSummon, summonDisabled }) {
   const effectLabel =
     mob.rpsEffect && mob.rpsEffect !== "none"
       ? RPS_LABELS[mob.rpsEffect]
@@ -76,7 +76,17 @@ function MobEntry({ mob }) {
 
   return (
     <div className={styles.mobEntry}>
-      <div className={styles.mobName}>{mob.name ?? "Monster"}</div>
+      <div className={styles.mobNameRow}>
+        <span className={styles.mobName}>{mob.name ?? "Monster"}</span>
+        <button
+          className={styles.summonBtn}
+          disabled={summonDisabled}
+          onClick={onSummon}
+          title={summonDisabled ? "Cannot summon here" : "Summon to your location"}
+        >
+          ▶
+        </button>
+      </div>
       {effectLabel && (
         <div className={styles.mobRow} style={{ color: effectColor }}>
           {effectLabel}
@@ -139,7 +149,14 @@ export function MinimapSidebar({
   goldDrops,
   itemDrops,
   scale,
+  summonMob,
 }) {
+  const pgx = Math.floor(camera.x);
+  const pgz = Math.floor(camera.z);
+  const playerOnSolid = solidData[pgz * dungeonWidth + pgx] !== 0;
+  const playerCellOccupied = mobs.some((m) => m.x === pgx && m.z === pgz);
+  const summonDisabled = playerOnSolid || playerCellOccupied;
+
   return (
     <div className={styles.sidebar}>
       <div className={styles.canvasWrap}>
@@ -174,7 +191,12 @@ export function MinimapSidebar({
       {mobs.length > 0 && (
         <div className={styles.mobRoster}>
           {mobs.map((mob, i) => (
-            <MobEntry key={i} mob={mob} />
+            <MobEntry
+              key={i}
+              mob={mob}
+              onSummon={() => summonMob(i)}
+              summonDisabled={summonDisabled}
+            />
           ))}
         </div>
       )}

@@ -557,6 +557,7 @@ export function useGameState({
     mobHpsRef.current = initialMobs.map((m) => m.hp ?? MOB_HP);
   }
   const mobRpsEffectsRef = useRef<string[]>(initialMobs.map(() => "none"));
+  const mobSummonSet = useRef<Set<number>>(new Set());
 
   // Hidden passages
   const passagesRef = useRef<any[]>([]);
@@ -627,6 +628,7 @@ export function useGameState({
     mobPositionsRef.current = freshPositions;
     ruinedNotifiedRef.current = new Set();
     adventurerSightingsRef.current = new Set();
+    mobSummonSet.current = new Set();
     firstTeaDeliveredRef.current = false;
     firstWarmRoomTeaRef.current = false;
 
@@ -1619,6 +1621,33 @@ export function useGameState({
       if (newMobSatiations[i] <= 0) continue; // unconscious
       const pos = newMobPositions[i];
 
+      // Summon: pathfind toward player
+      if (mobSummonSet.current.has(i)) {
+        const dist = Math.abs(pos.x - pgx) + Math.abs(pos.z - pgz);
+        if (dist <= 1) {
+          mobSummonSet.current.delete(i);
+        } else {
+          const summonAstar = aStar8(
+            { width: dungeonWidth, height: dungeonHeight },
+            (x: number, y: number) => isWalkable(x, y),
+            { x: pos.x, y: pos.z },
+            { x: pgx, y: pgz },
+            { fourDir: true },
+          );
+          if (summonAstar && summonAstar.path.length > 1) {
+            const step = summonAstar.path[1];
+            const blockedByMob = newMobPositions.some(
+              (p: any, j: number) => j !== i && p.x === step.x && p.z === step.y,
+            );
+            const blockedByPlayer = step.x === pgx && step.y === pgz;
+            if (!blockedByMob && !blockedByPlayer) {
+              newMobPositions[i] = { x: step.x, z: step.y };
+            }
+          }
+        }
+        continue;
+      }
+
       // Find nearest visible adventurer within LOS_RADIUS
       let chaseTarget: any = null;
       let chaseDist = Infinity;
@@ -2532,6 +2561,7 @@ export function useGameState({
     onBlockedMove,
     spawnAdventurersForRound,
     getFacingTarget,
+    summonMob: (mobIdx: number) => { mobSummonSet.current.add(mobIdx); },
     // refs for cross-hook wiring
     logicalRef,
     doMoveRef,
