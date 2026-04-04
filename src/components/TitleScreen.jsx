@@ -720,7 +720,7 @@ export const DIFFICULTY_PRESETS = {
     heatingPerStep: 6.0,
     satiationDropPerStep: 0.1,
     supersatiationBonus: 50,
-    turnsPerWave: 120,
+    turnsPerRound: 120,
     traversalFactor: 2.0,
     adventurerDreadRate: 0.5,
     adventurerLootPerChest: 20,
@@ -730,7 +730,7 @@ export const DIFFICULTY_PRESETS = {
     heatingPerStep: 3.5,
     satiationDropPerStep: 0.3,
     supersatiationBonus: 25,
-    turnsPerWave: 60,
+    turnsPerRound: 60,
     traversalFactor: 1.0,
     adventurerDreadRate: 1.5,
     adventurerLootPerChest: 10,
@@ -740,7 +740,7 @@ export const DIFFICULTY_PRESETS = {
     heatingPerStep: 1.5,
     satiationDropPerStep: 0.6,
     supersatiationBonus: 10,
-    turnsPerWave: 30,
+    turnsPerRound: 30,
     traversalFactor: 0.5,
     adventurerDreadRate: 3.0,
     adventurerLootPerChest: 5,
@@ -771,7 +771,7 @@ export function TitleScreen({ onNewGame, onTutorial }) {
     settings.setHeatingPerStep(preset.heatingPerStep);
     settings.setSatiationDropPerStep(preset.satiationDropPerStep);
     settings.setSupersatiationBonus(preset.supersatiationBonus);
-    settings.setTurnsPerWave(preset.turnsPerWave);
+    settings.setTurnsPerRound(preset.turnsPerRound);
     settings.setTraversalFactor(preset.traversalFactor);
     settings.setAdventurerDreadRate(preset.adventurerDreadRate);
     settings.setAdventurerLootPerChest(preset.adventurerLootPerChest);

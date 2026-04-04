@@ -1,6 +1,14 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,6 +64,8 @@ export type MinimapAdventurer = {
 };
 export type MinimapDoor = { x: number; z: number };
 export type MinimapStove = { x: number; z: number };
+export type MinimapGoldDrop = { x: number; z: number; amount: number };
+export type MinimapItemDrop = { x: number; z: number; name?: string };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Floor tiles (flat-color instanced mesh, no texture or shading)
@@ -106,6 +116,30 @@ function FloorTiles({ cells }: { cells: FloorCell[] }) {
 
   return (
     <instancedMesh ref={meshRef} args={[planeGeo, floorMat, cells.length]} />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Furniture dot — small dark grey square
+// ─────────────────────────────────────────────────────────────────────────────
+
+function FurnitureDot({
+  x,
+  z,
+  tileSize,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+}) {
+  const wx = (x + 0.5) * tileSize;
+  const wz = (z + 0.5) * tileSize;
+  const size = tileSize * 0.35;
+  return (
+    <mesh position={[wx, 0.02, wz]} rotation={[-HALF_PI, 0, 0]} renderOrder={1}>
+      <planeGeometry args={[size, size]} />
+      <meshBasicMaterial color="#555555" depthTest={false} />
+    </mesh>
   );
 }
 
@@ -177,6 +211,84 @@ function ChestIcon({
         <meshBasicMaterial color="#c8a46e" depthTest={false} />
       </mesh>
       {hovered && <Html style={TOOLTIP_STYLE}>Chest</Html>}
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gold drop icon — small yellow rotated square (diamond)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function GoldDropIcon({
+  x,
+  z,
+  tileSize,
+  amount,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+  amount: number;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const wx = (x + 0.5) * tileSize;
+  const wz = (z + 0.5) * tileSize;
+  const s = tileSize * 0.38;
+
+  return (
+    <group position={[wx, 0.03, wz]}>
+      <mesh
+        rotation={[-HALF_PI, 0, Math.PI / 4]}
+        renderOrder={2}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <planeGeometry args={[s, s]} />
+        <meshBasicMaterial color="#f5c842" depthTest={false} />
+      </mesh>
+      {hovered && <Html style={TOOLTIP_STYLE}>{amount} gold</Html>}
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Item drop icon — small purple square
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ItemDropIcon({
+  x,
+  z,
+  tileSize,
+  name,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+  name?: string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const wx = (x + 0.5) * tileSize;
+  const wz = (z + 0.5) * tileSize;
+  const s = tileSize * 0.32;
+
+  return (
+    <group position={[wx, 0.04, wz]}>
+      <mesh
+        rotation={[-HALF_PI, 0, 0]}
+        renderOrder={2}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <planeGeometry args={[s, s]} />
+        <meshBasicMaterial color="#c46ef5" depthTest={false} />
+      </mesh>
+      {hovered && <Html style={TOOLTIP_STYLE}>{name ?? "Item"}</Html>}
     </group>
   );
 }
@@ -456,7 +568,11 @@ function TeaomaticIndicator({
 }: {
   stove: MinimapStove;
   tileSize: number;
-  propsRef: React.RefObject<{ playerX: number; playerZ: number; targetYaw: number }>;
+  propsRef: React.RefObject<{
+    playerX: number;
+    playerZ: number;
+    targetYaw: number;
+  }>;
   lerpedYawRef: React.RefObject<number>;
 }) {
   const { camera, size } = useThree();
@@ -498,15 +614,15 @@ function TeaomaticIndicator({
     // Ray-box intersection: find t where ray (0,0)→(vx,vy) hits the frustum edge
     const tx = vx !== 0 ? halfW / Math.abs(vx) : Infinity;
     const ty = vy !== 0 ? halfH / Math.abs(vy) : Infinity;
-    const t = Math.min(tx, ty) * 0.90; // 10% inset so triangle is fully visible
+    const t = Math.min(tx, ty) * 0.9; // 10% inset so triangle is fully visible
 
     const edgeVx = vx * t;
     const edgeVy = vy * t;
 
     // Back-project from view space to world XZ
     // right_world = (cosY, 0, -sinY),  up_world = (-sinY, 0, -cosY)
-    const worldX = pwx + edgeVx * cosY + edgeVy * (-sinY);
-    const worldZ = pwz + edgeVx * (-sinY) + edgeVy * (-cosY);
+    const worldX = pwx + edgeVx * cosY + edgeVy * -sinY;
+    const worldZ = pwz + edgeVx * -sinY + edgeVy * -cosY;
 
     group.position.set(worldX, 0.2, worldZ);
     // Rotate so triangle apex points toward stove
@@ -521,7 +637,12 @@ function TeaomaticIndicator({
           group.rotation.y then aims it at the stove in world space */}
       <mesh rotation={[-HALF_PI, 0, Math.PI]} renderOrder={10}>
         <coneGeometry args={[triSize * 0.65, triSize * 1.4, 3]} />
-        <meshBasicMaterial color="#00b8da" depthTest={false} transparent opacity={0.9} />
+        <meshBasicMaterial
+          color="#00b8da"
+          depthTest={false}
+          transparent
+          opacity={0.9}
+        />
       </mesh>
     </group>
   );
@@ -549,6 +670,9 @@ type SceneProps = {
   hazardData?: Uint8Array;
   disarmedTraps: Set<string>;
   chests: MinimapChest[];
+  furniturePlacements: { x: number; z: number }[];
+  goldDrops: MinimapGoldDrop[];
+  itemDrops: MinimapItemDrop[];
   scale: number;
   setTooltip: (
     t: { pos: { x: number; y: number }; content: ReactNode } | null,
@@ -571,6 +695,9 @@ function MinimapScene({
   hazardData,
   disarmedTraps,
   chests,
+  furniturePlacements,
+  goldDrops,
+  itemDrops,
   scale,
   setTooltip,
 }: SceneProps) {
@@ -654,6 +781,10 @@ function MinimapScene({
       <color attach="background" args={["#050208"]} />
       <FloorTiles cells={floorCells} />
 
+      {furniturePlacements.map((f, i) => (
+        <FurnitureDot key={`furn_${i}`} x={f.x} z={f.z} tileSize={tileSize} />
+      ))}
+
       {stovePlacements.map((s) => (
         <StoveTile
           key={`stove_${s.x}_${s.z}`}
@@ -665,6 +796,26 @@ function MinimapScene({
 
       {chests.map((c, i) => (
         <ChestIcon key={`chest_${i}`} x={c.x} z={c.z} tileSize={tileSize} />
+      ))}
+
+      {goldDrops.map((g, i) => (
+        <GoldDropIcon
+          key={`gold_${i}`}
+          x={g.x}
+          z={g.z}
+          tileSize={tileSize}
+          amount={g.amount}
+        />
+      ))}
+
+      {itemDrops.map((d, i) => (
+        <ItemDropIcon
+          key={`item_${i}`}
+          x={d.x}
+          z={d.z}
+          tileSize={tileSize}
+          name={d.name}
+        />
       ))}
 
       {trapList.map((t) => (
@@ -785,6 +936,9 @@ export type MinimapProps = {
   hazardData?: Uint8Array;
   disarmedTraps?: Set<string>;
   chests?: MinimapChest[];
+  furniturePlacements?: { x: number; z: number }[];
+  goldDrops?: MinimapGoldDrop[];
+  itemDrops?: MinimapItemDrop[];
   /** Orthographic zoom level. Defaults to 4.5. */
   scale?: number;
   // Legacy props kept for call-site compatibility
@@ -810,6 +964,9 @@ export function Minimap({
   hazardData,
   disarmedTraps = new Set(),
   chests = [],
+  furniturePlacements = [],
+  goldDrops = [],
+  itemDrops = [],
   scale = DEFAULT_ZOOM,
 }: MinimapProps) {
   const [tooltip, setTooltip] = useState<{
@@ -825,7 +982,10 @@ export function Minimap({
     const MARGIN = 6;
     let left = tooltip.pos.x - rect.width / 2;
     let top = tooltip.pos.y - rect.height - 10;
-    left = Math.max(MARGIN, Math.min(window.innerWidth - rect.width - MARGIN, left));
+    left = Math.max(
+      MARGIN,
+      Math.min(window.innerWidth - rect.width - MARGIN, left),
+    );
     top = Math.max(MARGIN, top);
     el.style.left = `${left}px`;
     el.style.top = `${top}px`;
@@ -865,6 +1025,9 @@ export function Minimap({
           hazardData={hazardData}
           disarmedTraps={disarmedTraps}
           chests={chests}
+          furniturePlacements={furniturePlacements}
+          goldDrops={goldDrops}
+          itemDrops={itemDrops}
           scale={scale}
           setTooltip={setTooltip}
         />

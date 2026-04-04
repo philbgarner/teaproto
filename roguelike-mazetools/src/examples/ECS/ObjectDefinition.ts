@@ -14,7 +14,8 @@ export enum ObjectId {
     CHEST = 4,
     SWORD = 5,
     BANDAGE = 6,
-    TEA_CUP = 7
+    TEA_CUP = 7,
+    KEY = 8
 }
 
 // Chest loot generation constants
@@ -22,6 +23,7 @@ const CHEST_SLOT_FILL_CHANCE = 0.6
 const BANDAGE_SPAWN_CHANCE = 0.4
 const SWORD_SPAWN_CHANCE = 0.3
 const TEA_CUP_SPAWN_CHANCE = 0.3
+const KEY_SPAWN_CHANCE = 0.3
 const BANDAGE_MIN_COUNT = 3
 const BANDAGE_MAX_COUNT = 8
 
@@ -29,7 +31,8 @@ const BANDAGE_MAX_COUNT = 8
 const POSSIBLE_CHEST_ITEMS = [
     { type: ObjectId.BANDAGE, chance: BANDAGE_SPAWN_CHANCE, minCount: BANDAGE_MIN_COUNT, maxCount: BANDAGE_MAX_COUNT },
     { type: ObjectId.SWORD, chance: SWORD_SPAWN_CHANCE, minCount: 1, maxCount: 1 },
-    { type: ObjectId.TEA_CUP, chance: TEA_CUP_SPAWN_CHANCE, minCount: 1, maxCount: 1 }
+    { type: ObjectId.TEA_CUP, chance: TEA_CUP_SPAWN_CHANCE, minCount: 1, maxCount: 1 },
+    { type: ObjectId.KEY, chance: KEY_SPAWN_CHANCE, minCount: 1, maxCount: 1 }
 ];
 
 export enum TeaContent {
@@ -48,6 +51,7 @@ export function initializeObjectDefinitions(registry: ComponentRegistry) {
     addSwordDefinition(registry);
     addBandageDefinition(registry);
     addTeaCupDefinition(registry);
+    addKeyDefinition(registry);
 }
 
 function createObjectDefinition(registry: ComponentRegistry, objectType: ObjectId, name: string) {
@@ -106,6 +110,10 @@ function addBandageDefinition(registry: ComponentRegistry) {
 
 function addTeaCupDefinition(registry: ComponentRegistry) {
     createObjectDefinition(registry, ObjectId.TEA_CUP, "Tea Cup");
+}
+
+function addKeyDefinition(registry: ComponentRegistry) {
+    createObjectDefinition(registry, ObjectId.KEY, "Dungeon Key");
 }
 
 export function getObjectDefinition(registry: ComponentRegistry, objectType: ObjectId): Entity {
@@ -264,4 +272,16 @@ export function initializeChestInventory(registry: ComponentRegistry, chest: Ent
             registry.addObjectToInventory(chestInventory, itemEntity, quantity);
         }
     }
+}
+
+export function getChestKeyCount(registry: ComponentRegistry, chestEntity: Entity): number {
+    const slots = registry.getFirstInventorySlots(chestEntity);
+    let count = 0;
+    for (const slot of slots) {
+        const slotData = registry.components.inventorySlot.get(slot);
+        if (!slotData?.object) continue;
+        const def = registry.components.objectDefinition.get(slotData.object);
+        if (def?.objectType === ObjectId.KEY) count += slotData.count;
+    }
+    return count;
 }

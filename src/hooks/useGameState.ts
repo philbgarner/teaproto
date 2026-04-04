@@ -20,6 +20,8 @@ import type { Tea } from "../tea";
 import { useSettings } from "../SettingsContext";
 import type { Entity } from "../../roguelike-mazetools/src/examples/ECS/Components";
 import { useSoundHelper } from "../hooks/useSoundHelper";
+import { getChestKeyCount } from "../../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
+import { useMusic } from "./useMusic";
 import { useMessage } from "./useMessage";
 import {
   ATLAS_SHEET_W,
@@ -41,8 +43,8 @@ import {
   MOB_TYPE_MAP,
   MOB_HP,
   PLAYER_MAX_HP,
-  TURNS_PER_WAVE,
-  WIN_WAVES,
+  TURNS_PER_ROUND,
+  WIN_ROUNDS,
   STATUS_RGB,
   STATUS_CSS,
   LOS_RADIUS,
@@ -85,7 +87,7 @@ export interface UseGameStateParams {
   heatingPerStep: number;
   satiationDropPerStep: number;
   supersatiationBonus: number;
-  turnsPerWave: number;
+  turnsPerRound: number;
   traversalFactor: number;
   adventurerDreadRate: number;
   adventurerLootPerChest: number;
@@ -116,7 +118,7 @@ export function useGameState({
   heatingPerStep,
   satiationDropPerStep,
   supersatiationBonus,
-  turnsPerWave,
+  turnsPerRound,
   traversalFactor,
   adventurerDreadRate,
   adventurerLootPerChest,
@@ -468,11 +470,11 @@ export function useGameState({
   const [chests, setChests] = useState<any[]>([]);
   const chestsRef = useRef<any[]>([]);
 
-  // Wave / combat state
+  // Round / combat state
   const [adventurers, setAdventurers] = useState<any[]>([]);
-  const [currentWave, setCurrentWave] = useState(0);
+  const [currentRound, setCurrentRound] = useState(0);
   const [turnCount, setTurnCount] = useState(0);
-  const [waveCountdown, setWaveCountdown] = useState(TURNS_PER_WAVE);
+  const [roundCountdown, setRoundCountdown] = useState(TURNS_PER_ROUND);
   const [playerXp, setPlayerXp] = useState(0);
   const [xpDrops, setXpDrops] = useState<any[]>([]);
   const [playerHp, setPlayerHp] = useState(PLAYER_MAX_HP);
@@ -511,9 +513,9 @@ export function useGameState({
 
   // Refs for synchronous cross-state access during game step processing
   const adventurersRef = useRef<any[]>([]);
-  const currentWaveRef = useRef(0);
+  const currentRoundRef = useRef(0);
   const turnCountRef = useRef(0);
-  const waveCountdownRef = useRef(TURNS_PER_WAVE);
+  const roundCountdownRef = useRef(TURNS_PER_ROUND);
   const playerXpRef = useRef(0);
   const xpDropsRef = useRef<any[]>([]);
   const playerHpRef = useRef(PLAYER_MAX_HP);
@@ -591,9 +593,9 @@ export function useGameState({
     setActiveStoveKey(null);
     setMessage(null);
     setAdventurers([]);
-    setCurrentWave(0);
+    setCurrentRound(0);
     setTurnCount(0);
-    setWaveCountdown(turnsPerWave);
+    setRoundCountdown(turnsPerRound);
     setPlayerXp(0);
     setXpDrops([]);
     setPlayerHp(PLAYER_MAX_HP);
@@ -610,9 +612,9 @@ export function useGameState({
     setGameState("playing");
     setGameOverReason(null);
     adventurersRef.current = [];
-    currentWaveRef.current = 0;
+    currentRoundRef.current = 0;
     turnCountRef.current = 0;
-    waveCountdownRef.current = turnsPerWave;
+    roundCountdownRef.current = turnsPerRound;
     playerXpRef.current = 0;
     xpDropsRef.current = [];
     playerHpRef.current = PLAYER_MAX_HP;
@@ -738,9 +740,9 @@ export function useGameState({
     });
   }, [speechBubbles, initialMobs, mobPositions, adventurers]);
 
-  const spawnAdventurersForWave = useCallback(
-    (waveNum: number) => {
-      const count = Math.min(1 + waveNum, 6);
+  const spawnAdventurersForRound = useCallback(
+    (roundNum: number) => {
+      const count = Math.min(1 + roundNum, 6);
       const spawned: any[] = [];
       // Block tiles occupied by alive adventurers or mobs
       const occupied = new Set([
@@ -782,19 +784,19 @@ export function useGameState({
         }
         if (spawnX === -1) continue;
         occupied.add(`${spawnX}_${spawnZ}`);
-        const lootRng = makeRng(waveNum * 31337 + i * 7919 + 1);
-        const dreadRng = makeRng(waveNum * 31337 + i * 7919 + 2);
+        const lootRng = makeRng(roundNum * 31337 + i * 7919 + 1);
+        const dreadRng = makeRng(roundNum * 31337 + i * 7919 + 2);
         spawned.push({
-          id: `adv_w${waveNum}_${i}`,
+          id: `adv_r${roundNum}_${i}`,
           name: tmpl.name,
           x: spawnX,
           z: spawnZ,
           alive: true,
-          hp: tmpl.hp + (waveNum - 1) * 3,
-          maxHp: tmpl.hp + (waveNum - 1) * 3,
-          attack: tmpl.attack + Math.floor((waveNum - 1) / 2),
+          hp: tmpl.hp + (roundNum - 1) * 3,
+          maxHp: tmpl.hp + (roundNum - 1) * 3,
+          attack: tmpl.attack + Math.floor((roundNum - 1) / 2),
           defense: tmpl.defense,
-          xp: tmpl.xp + (waveNum - 1) * 5,
+          xp: tmpl.xp + (roundNum - 1) * 5,
           template: tmpl.type,
           colorRgb: tmpl.colorRgb,
           state: "exploring",
@@ -905,7 +907,7 @@ export function useGameState({
     let newMobHps = mobHpsRef.current!.map((h) => h);
     let newMobRpsEffects = mobRpsEffectsRef.current.map((e) => e);
     let newMobPositions = mobPositionsRef.current.map((p) => ({ ...p }));
-    let newWave = currentWaveRef.current;
+    let newRound = currentRoundRef.current;
     let newPlayerXp = playerXpRef.current;
     let newXpDrops = [...xpDropsRef.current];
     let newPlayerHp = playerHpRef.current;
@@ -931,28 +933,23 @@ export function useGameState({
       z: number;
     }[] = [];
 
-    // --- Wave spawning ---
-    // The countdown to the next wave only ticks when all enemies are dead.
+    // --- Round spawning ---
     console.log(
-      "[onStep] wave spawning check, turn:",
+      "[onStep] round spawning check, turn:",
       newTurnCount,
       "countdown:",
-      waveCountdownRef.current,
+      roundCountdownRef.current,
     );
-    const allEnemiesDead = newAdventurers.every((a) => !a.alive);
-    let newWaveCountdown = waveCountdownRef.current;
-    if (allEnemiesDead) {
-      newWaveCountdown -= 1;
-    }
-    if (newWaveCountdown <= 0) {
-      newWaveCountdown = turnsPerWave;
-      newWave = currentWaveRef.current + 1;
-      currentWaveRef.current = newWave;
-      const spawned = spawnAdventurersForWave(newWave);
+    let newRoundCountdown = roundCountdownRef.current - 1;
+    if (newRoundCountdown <= 0) {
+      newRoundCountdown = turnsPerRound;
+      newRound = currentRoundRef.current + 1;
+      currentRoundRef.current = newRound;
+      const spawned = spawnAdventurersForRound(newRound);
       newAdventurers = [...newAdventurers.filter((a) => a.alive), ...spawned];
-      stepMessage = `Wave ${newWave}! ${spawned.length} adventurer${spawned.length !== 1 ? "s" : ""} have entered the dungeon!`;
+      stepMessage = `Round ${newRound}! ${spawned.length} adventurer${spawned.length !== 1 ? "s" : ""} have entered the dungeon!`;
     }
-    waveCountdownRef.current = newWaveCountdown;
+    roundCountdownRef.current = newRoundCountdown;
 
     // --- XP pickup (before moving to avoid collecting just-dropped XP) ---
     const { x: px, z: pz } = logicalRef.current;
@@ -1158,7 +1155,7 @@ export function useGameState({
             isBlocked: (x: number, y: number) => {
               const isLockedDoor =
                 doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                adv.template !== "rogue";
+                adv.template !== "rogue" && (adv.keys ?? 0) === 0;
               return (
                 isLockedDoor ||
                 (mobPlayerOccupied.has(`${x}_${y}`) &&
@@ -1234,6 +1231,12 @@ export function useGameState({
             };
           }
           newLoot += adventurerLootPerChestRef.current;
+          if (pickedChest.ecsData) {
+            const keyCount = getChestKeyCount(pickedChest.ecsData.registry, pickedChest.ecsData.chestEntity);
+            if (keyCount > 0) {
+              adv = { ...adv, keys: (adv.keys ?? 0) + keyCount };
+            }
+          }
         }
 
         // Check state transition
@@ -1275,7 +1278,7 @@ export function useGameState({
                 isBlocked: (x: number, y: number) => {
                   const isLockedDoor =
                     doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                    adv.template !== "rogue";
+                    adv.template !== "rogue" && (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
                 fourDir: true,
@@ -1302,25 +1305,10 @@ export function useGameState({
                 inCombat: false,
               };
             }
-            // Chest exists but is unreachable — count the stuck turn
-            adv = {
-              ...adv,
-              dread: newDread,
-              loot: newLoot,
-              state: newAdvState,
-              noLootTurns: (adv.noLootTurns ?? 0) + 1,
-            };
-            return {
-              adv,
-              intendedX: adv.x,
-              intendedZ: adv.z,
-              debugPath: [],
-              isAttack: false,
-              inCombat: false,
-            };
+            // Chest unreachable (locked door, no key) — wander to find accessible loot
           }
 
-          // No chests at all — count the stuck turn and wander
+          // No reachable chests — count the stuck turn and wander
           const newNoLootTurns = (adv.noLootTurns ?? 0) + 1;
           const nonEndRoomsArray = [...dungeon.rooms.entries()].filter(
             ([id]: any) => id !== dungeon.endRoomId,
@@ -1340,7 +1328,7 @@ export function useGameState({
                 isBlocked: (x: number, y: number) => {
                   const isLockedDoor =
                     doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                    adv.template !== "rogue";
+                    adv.template !== "rogue" && (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
                 fourDir: true,
@@ -1387,6 +1375,7 @@ export function useGameState({
 
         // State just switched to seeking — fall through to seeking logic below
         adv = { ...adv, dread: newDread, loot: newLoot, state: "seeking" };
+        stepMessage = `The ${adv.name} is heading for the stove!`;
       }
 
       // seeking state: pathfind to nearest stove
@@ -1419,7 +1408,7 @@ export function useGameState({
           isBlocked: (x: number, y: number) => {
             const isLockedDoor =
               doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-              adv.template !== "rogue";
+              adv.template !== "rogue" && (adv.keys ?? 0) === 0;
             return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
           },
           fourDir: true,
@@ -1543,9 +1532,12 @@ export function useGameState({
         const key = `${adv.x}_${adv.z}`;
         const state = doorUpdates.get(key);
         if (state === undefined) continue;
-        if (state === "locked" && adv.template === "rogue") {
+        if (state === "locked" && (adv.template === "rogue" || (adv.keys ?? 0) > 0)) {
           doorUpdates.set(key, "open");
           anyDoorChanged = true;
+          if (adv.template !== "rogue" && (adv.keys ?? 0) > 0) {
+            adv.keys = (adv.keys ?? 0) - 1;
+          }
         } else if (state !== "locked" && state !== "open") {
           doorUpdates.set(key, "open");
           anyDoorChanged = true;
@@ -1749,7 +1741,7 @@ export function useGameState({
     }
 
     // --- Win condition ---
-    if (newWave >= WIN_WAVES) {
+    if (newRound >= WIN_ROUNDS) {
       setGameState("won");
       return;
     }
@@ -1757,7 +1749,7 @@ export function useGameState({
     // --- Commit all ref + state updates ---
     console.log("[onStep] committing state updates");
     adventurersRef.current = newAdventurers;
-    currentWaveRef.current = newWave;
+    currentRoundRef.current = newRound;
     playerXpRef.current = newPlayerXp;
     xpDropsRef.current = newXpDrops;
     playerHpRef.current = newPlayerHp;
@@ -1771,8 +1763,8 @@ export function useGameState({
     setDisarmedTraps(new Set(disarmedTrapsRef.current));
 
     setTurnCount(newTurnCount);
-    setWaveCountdown(newWaveCountdown);
-    setCurrentWave(newWave);
+    setRoundCountdown(newRoundCountdown);
+    setCurrentRound(newRound);
     setAdventurers([...newAdventurers]);
     setPlayerXp(newPlayerXp);
     setXpDrops([...newXpDrops]);
@@ -1940,13 +1932,13 @@ export function useGameState({
     regionAdjacency,
     dungeonWidth,
     dungeonHeight,
-    turnsPerWave,
+    turnsPerRound,
     temperatureData,
     dungeon,
     initialMobs,
     showMsg,
     showSpeechBubble,
-    spawnAdventurersForWave,
+    spawnAdventurersForRound,
     stovePlacements,
     doorPlacements,
   ]);
@@ -2491,15 +2483,15 @@ export function useGameState({
     adventurers,
     setAdventurers,
     adventurersRef,
-    currentWave,
-    setCurrentWave,
-    currentWaveRef,
+    currentRound,
+    setCurrentRound,
+    currentRoundRef,
     turnCount,
     setTurnCount,
     turnCountRef,
-    waveCountdown,
-    setWaveCountdown,
-    waveCountdownRef,
+    roundCountdown,
+    setRoundCountdown,
+    roundCountdownRef,
     playerXp,
     setPlayerXp,
     playerXpRef,
@@ -2538,7 +2530,7 @@ export function useGameState({
     // callbacks
     onStep,
     onBlockedMove,
-    spawnAdventurersForWave,
+    spawnAdventurersForRound,
     getFacingTarget,
     // refs for cross-hook wiring
     logicalRef,

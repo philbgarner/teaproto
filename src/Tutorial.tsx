@@ -26,13 +26,13 @@ import { buildPassageMask } from "../roguelike-mazetools/src/rendering/hiddenPas
 import { useSoundHelper } from "./hooks/useSoundHelper";
 import "./App.css";
 
-// Tutorial uses Easy-like settings, waves effectively disabled
+// Tutorial uses Easy-like settings, rounds effectively disabled
 const TUTORIAL_GAME_SETTINGS = {
   tempDropPerStep: 0.5,
   heatingPerStep: 6.0,
   satiationDropPerStep: 0.0,
   supersatiationBonus: 50,
-  turnsPerWave: 999999,
+  turnsPerRound: 999999,
   traversalFactor: 2.0,
   adventurerDreadRate: 0,
   adventurerLootPerChest: 0,
@@ -339,7 +339,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     setHeatingPerStep,
     setSatiationDropPerStep,
     setSupersatiationBonus,
-    setTurnsPerWave,
+    setTurnsPerRound,
     setTraversalFactor,
     setAdventurerDreadRate,
     setAdventurerLootPerChest,
@@ -484,7 +484,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
         setHeatingPerStep(6.0);
         setSatiationDropPerStep(0.1);
         setSupersatiationBonus(50);
-        setTurnsPerWave(120);
+        setTurnsPerRound(120);
         setTraversalFactor(2.0);
         setAdventurerDreadRate(0.5);
         setAdventurerLootPerChest(20);

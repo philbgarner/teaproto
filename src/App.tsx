@@ -18,12 +18,13 @@ import {
 } from "../roguelike-mazetools/src/rendering/InstancedTileMesh";
 import type { TileAtlas } from "../roguelike-mazetools/src/rendering/tileAtlas";
 import { StatusBar } from "./components/StatusBar";
-import { WaveCountdown } from "./components/WaveCountdown";
+import { RoundCountdown } from "./components/WaveCountdown";
 import { RecipeMenu } from "./components/RecipeMenu";
 import { GameOverOverlay } from "./components/GameOverOverlay";
 import { MinimapSidebar } from "./components/MinimapSidebar";
 import { DifficultyModal } from "./components/DifficultyModal";
 import { RECIPES } from "./tea";
+import atlasJson from "./assets/atlas.json";
 import {
   TILE_FLOOR,
   TILE_CEILING,
@@ -38,8 +39,11 @@ import {
   TRAP_GRID_OVERLAY_ID,
   SPIKE_TRAP_OVERLAY_ID,
   PLAYER_MAX_HP,
-  WAVE_COUNTDOWN_THRESHOLD,
-  WIN_WAVES,
+  ROUND_COUNTDOWN_THRESHOLD,
+  WIN_ROUNDS,
+  ATLAS_SHEET_W,
+  ATLAS_SHEET_H,
+  atlasIndex,
 } from "./gameConstants";
 import { cardinalDir } from "./gameUtils";
 import "./App.css";
@@ -223,6 +227,20 @@ const MIMIC_UV_RECT = new THREE.Vector4(
   64 / _CHAR_H,
 );
 
+const _ATLAS_W = ATLAS_SHEET_W;
+const _ATLAS_H = ATLAS_SHEET_H;
+function spriteUvRect(name: string): THREE.Vector4 {
+  const entry = atlasIndex.sprites.byName(name);
+  const [px, py] = entry?.uv ?? [0, 0];
+  const tileSize = atlasJson.tileSize ?? 64;
+  return new THREE.Vector4(
+    px / _ATLAS_W,
+    1 - (py + tileSize) / _ATLAS_H,
+    tileSize / _ATLAS_W,
+    tileSize / _ATLAS_H,
+  );
+}
+
 const CHEST_VERT = /* glsl */ `
 uniform float uTime;
 varying vec2 vUv;
@@ -256,6 +274,29 @@ void main() {
   float shinePhase = fract(uTime * 0.4);
   float shine = smoothstep(0.08, 0.0, abs(vUv.x - shinePhase)) * 0.7;
   lit += color.rgb * shine * vec3(1.0, 1.0, 1.0);
+  gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
+}
+`;
+
+// ---------------------------------------------------------------------------
+// Furniture billboard — same pipeline as chest but no shine effect.
+// ---------------------------------------------------------------------------
+
+const FURNITURE_FRAG = /* glsl */ `
+uniform sampler2D uAtlas;
+uniform vec4 uUvRect;
+uniform vec3 uFogColor;
+${TORCH_UNIFORMS_GLSL}
+varying vec2 vUv;
+varying float vFogDist;
+varying vec2 vWorldPos;
+${TORCH_HASH_GLSL}
+${TORCH_FNS_GLSL}
+void main() {
+  vec4 color = texture2D(uAtlas, uUvRect.xy + vUv * uUvRect.zw);
+  if (color.a < 0.5) discard;
+  float band = torchBand(0.03);
+  vec3 lit = applyTorchLighting(color.rgb, band);
   gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
 }
 `;
@@ -480,6 +521,114 @@ function ChestMeshes({
   );
 }
 
+function FurnitureBillboard({
+  item,
+  tileSize,
+  mat,
+}: {
+  item: { x: number; z: number };
+  tileSize: number;
+  mat: THREE.ShaderMaterial;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+  const size = tileSize * 0.6;
+  const wx = (item.x + 0.5) * tileSize;
+  const wz = (item.z + 0.5) * tileSize;
+
+  useFrame(({ camera }) => {
+    if (ref.current)
+      ref.current.rotation.y = Math.atan2(
+        camera.position.x - wx,
+        camera.position.z - wz,
+      );
+  });
+
+  return (
+    <mesh
+      ref={ref}
+      geometry={COIN_GEO}
+      material={mat}
+      position={[wx, size / 2, wz]}
+      scale={[size, size, 1]}
+    />
+  );
+}
+
+function FurnitureMeshes({
+  items,
+  tileSize = 1,
+  fogNear = 4,
+  fogFar = 28,
+  torchColor,
+  torchIntensity,
+}: {
+  items: { id: string; x: number; z: number; type: string }[];
+  tileSize?: number;
+  fogNear?: number;
+  fogFar?: number;
+  torchColor?: string;
+  torchIntensity?: number;
+}) {
+  const texture = useLoader(
+    THREE.TextureLoader,
+    `${import.meta.env.BASE_URL}textures/atlas.png`,
+  );
+
+  const matsByType = useMemo(() => {
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+    const types = [...new Set(items.map((i) => i.type))];
+    return Object.fromEntries(
+      types.map((type) => [
+        type,
+        new THREE.ShaderMaterial({
+          uniforms: {
+            uAtlas: { value: texture },
+            uUvRect: { value: spriteUvRect(type) },
+            uFogColor: { value: new THREE.Color(0, 0, 0) },
+            uFogNear: { value: fogNear },
+            uFogFar: { value: fogFar },
+            ...makeTorchUniforms(),
+          },
+          vertexShader: CHEST_VERT,
+          fragmentShader: FURNITURE_FRAG,
+          transparent: true,
+          alphaTest: 0.5,
+          side: THREE.DoubleSide,
+        }),
+      ]),
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [texture, fogNear, fogFar]);
+
+  const torchColorObj = useMemo(
+    () => (torchColor ? new THREE.Color(torchColor) : undefined),
+    [torchColor],
+  );
+  useEffect(() => {
+    if (torchColorObj)
+      Object.values(matsByType).forEach(
+        (m) => (m.uniforms.uTorchColor.value = torchColorObj),
+      );
+  }, [torchColorObj, matsByType]);
+  useEffect(() => {
+    if (torchIntensity !== undefined)
+      Object.values(matsByType).forEach(
+        (m) => (m.uniforms.uTorchIntensity.value = torchIntensity),
+      );
+  }, [torchIntensity, matsByType]);
+
+  return (
+    <>
+      {items.map((item) => (
+        <FurnitureBillboard key={item.id} item={item} tileSize={tileSize} mat={matsByType[item.type]} />
+      ))}
+    </>
+  );
+}
+
 export default function App() {
   const {
     playerData,
@@ -508,8 +657,8 @@ export default function App() {
     setSatiationDropPerStep,
     supersatiationBonus,
     setSupersatiationBonus,
-    turnsPerWave,
-    setTurnsPerWave,
+    turnsPerRound,
+    setTurnsPerRound,
     traversalFactor,
     setTraversalFactor,
     adventurerDreadRate,
@@ -561,7 +710,7 @@ export default function App() {
     heatingPerStep,
     satiationDropPerStep,
     supersatiationBonus,
-    turnsPerWave,
+    turnsPerRound,
     traversalFactor,
     adventurerDreadRate,
     adventurerLootPerChest,
@@ -805,13 +954,21 @@ export default function App() {
                   torchColor={torchColor}
                   torchIntensity={torchIntensity}
                 />
+                <FurnitureMeshes
+                  items={ds.initialFurniture ?? []}
+                  tileSize={TILE_SIZE}
+                  fogNear={4}
+                  fogFar={28}
+                  torchColor={torchColor}
+                  torchIntensity={torchIntensity}
+                />
               </PerspectiveDungeonView>
             )}
 
-            <WaveCountdown
-              turnsLeft={gs.waveCountdown}
+            <RoundCountdown
+              turnsLeft={gs.roundCountdown}
               visible={
-                gs.waveCountdown <= WAVE_COUNTDOWN_THRESHOLD &&
+                gs.roundCountdown <= ROUND_COUNTDOWN_THRESHOLD &&
                 gs.adventurers.filter((a: any) => a.alive).length === 0
               }
             />
@@ -959,6 +1116,9 @@ export default function App() {
             hazardData={ds.hazardData}
             disarmedTraps={gs.disarmedTraps}
             chests={gs.chests}
+            furniturePlacements={ds.initialFurniture}
+            goldDrops={gs.xpDrops}
+            itemDrops={gs.ingredientDrops}
           />
         </div>
 
@@ -971,8 +1131,8 @@ export default function App() {
             heatingPerStep,
             setHeatingPerStep,
             satiationDropPerStep,
-            turnsPerWave,
-            setTurnsPerWave,
+            turnsPerRound,
+            setTurnsPerRound,
             setSatiationDropPerStep,
             supersatiationBonus,
             setSupersatiationBonus,
@@ -1029,9 +1189,9 @@ export default function App() {
       <GameOverOverlay
         gameState={gs.gameState}
         gameOverReason={gs.gameOverReason}
-        currentWave={gs.currentWave}
+        currentRound={gs.currentRound}
         turnCount={gs.turnCount}
-        winWaves={WIN_WAVES}
+        winRounds={WIN_ROUNDS}
         onPlayAgain={() => {
           setDungeonSeed((s) => s);
           const freshSatiations = ds.initialMobs.map(() => 40);
@@ -1043,9 +1203,9 @@ export default function App() {
           gs.setActiveStoveKey(null);
           gs.setMessage(null);
           gs.setAdventurers([]);
-          gs.setCurrentWave(0);
+          gs.setCurrentRound(0);
           gs.setTurnCount(0);
-          gs.setWaveCountdown(turnsPerWave);
+          gs.setRoundCountdown(turnsPerRound);
           gs.setPlayerXp(0);
           gs.setXpDrops([]);
           gs.setPlayerHp(PLAYER_MAX_HP);
@@ -1056,9 +1216,9 @@ export default function App() {
           gs.setGameState("playing");
           gs.setGameOverReason(null);
           gs.adventurersRef.current = [];
-          gs.currentWaveRef.current = 0;
+          gs.currentRoundRef.current = 0;
           gs.turnCountRef.current = 0;
-          gs.waveCountdownRef.current = turnsPerWave;
+          gs.roundCountdownRef.current = turnsPerRound;
           gs.playerXpRef.current = 0;
           gs.xpDropsRef.current = [];
           gs.playerHpRef.current = PLAYER_MAX_HP;
