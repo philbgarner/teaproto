@@ -283,7 +283,7 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     defense: 0,
     xp: 40,
     colorRgb: [0.2, 0.3, 1.0],
-    drop: { id: "wild-herbs", name: "Wild Herbs" },
+    drop: { id: "wild-herb", name: "Wild Herbs" },
     geometrySize: [2, 1],
     uvRectBody: { x: 512, y: 96, w: 128, h: 64 },
     uvRectHead: { x: 640, y: 96, w: 128, h: 64 },

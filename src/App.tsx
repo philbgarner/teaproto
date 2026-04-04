@@ -255,7 +255,11 @@ export default function App() {
             gs.setPlayerXp(0);
             gs.setXpDrops([]);
             gs.setPlayerHp(PLAYER_MAX_HP);
-            gs.setIngredients({ hotPeppers: 0, wildHerbs: 0, frostLeaves: 0 });
+            gs.setIngredients({
+              "hot-pepper": 0,
+              "wild-herb": 0,
+              "frost-leaf": 0,
+            });
             gs.setIngredientDrops([...ds.initialIngredientDrops]);
             gs.setChests([...ds.initialChests]);
             gs.chestsRef.current = [...ds.initialChests];
@@ -269,9 +273,9 @@ export default function App() {
             gs.xpDropsRef.current = [];
             gs.playerHpRef.current = PLAYER_MAX_HP;
             gs.ingredientsRef.current = {
-              hotPeppers: 0,
-              wildHerbs: 0,
-              frostLeaves: 0,
+              "hot-pepper": 0,
+              "wild-herb": 0,
+              "frost-leaf": 0,
             };
             gs.ingredientDropsRef.current = [...ds.initialIngredientDrops];
             gs.mobSatiationsRef.current = freshSatiations;

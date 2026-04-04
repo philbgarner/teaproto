@@ -514,9 +514,9 @@ export function useGameState({
 
   // Ingredient inventory
   const [ingredients, setIngredients] = useState<Record<string, number>>({
-    hotPeppers: 1,
-    wildHerbs: 1,
-    frostLeaves: 1,
+    "hot-pepper": 1,
+    "wild-herb": 1,
+    "frost-leaf": 1,
   });
   const [ingredientDrops, setIngredientDrops] = useState<any[]>([]);
 
@@ -535,9 +535,9 @@ export function useGameState({
   const xpDropsRef = useRef<any[]>([]);
   const playerHpRef = useRef(PLAYER_MAX_HP);
   const ingredientsRef = useRef<Record<string, number>>({
-    hotPeppers: 1,
-    wildHerbs: 1,
-    frostLeaves: 1,
+    "hot-pepper": 1,
+    "wild-herb": 1,
+    "frost-leaf": 1,
   });
   const ingredientDropsRef = useRef<any[]>([]);
   // Sync ref kept in step with ECS hand state so onStep can read without a dep
@@ -628,9 +628,9 @@ export function useGameState({
     setAdvAttackDirs([]);
     setDamageNumbers([]);
     setIngredients({
-      hotPeppers: startIngredientAmount,
-      wildHerbs: startIngredientAmount,
-      frostLeaves: startIngredientAmount,
+      "hot-pepper": startIngredientAmount,
+      "wild-herb": startIngredientAmount,
+      "frost-leaf": startIngredientAmount,
     });
     setIngredientDrops([...initialIngredientDrops]);
     setChests([...initialChests]);
@@ -644,7 +644,11 @@ export function useGameState({
     playerXpRef.current = 0;
     xpDropsRef.current = [];
     playerHpRef.current = PLAYER_MAX_HP;
-    ingredientsRef.current = { hotPeppers: 0, wildHerbs: 0, frostLeaves: 0 };
+    ingredientsRef.current = {
+      "hot-pepper": 0,
+      "wild-herb": 0,
+      "frost-leaf": 0,
+    };
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
     mobHpsRef.current = freshHps;

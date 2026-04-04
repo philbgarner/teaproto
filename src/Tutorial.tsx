@@ -189,9 +189,9 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       gs.clearHands();
       // Give the player one ice-tea ingredient — only ice tea is initially available
       const startIngredients: Record<string, number> = {
-        hotPeppers: 0,
-        frostLeaves: 1,
-        wildHerbs: 0,
+        "hot-pepper": 0,
+        "frost-leaf": 1,
+        "wild-herb": 0,
       };
       gs.setIngredients(startIngredients);
       gs.ingredientsRef.current = startIngredients;
@@ -269,9 +269,9 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     );
     // Clear all ingredients so the player can't queue another brew yet
     const empty: Record<string, number> = {
-      hotPeppers: 0,
-      wildHerbs: 0,
-      frostLeaves: 0,
+      "hot-pepper": 0,
+      "wild-herb": 0,
+      "frost-leaf": 0,
     };
     gs.setIngredients(empty);
     gs.ingredientsRef.current = empty;
@@ -331,9 +331,9 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       // Unlock all other teas now that the player has seen a plant
       const unlocked = {
         ...gs.ingredientsRef.current,
-        hotPeppers: 1,
-        wildHerbs: 1,
-        frostLeaves: 1,
+        "hot-pepper": 1,
+        "wild-herb": 1,
+        "frost-leaf": 1,
       };
       gs.setIngredients(unlocked);
       gs.ingredientsRef.current = unlocked;

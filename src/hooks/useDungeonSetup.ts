@@ -486,7 +486,7 @@ export function useDungeonSetup({
     const rng = makeRng(dungeonSeed ^ 0x1337beef);
     const ingTypes = [
       { id: "hot-pepper", name: "Hot Pepper" },
-      { id: "wild-herbs", name: "Wild Herbs" },
+      { id: "wild-herb", name: "Wild Herbs" },
       { id: "frost-leaf", name: "Frost Leaf" },
     ];
     const nonEndRooms = Array.from(dungeon.rooms.entries())

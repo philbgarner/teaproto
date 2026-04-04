@@ -40,7 +40,7 @@ export const RECIPES: Recipe[] = [
     name: "Green Tea",
     timeToBrew: 25,
     idealTemperatureRange: [65, 80],
-    ingredientId: "wild-herbs",
+    ingredientId: "wild-herb",
     ingredientName: "Wild Herbs",
     countersEffect: "freezing",
   },

@@ -14,7 +14,7 @@ import hotkeys from "hotkeys-js";
  *   playerHp: number,
  *   playerMaxHp: number,
  *   playerXp: number,
- *   ingredients: { hotPeppers: 0, wildHerbs: 0, frostLeaves: 0 },
+ *   ingredients: { "hot-pepper": 0, "wild-herb": 0, "frost-leaf": 0 },
  *   openMenuKeys: string[],
  *   onOpenSettings: () => void,
  * }} props
