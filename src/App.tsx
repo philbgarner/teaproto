@@ -20,6 +20,7 @@ import type { TileAtlas } from "../roguelike-mazetools/src/rendering/tileAtlas";
 import { StatusBar } from "./components/StatusBar";
 import { RoundCountdown } from "./components/WaveCountdown";
 import { RecipeMenu } from "./components/RecipeMenu";
+import { SummonMenu } from "./components/SummonMenu";
 import { GameOverOverlay } from "./components/GameOverOverlay";
 import { MinimapSidebar } from "./components/MinimapSidebar";
 import { DifficultyModal } from "./components/DifficultyModal";
@@ -732,7 +733,7 @@ export default function App() {
     ds.spawnZ,
     {
       onStep: gs.onStep,
-      blocked: gs.showRecipeMenu || gs.gameState !== "playing",
+      blocked: gs.showRecipeMenu || gs.showSummonMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
       canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
       blockedPositions: [
@@ -977,7 +978,7 @@ export default function App() {
             />
 
             {/* Interaction prompt */}
-            {promptText && !gs.showRecipeMenu && (
+            {promptText && !gs.showRecipeMenu && !gs.showSummonMenu && (
               <div
                 style={{
                   position: "absolute",
@@ -1038,6 +1039,22 @@ export default function App() {
                   );
                 }}
                 onCancel={() => gs.setShowRecipeMenu(false)}
+              />
+            )}
+
+            {gs.showSummonMenu && (
+              <SummonMenu
+                mobs={(ds.initialMobs as any[]).map((m: any) => ({ name: m.name }))}
+                selectedIndex={gs.summonMenuCursor}
+                onSelectMob={(mobIdx: number) => {
+                  const { x: px, z: pz } = gs.logicalRef.current;
+                  const pgx = Math.floor(px);
+                  const pgz = Math.floor(pz);
+                  gs.summonMob(mobIdx, pgx, pgz);
+                  gs.setShowSummonMenu(false);
+                }}
+                onCancel={() => gs.setShowSummonMenu(false)}
+                keybindings={keybindings}
               />
             )}
 
@@ -1192,6 +1209,7 @@ export default function App() {
             );
           })()}
           openMenuKeys={keybindings.openMenu}
+          summonMonsterKeys={keybindings.summon}
           onOpenSettings={() => gs.setShowSettings(true)}
         />
       </div>

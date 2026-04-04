@@ -42,6 +42,7 @@ export function StatusBar({
   playerXp,
   ingredients,
   openMenuKeys,
+  summonMonsterKeys,
   onOpenSettings,
 }) {
   const [showMenu, setShowMenu] = useState(false);
@@ -89,6 +90,11 @@ export function StatusBar({
         <span className={styles.roomTemp}>
           {(openMenuKeys?.[0] ?? "m").toUpperCase()}: Menu
         </span>
+        {summonMonsterKeys?.[0] && (
+          <span className={styles.roomTemp}>
+            {summonMonsterKeys[0].toUpperCase()}: Summon
+          </span>
+        )}
       </div>
 
       <ModalPanel
@@ -100,7 +106,11 @@ export function StatusBar({
       >
         <div className={menuStyles.menuList}>
           {menuItems.map(({ label, onClick }) => (
-            <button key={label} className={menuStyles.menuItem} onClick={onClick}>
+            <button
+              key={label}
+              className={menuStyles.menuItem}
+              onClick={onClick}
+            >
               {label}
             </button>
           ))}

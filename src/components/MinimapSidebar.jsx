@@ -195,7 +195,7 @@ export function MinimapSidebar({
             <MobEntry
               key={i}
               mob={mob}
-              onSummon={() => summonMob(i)}
+              onSummon={() => summonMob(i, pgx, pgz)}
               summonDisabled={summonDisabled}
             />
           ))}

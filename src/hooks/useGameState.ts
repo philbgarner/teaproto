@@ -345,6 +345,8 @@ export function useGameState({
   const [showRecipeMenu, setShowRecipeMenu] = useState(false);
   const [recipeMenuCursor, setRecipeMenuCursor] = useState(0);
   const [activeStoveKey, setActiveStoveKey] = useState<string | null>(null);
+  const [showSummonMenu, setShowSummonMenu] = useState(false);
+  const [summonMenuCursor, setSummonMenuCursor] = useState(0);
   const { message, displayedText, setMessage, showMsg } = useMessage();
   const ruinedNotifiedRef = useRef(new Set<string>());
 
@@ -559,7 +561,7 @@ export function useGameState({
     mobHpsRef.current = initialMobs.map((m) => m.hp ?? MOB_HP);
   }
   const mobRpsEffectsRef = useRef<string[]>(initialMobs.map(() => "none"));
-  const mobSummonSet = useRef<Set<number>>(new Set());
+  const mobSummonSet = useRef<Map<number, { x: number; z: number }>>(new Map());
 
   // Hidden passages
   const passagesRef = useRef<any[]>([]);
@@ -630,7 +632,7 @@ export function useGameState({
     mobPositionsRef.current = freshPositions;
     ruinedNotifiedRef.current = new Set();
     adventurerSightingsRef.current = new Set();
-    mobSummonSet.current = new Set();
+    mobSummonSet.current = new Map();
     firstTeaDeliveredRef.current = false;
     firstWarmRoomTeaRef.current = false;
 
@@ -1633,9 +1635,10 @@ export function useGameState({
       if (newMobSatiations[i] <= 0) continue; // unconscious
       const pos = newMobPositions[i];
 
-      // Summon: pathfind toward player
+      // Summon: pathfind toward stored target position
       if (mobSummonSet.current.has(i)) {
-        const dist = Math.abs(pos.x - pgx) + Math.abs(pos.z - pgz);
+        const target = mobSummonSet.current.get(i)!;
+        const dist = Math.abs(pos.x - target.x) + Math.abs(pos.z - target.z);
         if (dist <= 1) {
           mobSummonSet.current.delete(i);
         } else {
@@ -1643,7 +1646,7 @@ export function useGameState({
             { width: dungeonWidth, height: dungeonHeight },
             (x: number, y: number) => isWalkable(x, y),
             { x: pos.x, y: pos.z },
-            { x: pgx, y: pgz },
+            { x: target.x, y: target.z },
             { fourDir: true },
           );
           if (summonAstar && summonAstar.path.length > 1) {
@@ -2252,15 +2255,19 @@ export function useGameState({
         setShowRecipeMenu(false);
         return;
       }
+      if (showSummonMenu) {
+        setShowSummonMenu(false);
+        return;
+      }
       doInteract();
     };
     const waitHandler = (e: KeyboardEvent) => {
-      if (showRecipeMenu) return;
+      if (showRecipeMenu || showSummonMenu) return;
       e.preventDefault();
       onStep();
     };
     const discardLeftHandler = (e: KeyboardEvent) => {
-      if (showRecipeMenu) return;
+      if (showRecipeMenu || showSummonMenu) return;
       e.preventDefault();
       if (gameState !== "playing") return;
       if (leftHandTea) {
@@ -2279,7 +2286,7 @@ export function useGameState({
       }
     };
     const discardRightHandler = (e: KeyboardEvent) => {
-      if (showRecipeMenu) return;
+      if (showRecipeMenu || showSummonMenu) return;
       e.preventDefault();
       if (gameState !== "playing") return;
       if (rightHandTea) {
@@ -2394,6 +2401,71 @@ export function useGameState({
       sounds.acceptSelection.play();
     };
 
+    const summonOpenHandler = (e: KeyboardEvent) => {
+      if (showRecipeMenu || showSummonMenu) return;
+      if (gameState !== "playing") return;
+      if (initialMobs.length === 0) return;
+      e.preventDefault();
+      setSummonMenuCursor(0);
+      setShowSummonMenu(true);
+    };
+    const summonCloseHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      setShowSummonMenu(false);
+    };
+    const summonOptionNextHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      sounds.selectionChanged.play();
+      setSummonMenuCursor((c) => (c + 1) % initialMobs.length);
+    };
+    const summonOptionPrevHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      sounds.selectionChanged.play();
+      setSummonMenuCursor((c) => (c - 1 + initialMobs.length) % initialMobs.length);
+    };
+    const summonOptionSelectHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      const { x: px, z: pz } = logicalRef.current;
+      const pgx = Math.floor(px);
+      const pgz = Math.floor(pz);
+      if (solidData[pgz * dungeonWidth + pgx] !== 0) {
+        showMsg("Can't summon here — you're standing on a wall.");
+        return;
+      }
+      if (mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)) {
+        showMsg("Can't summon here — a monster is already here.");
+        return;
+      }
+      mobSummonSet.current.set(summonMenuCursor, { x: pgx, z: pgz });
+      setShowSummonMenu(false);
+      sounds.acceptSelection.play();
+    };
+    const summonSelectHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= initialMobs.length) {
+        const { x: px, z: pz } = logicalRef.current;
+        const pgx = Math.floor(px);
+        const pgz = Math.floor(pz);
+        if (solidData[pgz * dungeonWidth + pgx] !== 0) {
+          showMsg("Can't summon here — you're standing on a wall.");
+          return;
+        }
+        if (mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)) {
+          showMsg("Can't summon here — a monster is already here.");
+          return;
+        }
+        mobSummonSet.current.set(num - 1, { x: pgx, z: pgz });
+        setShowSummonMenu(false);
+        sounds.acceptSelection.play();
+      }
+    };
+
     const interactKeys = keybindings.interact.join(",");
     const waitKeys = keybindings.wait.join(",");
     const discardLeftKeys = keybindings.discardLeft.join(",");
@@ -2401,17 +2473,25 @@ export function useGameState({
     const optionNextKeys = (keybindings.optionNext ?? []).join(",");
     const optionPrevKeys = (keybindings.optionPrev ?? []).join(",");
     const optionSelectKeys = (keybindings.optionSelect ?? []).join(",");
+    const summonKeys = (keybindings.summon ?? []).join(",");
 
     if (interactKeys) hotkeys(interactKeys, interactHandler as any);
     if (waitKeys) hotkeys(waitKeys, waitHandler as any);
     if (discardLeftKeys) hotkeys(discardLeftKeys, discardLeftHandler as any);
     if (discardRightKeys) hotkeys(discardRightKeys, discardRightHandler as any);
     if (optionNextKeys) hotkeys(optionNextKeys, recipeOptionNextHandler as any);
+    if (optionNextKeys) hotkeys(optionNextKeys, summonOptionNextHandler as any);
     if (optionPrevKeys) hotkeys(optionPrevKeys, recipeOptionPrevHandler as any);
+    if (optionPrevKeys) hotkeys(optionPrevKeys, summonOptionPrevHandler as any);
     if (optionSelectKeys)
       hotkeys(optionSelectKeys, recipeOptionSelectHandler as any);
+    if (optionSelectKeys)
+      hotkeys(optionSelectKeys, summonOptionSelectHandler as any);
     hotkeys("escape", recipeCloseHandler as any);
+    hotkeys("escape", summonCloseHandler as any);
     hotkeys("1,2,3,4,5,6,7,8,9", recipeSelectHandler as any);
+    hotkeys("1,2,3,4,5,6,7,8,9", summonSelectHandler as any);
+    if (summonKeys) hotkeys(summonKeys, summonOpenHandler as any);
 
     return () => {
       if (interactKeys) hotkeys.unbind(interactKeys, interactHandler as any);
@@ -2422,15 +2502,25 @@ export function useGameState({
         hotkeys.unbind(discardRightKeys, discardRightHandler as any);
       if (optionNextKeys)
         hotkeys.unbind(optionNextKeys, recipeOptionNextHandler as any);
+      if (optionNextKeys)
+        hotkeys.unbind(optionNextKeys, summonOptionNextHandler as any);
       if (optionPrevKeys)
         hotkeys.unbind(optionPrevKeys, recipeOptionPrevHandler as any);
+      if (optionPrevKeys)
+        hotkeys.unbind(optionPrevKeys, summonOptionPrevHandler as any);
       if (optionSelectKeys)
         hotkeys.unbind(optionSelectKeys, recipeOptionSelectHandler as any);
+      if (optionSelectKeys)
+        hotkeys.unbind(optionSelectKeys, summonOptionSelectHandler as any);
       hotkeys.unbind("escape", recipeCloseHandler as any);
+      hotkeys.unbind("escape", summonCloseHandler as any);
       hotkeys.unbind("1,2,3,4,5,6,7,8,9", recipeSelectHandler as any);
+      hotkeys.unbind("1,2,3,4,5,6,7,8,9", summonSelectHandler as any);
+      if (summonKeys) hotkeys.unbind(summonKeys, summonOpenHandler as any);
     };
   }, [
     showRecipeMenu,
+    showSummonMenu,
     stoveStates,
     leftHandTea,
     rightHandTea,
@@ -2446,6 +2536,7 @@ export function useGameState({
     gameState,
     keybindings,
     recipeMenuCursor,
+    summonMenuCursor,
   ]);
 
   return {
@@ -2478,6 +2569,10 @@ export function useGameState({
     setRecipeMenuCursor,
     activeStoveKey,
     setActiveStoveKey,
+    showSummonMenu,
+    setShowSummonMenu,
+    summonMenuCursor,
+    setSummonMenuCursor,
     message,
     displayedText,
     setMessage,
@@ -2549,8 +2644,8 @@ export function useGameState({
     onBlockedMove,
     spawnAdventurersForRound,
     getFacingTarget,
-    summonMob: (mobIdx: number) => {
-      mobSummonSet.current.add(mobIdx);
+    summonMob: (mobIdx: number, targetX: number, targetZ: number) => {
+      mobSummonSet.current.set(mobIdx, { x: targetX, z: targetZ });
     },
     // refs for cross-hook wiring
     logicalRef,
