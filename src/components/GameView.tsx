@@ -763,7 +763,7 @@ export function GameView({
     gs.mobSatiations,
     keybindings,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
-
+  console.log("recipes", RECIPES, "ingredients", gs.ingredients);
   return (
     <>
       <div
