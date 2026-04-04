@@ -72,6 +72,12 @@ export default function SettingsTabs({
   onPickerBlur,
   keybindings,
   setKeybindings,
+  showActionLog,
+  setShowActionLog,
+  musicVolume,
+  setMusicVolume,
+  sfxVolume,
+  setSfxVolume,
 }) {
   const [activeTab, setActiveTab] = useState("difficulty");
   const [seedInput, setSeedInput] = useState(String(dungeonSeed));
@@ -104,6 +110,7 @@ export default function SettingsTabs({
         {tab("world", "world")}
         {tab("lighting", "lighting")}
         {tab("keys", "keys")}
+        {tab("ui/sound", "ui/sound")}
       </div>
 
       <div className={styles.content}>
@@ -357,6 +364,49 @@ export default function SettingsTabs({
                 onBlur={() => onPickerBlur?.()}
                 className={styles.colorPicker}
               />
+            </div>
+          </>
+        )}
+
+        {activeTab === "ui/sound" && (
+          <>
+            <SliderRow
+              label="Music volume"
+              value={musicVolume}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={(v) => {
+                setMusicVolume(v);
+                try { localStorage.setItem("musicVolume", String(v)); } catch { /* */ }
+              }}
+              format={(v) => `${Math.round(v * 100)}%`}
+            />
+            <SliderRow
+              label="SFX volume"
+              value={sfxVolume}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={(v) => {
+                setSfxVolume(v);
+                try { localStorage.setItem("sfxVolume", String(v)); } catch { /* */ }
+              }}
+              format={(v) => `${Math.round(v * 100)}%`}
+            />
+            <div className={styles.sliderRow}>
+              <label className={styles.sliderLabel} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={!!showActionLog}
+                  onChange={(e) => {
+                    setShowActionLog(e.target.checked);
+                    try { localStorage.setItem("showActionLog", String(e.target.checked)); } catch { /* */ }
+                  }}
+                  style={{ accentColor: "#f8a81a", width: 14, height: 14, cursor: "pointer" }}
+                />
+                Show action log
+              </label>
             </div>
           </>
         )}

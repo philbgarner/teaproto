@@ -18,6 +18,7 @@ import { RoundCountdown } from "./WaveCountdown";
 import { RecipeMenu } from "./RecipeMenu";
 import { SummonMenu } from "./SummonMenu";
 import { MinimapSidebar } from "./MinimapSidebar";
+import { ActionLog } from "./ActionLog";
 import { RECIPES } from "../tea";
 import atlasJson from "../assets/atlas.json";
 import {
@@ -1106,6 +1107,9 @@ export function GameView({
                 keybindings={keybindings}
               />
             )}
+
+            {/* Action log */}
+            <ActionLog messages={gs.messageLog} />
 
             {/* Message box */}
             {gs.message && (

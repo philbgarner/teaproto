@@ -83,6 +83,12 @@ interface SettingsContextValue {
   setTorchIntensity: Dispatch<SetStateAction<number>>;
   keybindings: Keybindings;
   setKeybindings: (next: Keybindings) => void;
+  showActionLog: boolean;
+  setShowActionLog: Dispatch<SetStateAction<boolean>>;
+  musicVolume: number;
+  setMusicVolume: Dispatch<SetStateAction<number>>;
+  sfxVolume: number;
+  setSfxVolume: Dispatch<SetStateAction<number>>;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -153,6 +159,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   });
   const [keybindings, setKeybindings] = useKeybindings();
+  const [showActionLog, setShowActionLog] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem("showActionLog");
+      return stored !== null ? stored === "true" : true;
+    } catch {
+      return true;
+    }
+  });
+  const [musicVolume, setMusicVolume] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem("musicVolume");
+      return stored !== null ? parseFloat(stored) : 1.0;
+    } catch {
+      return 1.0;
+    }
+  });
+  const [sfxVolume, setSfxVolume] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem("sfxVolume");
+      return stored !== null ? parseFloat(stored) : 1.0;
+    } catch {
+      return 1.0;
+    }
+  });
 
   return (
     <SettingsContext.Provider
@@ -209,6 +239,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setTorchIntensity,
         keybindings,
         setKeybindings,
+        showActionLog,
+        setShowActionLog,
+        musicVolume,
+        setMusicVolume,
+        sfxVolume,
+        setSfxVolume,
       }}
     >
       {children}

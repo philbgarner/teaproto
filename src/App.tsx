@@ -60,6 +60,12 @@ export default function App() {
     setTrapDensity,
     keybindings,
     setKeybindings,
+    showActionLog,
+    setShowActionLog,
+    musicVolume,
+    setMusicVolume,
+    sfxVolume,
+    setSfxVolume,
   } = useSettings();
 
   const ds = useDungeonSetup({
@@ -234,6 +240,12 @@ export default function App() {
             setTorchIntensity,
             keybindings,
             setKeybindings,
+            showActionLog,
+            setShowActionLog,
+            musicVolume,
+            setMusicVolume,
+            sfxVolume,
+            setSfxVolume,
           }}
         />
       }
