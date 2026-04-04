@@ -15,10 +15,15 @@ const RPS_LABELS = {
   bleeding: "Bleeding",
 };
 
+const IMG_MAPPING = {
+  "Green Tea": "tea-green.png",
+  "Iced Tea": "tea-iced.png",
+  "Spicy Tea": "tea-spicy.png",
+};
+
 function HandSlot({ items, registry, side }) {
   const item = items[0];
   const name = item ? registry.getSlotObjectName(item) : null;
-  const count = item ? registry.getSlotQuantity(item) : 0;
   const isEmpty = !name;
 
   return (
@@ -29,8 +34,10 @@ function HandSlot({ items, registry, side }) {
     >
       {!isEmpty ? (
         <>
-          <span className={ghostStyles.itemName}>{name}</span>
-          {count > 1 && <span className={ghostStyles.itemCount}>×{count}</span>}
+          <span className={ghostStyles.itemName}>
+            <img src={`textures/${IMG_MAPPING[name]}`} />
+            <span>{name}</span>
+          </span>
         </>
       ) : (
         <span style={{ fontSize: "0.65rem", color: "#5a5450" }}>{side}</span>
