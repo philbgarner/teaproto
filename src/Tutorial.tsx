@@ -4,10 +4,8 @@ import { useDungeonTutorialSetup } from "./hooks/useDungeonTutorialSetup";
 import { useGameState } from "./hooks/useGameState";
 import { useEotBCamera } from "./hooks/useEotBCamera";
 import { GameView } from "./components/GameView";
-import { RECIPES } from "./tea";
-import { LESSON_CONFIGS } from "./tutorial/lessons";
+import { LESSON_CONFIGS, ICE_TEA_INGREDIENT_ID } from "./tutorial/lessons";
 import { buildPassageMask } from "../roguelike-mazetools/src/rendering/hiddenPassagesMask";
-import { useSoundHelper } from "./hooks/useSoundHelper";
 import "./App.css";
 
 // Tutorial uses Easy-like settings, rounds effectively disabled
@@ -33,6 +31,7 @@ interface LessonViewProps {
   torchIntensity: number;
   keybindings: any;
   onCameraStep: (x: number, z: number) => void;
+  onBlockedMove?: (dx: number, dz: number) => void;
 }
 
 function LessonView({
@@ -43,6 +42,7 @@ function LessonView({
   torchIntensity,
   keybindings,
   onCameraStep,
+  onBlockedMove,
 }: LessonViewProps) {
   const config = LESSON_CONFIGS[lessonIndex];
 
@@ -59,7 +59,7 @@ function LessonView({
     {
       onStep: gs.onStep,
       blocked: gs.showRecipeMenu || gs.gameState !== "playing",
-      onBlockedMove: gs.onBlockedMove,
+      onBlockedMove: onBlockedMove ?? gs.onBlockedMove,
       canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
       keybindings,
       startYaw: ds.spawnYaw,
@@ -122,7 +122,6 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     setAdventurerDreadRate,
     setAdventurerLootPerChest,
   } = useSettings();
-  const { sounds } = useSoundHelper();
   const [lessonIndex, setLessonIndex] = useState(0);
   const lessonDoneRef = useRef(false);
 
@@ -138,13 +137,15 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     temperatureData: ds.temperatureData,
     initialMobs: ds.initialMobs,
     adventurerSpawnRooms: [],
-    initialIngredientDrops: [],
+    initialIngredientDrops: ds.initialIngredientDrops,
     initialChests: [],
+    initialDisarmedTraps: ds.initialDisarmedTraps,
+    initialOpenDoors: ds.initialOpenDoors,
     spawnX: ds.spawnX,
     spawnZ: ds.spawnZ,
     spawnYaw: ds.spawnYaw,
     stovePlacements: ds.stovePlacements,
-    doorPlacements: [],
+    doorPlacements: ds.doorPlacements,
     hazardData: ds.hazardData,
     dungeonSeed: 0x1337 + lessonIndex,
     dungeonWidth: config.dungeonW,
@@ -163,7 +164,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       gs.exploredMaskRef.current.fill(0);
     }
 
-    // Lesson 1: replace auto-generated passages with our specific one
+    // Set up hidden passage for lesson 0 (foyer → big room)
     if (lessonIndex === 0 && config.passage) {
       gs.passagesRef.current = [config.passage];
       gs.setPassageMask(
@@ -173,49 +174,45 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       );
     }
 
-    // Lesson 2: player starts empty-handed so they must brew
+    // Lesson 1: set up passage, mob state, and starting ingredients
     if (lessonIndex === 1) {
+      if (config.passage) {
+        gs.passagesRef.current = [config.passage];
+        gs.setPassageMask(
+          buildPassageMask(config.dungeonW, config.dungeonH, {
+            passages: [config.passage],
+          }),
+        );
+      }
       gs.clearHands();
-    }
-
-    // Lesson 3: Green Tea at ideal temp, mob starts unconscious
-    if (lessonIndex === 2) {
-      gs.clearHands();
-      gs.addTeaToHand("left", RECIPES[0], 68); // within ideal range [60, 75]
+      // Give the player one ice-tea ingredient — only ice tea is initially available
+      const startIngredients: Record<string, number> = {
+        rations: 0,
+        herbs: 0,
+        dust: 0,
+        [ICE_TEA_INGREDIENT_ID]: 1,
+      };
+      gs.setIngredients(startIngredients);
+      gs.ingredientsRef.current = startIngredients;
+      // Monster starts unconscious (satiation -1 = gasping/red)
       gs.setMobSatiations([-1]);
       gs.mobSatiationsRef.current = [-1];
     }
 
-    // Override the default game-init message with lesson flavour text
     gs.setMessage(null);
     const id = setTimeout(() => gs.showMsg(config.startMessage), 200);
     return () => clearTimeout(id);
   }, [lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Lesson 2: flavour message on first stove interaction ─────────────────
+  // ── Camera position ───────────────────────────────────────────────────────
 
-  const shownTeaomaticMsgRef = useRef(false);
-  useEffect(() => {
-    if (lessonIndex !== 1) {
-      shownTeaomaticMsgRef.current = false;
-      return;
-    }
-    if (gs.showRecipeMenu && !shownTeaomaticMsgRef.current) {
-      shownTeaomaticMsgRef.current = true;
-      gs.showMsg(
-        "Most peculiar... a Teaomatic in the afterlife. I suppose one brews what one must.",
-      );
-    }
-  }, [gs.showRecipeMenu, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Lesson completion detection ───────────────────────────────────────────
-
-  // Lesson 1: player reaches Room B — camera position reported via callback
   const [cameraPos, setCameraPos] = useState({ x: 0, z: 0 });
   const onCameraStep = useCallback(
     (x: number, z: number) => setCameraPos({ x, z }),
     [],
   );
+
+  // ── Lesson 0: advance when player enters Room B ──────────────────────────
 
   useEffect(() => {
     if (lessonIndex !== 0 || lessonDoneRef.current) return;
@@ -230,44 +227,175 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       pz < room2.y + room2.h
     ) {
       lessonDoneRef.current = true;
-      gs.showMsg("You made it through! The dungeon calls you deeper...");
+      gs.showMsg("Something draws you deeper into the dungeon...");
       setTimeout(() => setLessonIndex(1), 2500);
     }
   }, [cameraPos, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Lesson 2: player picks up tea from the Teaomatic
-  useEffect(() => {
-    if (lessonIndex !== 1 || lessonDoneRef.current) return;
-    const hands = gs.playerHandsRef.current;
-    if (hands.left || hands.right) {
-      lessonDoneRef.current = true;
-      gs.showMsg("You almost feel like a person again.");
-      setTimeout(() => setLessonIndex(2), 3000);
-    }
-  }, [gs.leftHandTea, gs.rightHandTea]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ── Lesson 1 sub-triggers ─────────────────────────────────────────────────
 
-  // Lesson 3: unconscious traveller has been revived
+  const firedTriggersRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    if (lessonIndex !== 2 || lessonDoneRef.current) return;
+    if (lessonIndex === 1) firedTriggersRef.current = new Set();
+  }, [lessonIndex]);
+
+  // T3: Recipe menu opened for the first time → show hint text
+  useEffect(() => {
+    if (lessonIndex !== 1 || firedTriggersRef.current.has("T3")) return;
+    if (gs.showRecipeMenu) {
+      firedTriggersRef.current.add("T3");
+    }
+  }, [gs.showRecipeMenu, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // T3b: A brew has been started — show timing hint and clear spare ingredients
+  useEffect(() => {
+    if (lessonIndex !== 1 || firedTriggersRef.current.has("T3b")) return;
+    let hasActiveBrew = false;
+    for (const [, state] of gs.stoveStates) {
+      if (state?.brewing && !state.brewing.ready) {
+        hasActiveBrew = true;
+        break;
+      }
+    }
+    if (!hasActiveBrew) return;
+    firedTriggersRef.current.add("T3b");
+    gs.showMsg(
+      "This brew will take time — 18 steps.\n" +
+        "Time only passes in the dungeon when you move from your current position.\n" +
+        "Press \".\" to force time to advance if you prefer.\n" +
+        "Come back later to collect your freshly brewed tea.",
+    );
+    // Clear all ingredients so the player can't queue another brew yet
+    const empty: Record<string, number> = {
+      rations: 0,
+      herbs: 0,
+      dust: 0,
+      [ICE_TEA_INGREDIENT_ID]: 0,
+    };
+    gs.setIngredients(empty);
+    gs.ingredientsRef.current = empty;
+  }, [gs.stoveStates, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // T7: Monster revived — drop gold, explain the endgame condition
+  useEffect(() => {
+    if (lessonIndex !== 1 || firedTriggersRef.current.has("T7")) return;
     if (gs.mobSatiations[0] > 0) {
-      lessonDoneRef.current = true;
+      firedTriggersRef.current.add("T7");
       gs.showMsg(
-        "They stir... eyes open. 'Thank you, dear ghost. Lead on.' — Tutorial complete!",
+        "Here, an adventurer dropped this gold. They make such a mess leaving it lying around.\n" +
+          "It's no use to me — whoever heard of monsters carrying gold?\n" +
+          "But if you found enough of it, you could persuade a dragon to move in —\n" +
+          "that would stop those adventurers once and for all.",
       );
-      setTimeout(() => {
-        // Apply Easy difficulty settings before handing off to the real game
-        setTempDropPerStep(0.5);
-        setHeatingPerStep(6.0);
-        setSatiationDropPerStep(0.1);
-        setSupersatiationBonus(50);
-        setTurnsPerRound(120);
-        setTraversalFactor(2.0);
-        setAdventurerDreadRate(0.5);
-        setAdventurerLootPerChest(20);
-        onComplete();
-      }, 4000);
+      // Spawn a gold pile next to the revived monster
+      const goldDrop = { id: "tut_gold_0", x: 6, z: 8, amount: 100 };
+      gs.setXpDrops((prev: any[]) => [...prev, goldDrop]);
+      gs.xpDropsRef.current = [...gs.xpDropsRef.current, goldDrop];
     }
   }, [gs.mobSatiations, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Position-based triggers: T4 monster, T5 plant, T6 trap/door, T8 antechamber
+  useEffect(() => {
+    if (lessonIndex !== 1) return;
+    const px = Math.floor(cameraPos.x);
+    const pz = Math.floor(cameraPos.z);
+
+    // T4: Near the unconscious monster at (5, 8)
+    if (
+      !firedTriggersRef.current.has("T4") &&
+      Math.abs(px - 5) <= 1 &&
+      Math.abs(pz - 8) <= 1
+    ) {
+      firedTriggersRef.current.add("T4");
+      gs.showMsg(
+        "This monster is unconscious! Each adventurer type deals a different form of elemental damage.\n" +
+          "This monster is suffering from red damage, which can only be healed by blue (ice) tea.\n" +
+          "Red tea heals green damage, and green tea heals blue damage.\n" +
+          "When your tea has brewed, interact with the monster to revive them.\n" +
+          "If all the monsters fall unconscious, adventurers will destroy the Teaomatic!",
+      );
+    }
+
+    // T5: Near the harvestable plant at (8, 8)
+    if (
+      !firedTriggersRef.current.has("T5") &&
+      Math.abs(px - 8) <= 1 &&
+      Math.abs(pz - 8) <= 1
+    ) {
+      firedTriggersRef.current.add("T5");
+      gs.showMsg(
+        "Some small plants grow in the dungeon — they're quite cute.\n" +
+          "I can harvest this and use it in the Teaomatic to brew different types of tea.",
+      );
+      // Unlock all other teas now that the player has seen a plant
+      const unlocked = {
+        ...gs.ingredientsRef.current,
+        rations: 1,
+        herbs: 1,
+        dust: 1,
+      };
+      gs.setIngredients(unlocked);
+      gs.ingredientsRef.current = unlocked;
+    }
+
+    // T6: Near the sprung trap and open door at (10–11, 8)
+    if (
+      !firedTriggersRef.current.has("T6") &&
+      Math.abs(px - 10) <= 1 &&
+      Math.abs(pz - 8) <= 1
+    ) {
+      firedTriggersRef.current.add("T6");
+      gs.showMsg(
+        "Some careless adventurer has triggered this trap and left the door open.\n" +
+          "It won't harm us, but we should reset it with \"space\" so another adventurer can enjoy it.",
+      );
+    }
+
+    // T8: Player reaches the antechamber (x ≥ 12, one tile past the door)
+    if (!firedTriggersRef.current.has("T8") && px >= 12) {
+      firedTriggersRef.current.add("T8");
+      gs.showMsg(
+        "Wait, there's a button here. It must be a secret passage leading to another part of the dungeon.\n" +
+          "Walking through walls is great, but I can't do that while holding tea —\n" +
+          "if I interact with this passage I can move around the dungeon quicker.",
+      );
+      if (!lessonDoneRef.current) {
+        lessonDoneRef.current = true;
+        setTimeout(() => {
+          setTempDropPerStep(0.5);
+          setHeatingPerStep(6.0);
+          setSatiationDropPerStep(0.1);
+          setSupersatiationBonus(50);
+          setTurnsPerRound(120);
+          setTraversalFactor(2.0);
+          setAdventurerDreadRate(0.5);
+          setAdventurerLootPerChest(20);
+          onComplete();
+        }, 5000);
+      }
+    }
+  }, [cameraPos, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── T9: Wall-phase blocked while holding tea ──────────────────────────────
+
+  const onBlockedMove = useCallback(
+    (dx: number, dz: number) => {
+      gs.onBlockedMove(dx, dz);
+      if (
+        lessonIndex === 1 &&
+        (gs.leftHandTea || gs.rightHandTea) &&
+        !firedTriggersRef.current.has("T9")
+      ) {
+        firedTriggersRef.current.add("T9");
+        gs.showMsg(
+          "Walking through walls is great, but I can't do that while holding tea.",
+        );
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lessonIndex, gs.leftHandTea, gs.rightHandTea, gs.onBlockedMove],
+  );
 
   return (
     <LessonView
@@ -279,6 +407,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       torchIntensity={torchIntensity}
       keybindings={keybindings}
       onCameraStep={onCameraStep}
+      onBlockedMove={onBlockedMove}
     />
   );
 }

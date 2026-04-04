@@ -59,7 +59,7 @@ function buildSpikeMatrix(
 ): THREE.Matrix4 {
   _spikeQ.setFromEuler(new THREE.Euler(0, ry, 0, "YXZ"));
   const m = new THREE.Matrix4();
-  m.compose(_spikeV.set(px, py, pz), _spikeQ, _spikeS.set(scaleX, scaleY, 1));
+  m.compose(_spikeV.set(px, py, pz), _spikeQ, _spikeS.set(scaleX, -scaleY, 1));
   return m;
 }
 

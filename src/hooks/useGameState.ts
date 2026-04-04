@@ -73,6 +73,8 @@ export interface UseGameStateParams {
   adventurerSpawnRooms: { x: number; z: number; dist: number }[];
   initialIngredientDrops: any[];
   initialChests: any[];
+  initialDisarmedTraps?: string[];
+  initialOpenDoors?: string[];
   spawnX: number;
   spawnZ: number;
   spawnYaw: number;
@@ -107,6 +109,8 @@ export function useGameState({
   adventurerSpawnRooms,
   initialIngredientDrops,
   initialChests,
+  initialDisarmedTraps = [],
+  initialOpenDoors = [],
   spawnX,
   spawnZ,
   spawnYaw,
@@ -465,7 +469,8 @@ export function useGameState({
   const [doorStates, setDoorStates] = useState<Map<string, DoorState>>(() => {
     const m = new Map<string, DoorState>();
     for (const d of doorPlacements) {
-      m.set(`${d.x}_${d.z}`, "closed");
+      const key = `${d.x}_${d.z}`;
+      m.set(key, initialOpenDoors.includes(key) ? "open" : "closed");
     }
     return m;
   });
@@ -499,9 +504,9 @@ export function useGameState({
   >([]);
   const [damageNumbers, setDamageNumbers] = useState<DamageNumberData[]>([]);
   const [disarmedTraps, setDisarmedTraps] = useState<Set<string>>(
-    () => new Set(),
+    () => new Set(initialDisarmedTraps),
   );
-  const disarmedTrapsRef = useRef<Set<string>>(new Set());
+  const disarmedTrapsRef = useRef<Set<string>>(new Set(initialDisarmedTraps));
 
   // Ingredient inventory  { rations: 0, herbs: 0, dust: 0 }
   const [ingredients, setIngredients] = useState<Record<string, number>>({
@@ -548,7 +553,6 @@ export function useGameState({
   // Explored mask — Uint8Array(W*H), 1 = cell has been seen by the player
   const exploredMaskRef = useRef<Uint8Array | null>(null);
   const firstTeaDeliveredRef = useRef(false);
-  const firstWarmRoomTeaRef = useRef(false);
 
   // Track which adventurers have already reacted to spotting the ghost (player)
   const adventurerSightingsRef = useRef(new Set<string>());
@@ -643,7 +647,6 @@ export function useGameState({
     adventurerSightingsRef.current = new Set();
     mobSummonSet.current = new Map();
     firstTeaDeliveredRef.current = false;
-    firstWarmRoomTeaRef.current = false;
 
     // Pre-explore exactly: kitchen (startRoomId) + one monster room + connecting corridor
     exploredMaskRef.current = buildInitialExploredMask(
@@ -853,7 +856,10 @@ export function useGameState({
           );
           setMobSatiations((prev) => {
             const next = [...prev];
-            next[ds.mobIdx!] = Math.min(150, next[ds.mobIdx!] + danceSatiationBoost);
+            next[ds.mobIdx!] = Math.min(
+              150,
+              next[ds.mobIdx!] + danceSatiationBoost,
+            );
             return next;
           });
         } else if (ds.advId !== null) {
@@ -882,38 +888,27 @@ export function useGameState({
       );
       const inWarmRoom = playerRoomTemp > 127;
 
-      const hands = playerHandsRef.current;
-      const carryingTea = hands.left || hands.right;
-      if (inWarmRoom && carryingTea && !firstWarmRoomTeaRef.current) {
-        firstWarmRoomTeaRef.current = true;
-        showMsg(
-          "The warmth of this room keeps your tea from cooling too much — it won't drop below mid-range here!",
-        );
+      let handsChanged = false;
+      for (const handInventory of [leftHandInventory, rightHandInventory]) {
+        const inv = registry.components.inventory.get(handInventory);
+        if (!inv?.slots[0]) continue;
+        const slot = registry.components.inventorySlot.get(inv.slots[0]);
+        if (!slot?.object) continue;
+        const entity = slot.object;
+        const tempComp = registry.components.temperature.get(entity);
+        const teaComp = registry.components.tea.get(entity);
+        if (!tempComp || !teaComp) continue;
+        const rawTemp = tempComp.currentTemperature - tempDropPerStep;
+        const newTemp = inWarmRoom
+          ? Math.max(
+              rawTemp,
+              (tempComp.minTemperature + tempComp.maxTemperature) / 2,
+            )
+          : rawTemp;
+        tempComp.currentTemperature = newTemp;
+        handsChanged = true;
       }
-
-      {
-        let handsChanged = false;
-        for (const handInventory of [leftHandInventory, rightHandInventory]) {
-          const inv = registry.components.inventory.get(handInventory);
-          if (!inv?.slots[0]) continue;
-          const slot = registry.components.inventorySlot.get(inv.slots[0]);
-          if (!slot?.object) continue;
-          const entity = slot.object;
-          const tempComp = registry.components.temperature.get(entity);
-          const teaComp = registry.components.tea.get(entity);
-          if (!tempComp || !teaComp) continue;
-          const rawTemp = tempComp.currentTemperature - tempDropPerStep;
-          const newTemp = inWarmRoom
-            ? Math.max(
-                rawTemp,
-                (tempComp.minTemperature + tempComp.maxTemperature) / 2,
-              )
-            : rawTemp;
-          tempComp.currentTemperature = newTemp;
-          handsChanged = true;
-        }
-        if (handsChanged) setHandsVersion((v) => v + 1);
-      }
+      if (handsChanged) setHandsVersion((v) => v + 1);
     }
 
     // --- Stove brewing countdown ---
@@ -2034,7 +2029,8 @@ export function useGameState({
 
     // Check for co-located mob
     const mobIdx = mobPositionsRef.current.findIndex(
-      (p, i) => p.x === px && p.z === pz && (mobSatiationsRef.current?.[i] ?? 0) > 0,
+      (p, i) =>
+        p.x === px && p.z === pz && (mobSatiationsRef.current?.[i] ?? 0) > 0,
     );
     if (mobIdx !== -1) {
       const ds = danceStateRef.current;
@@ -2500,7 +2496,9 @@ export function useGameState({
       if (!showSummonMenu) return;
       e.preventDefault();
       sounds.selectionChanged.play();
-      setSummonMenuCursor((c) => (c - 1 + initialMobs.length) % initialMobs.length);
+      setSummonMenuCursor(
+        (c) => (c - 1 + initialMobs.length) % initialMobs.length,
+      );
     };
     const summonOptionSelectHandler = (e: KeyboardEvent) => {
       if (!showSummonMenu) return;
@@ -2512,7 +2510,9 @@ export function useGameState({
         showMsg("Can't summon here — you're standing on a wall.");
         return;
       }
-      if (mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)) {
+      if (
+        mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)
+      ) {
         showMsg("Can't summon here — a monster is already here.");
         return;
       }
@@ -2533,7 +2533,9 @@ export function useGameState({
           showMsg("Can't summon here — you're standing on a wall.");
           return;
         }
-        if (mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)) {
+        if (
+          mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)
+        ) {
           showMsg("Can't summon here — a monster is already here.");
           return;
         }
