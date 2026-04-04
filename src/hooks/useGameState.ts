@@ -723,6 +723,7 @@ export function useGameState({
             CHAR_SHEET_H,
           ),
           unconscious: mobHps[i] <= 0,
+          satiation: mobSatiations[i],
           outlineColor:
             RPS_OUTLINE_COLOR[mobRpsEffects[i]] ??
             ([0, 0, 0, 0] as [number, number, number, number]),

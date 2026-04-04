@@ -41,6 +41,8 @@ export interface MobilePlacement {
   uvRectHead?: [number, number, number, number];
   /** When true, the head bobbing animation is suppressed. */
   unconscious?: boolean;
+  /** Current satiation value; used to determine face state (angry when ≤ 0). */
+  satiation?: number;
   /**
    * Billboard geometry size in map cells [width, height].
    * A map cell is 3×3 world units. Defaults to [1, 1].

@@ -646,7 +646,17 @@ function SceneMobiles({
     geo.setAttribute("aIsDamaged", isDamagedAttr);
     isDamagedRef.current = isDamagedAttr;
 
-    const headOffsetArr = new Float32Array(count).fill(64);
+    const headOffsetArr = new Float32Array(count);
+    placements.forEach((p, i) => {
+      if (p.type !== "adventurer") {
+        const geomW = p.geometrySize?.[0] ?? 1;
+        if (p.unconscious) {
+          headOffsetArr[i] = 128.0 * geomW;
+        } else if (p.satiation !== undefined && p.satiation <= 0) {
+          headOffsetArr[i] = 64.0 * geomW;
+        }
+      }
+    });
     const headOffsetAttr = new THREE.InstancedBufferAttribute(headOffsetArr, 1);
     geo.setAttribute("aHeadOffset", headOffsetAttr);
     headOffsetRef.current = headOffsetAttr;
@@ -735,7 +745,7 @@ function SceneMobiles({
           const geomW = p.geometrySize?.[0] ?? 1;
           if (p.unconscious) {
             offset = 128.0 * geomW;
-          } else if (attackDirs?.[i]) {
+          } else if (p.satiation !== undefined && p.satiation <= 0) {
             offset = 64.0 * geomW;
           }
         }
