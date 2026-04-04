@@ -92,6 +92,7 @@ export interface UseGameStateParams {
   adventurerDreadRate: number;
   adventurerLootPerChest: number;
   winRounds: number;
+  danceSatiationBoost: number;
   keybindings: any;
 }
 
@@ -124,6 +125,7 @@ export function useGameState({
   adventurerDreadRate,
   adventurerLootPerChest,
   winRounds,
+  danceSatiationBoost,
   keybindings,
 }: UseGameStateParams) {
   // Tile atlas + texture
@@ -563,6 +565,13 @@ export function useGameState({
   const mobRpsEffectsRef = useRef<string[]>(initialMobs.map(() => "none"));
   const mobSummonSet = useRef<Map<number, { x: number; z: number }>>(new Map());
 
+  // Dance tracking: counts consecutive q/e turns while sharing a cell with a mob/adventurer
+  const danceStateRef = useRef<{
+    mobIdx: number | null;
+    advId: string | null;
+    count: number;
+  }>({ mobIdx: null, advId: null, count: 0 });
+
   // Hidden passages
   const passagesRef = useRef<any[]>([]);
   const [passageMask, setPassageMask] = useState<Uint8Array | null>(null);
@@ -830,6 +839,34 @@ export function useGameState({
   // On each player step: cool tea, count down brewing, run game loop
   const onStep = useCallback(() => {
     if (gameState !== "playing") return;
+
+    // --- Dance resolution: player moves away after 3+ turns with a co-located entity ---
+    {
+      const ds = danceStateRef.current;
+      if (ds.count >= 3) {
+        if (ds.mobIdx !== null) {
+          const mobEntityId = `mob_${ds.mobIdx}`;
+          showSpeechBubble(
+            mobEntityId,
+            "Thank you for the dance, dear ghost!",
+            6000,
+          );
+          setMobSatiations((prev) => {
+            const next = [...prev];
+            next[ds.mobIdx!] = Math.min(150, next[ds.mobIdx!] + danceSatiationBoost);
+            return next;
+          });
+        } else if (ds.advId !== null) {
+          showSpeechBubble(
+            ds.advId,
+            "Most peculiar... dancing with a phantom!",
+            6000,
+          );
+        }
+      }
+      danceStateRef.current = { mobIdx: null, advId: null, count: 0 };
+    }
+
     // --- Tea cooling ---
     // Check if player is in a warm or cozy room (roomTemp > 127)
     {
@@ -1986,7 +2023,46 @@ export function useGameState({
     spawnAdventurersForRound,
     stovePlacements,
     doorPlacements,
+    danceSatiationBoost,
   ]);
+
+  const onTurn = useCallback(() => {
+    if (gameState !== "playing") return;
+    const { x, z } = logicalRef.current;
+    const px = Math.floor(x);
+    const pz = Math.floor(z);
+
+    // Check for co-located mob
+    const mobIdx = mobPositionsRef.current.findIndex(
+      (p, i) => p.x === px && p.z === pz && (mobSatiationsRef.current?.[i] ?? 0) > 0,
+    );
+    if (mobIdx !== -1) {
+      const ds = danceStateRef.current;
+      if (ds.mobIdx === mobIdx) {
+        danceStateRef.current = { ...ds, count: ds.count + 1 };
+      } else {
+        danceStateRef.current = { mobIdx, advId: null, count: 1 };
+      }
+      return;
+    }
+
+    // Check for co-located adventurer
+    const adv = adventurersRef.current.find(
+      (a) => a.alive && a.x === px && a.z === pz,
+    );
+    if (adv) {
+      const ds = danceStateRef.current;
+      if (ds.advId === adv.id) {
+        danceStateRef.current = { ...ds, count: ds.count + 1 };
+      } else {
+        danceStateRef.current = { mobIdx: null, advId: adv.id, count: 1 };
+      }
+      return;
+    }
+
+    // Not co-located with anyone — reset
+    danceStateRef.current = { mobIdx: null, advId: null, count: 0 };
+  }, [gameState, mobPositionsRef, adventurersRef, mobSatiationsRef]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onBlockedMove = useCallback((dx: number, dz: number) => {
     const passages = passagesRef.current;
@@ -2641,6 +2717,7 @@ export function useGameState({
     traversalStartRef,
     // callbacks
     onStep,
+    onTurn,
     onBlockedMove,
     spawnAdventurersForRound,
     getFacingTarget,

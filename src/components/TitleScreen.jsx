@@ -867,7 +867,24 @@ export function TitleScreen({ onNewGame, onTutorial }) {
               </button>
             </div>
             <div className={styles.settingsPanelBody}>
-              <SettingsTabs {...settings} />
+              <SettingsTabs
+                {...settings}
+                onResetToDefaults={() => {
+                  try { localStorage.clear(); } catch { /* */ }
+                  settings.setTempDropPerStep(0.5);
+                  settings.setHeatingPerStep(2.0);
+                  settings.setSatiationDropPerStep(0.5);
+                  settings.setSupersatiationBonus(50);
+                  settings.setTurnsPerRound(120);
+                  settings.setTraversalFactor(2.0);
+                  settings.setAdventurerDreadRate(1.0);
+                  settings.setAdventurerLootPerChest(10);
+                  settings.setWinRounds(10);
+                  settings.setDanceSatiationBoost(5);
+                  settings.setTrapDensity(1.0);
+                  settings.setMaxDoors(3);
+                }}
+              />
             </div>
           </div>
         </div>

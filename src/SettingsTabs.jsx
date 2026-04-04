@@ -38,6 +38,9 @@ export default function SettingsTabs({
   setAdventurerLootPerChest,
   winRounds,
   setWinRounds,
+  danceSatiationBoost,
+  setDanceSatiationBoost,
+  onResetToDefaults,
   dungeonSeed,
   setDungeonSeed,
   dungeonWidth,
@@ -187,6 +190,24 @@ export default function SettingsTabs({
               step={1}
               onChange={(v) => setWinRounds(Math.round(v))}
             />
+            <SliderRow
+              label="Dance satiation boost"
+              value={danceSatiationBoost}
+              min={0}
+              max={50}
+              step={1}
+              onChange={(v) => setDanceSatiationBoost(Math.round(v))}
+              format={(v) => `+${v}`}
+            />
+            {onResetToDefaults && (
+              <button
+                className={styles.seedBtn}
+                style={{ alignSelf: "flex-start", marginTop: "8px" }}
+                onClick={onResetToDefaults}
+              >
+                reset to defaults
+              </button>
+            )}
           </>
         )}
 

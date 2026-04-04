@@ -667,6 +667,8 @@ export default function App() {
     setAdventurerLootPerChest,
     winRounds,
     setWinRounds,
+    danceSatiationBoost,
+    setDanceSatiationBoost,
     torchColor,
     setTorchColor,
     torchIntensity,
@@ -718,6 +720,7 @@ export default function App() {
     adventurerDreadRate,
     adventurerLootPerChest,
     winRounds,
+    danceSatiationBoost,
     keybindings,
   });
 
@@ -733,6 +736,7 @@ export default function App() {
     ds.spawnZ,
     {
       onStep: gs.onStep,
+      onTurn: gs.onTurn,
       blocked: gs.showRecipeMenu || gs.showSummonMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
       canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
@@ -1147,6 +1151,23 @@ export default function App() {
           visible={gs.showSettings}
           onClose={() => gs.setShowSettings(false)}
           settingsProps={{
+            onResetToDefaults: () => {
+              try { localStorage.clear(); } catch { /* */ }
+              setTempDropPerStep(0.5);
+              setHeatingPerStep(2.0);
+              setSatiationDropPerStep(0.5);
+              setSupersatiationBonus(50);
+              setTurnsPerRound(120);
+              setTraversalFactor(2.0);
+              setAdventurerDreadRate(1.0);
+              setAdventurerLootPerChest(10);
+              setWinRounds(10);
+              setDanceSatiationBoost(5);
+              setTrapDensity(1.0);
+              setMaxDoors(3);
+            },
+            danceSatiationBoost,
+            setDanceSatiationBoost,
             tempDropPerStep,
             setTempDropPerStep,
             heatingPerStep,
