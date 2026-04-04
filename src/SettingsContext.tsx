@@ -73,6 +73,8 @@ interface SettingsContextValue {
   setDanceSatiationBoost: Dispatch<SetStateAction<number>>;
   teaSatiationAmount: number;
   setTeaSatiationAmount: Dispatch<SetStateAction<number>>;
+  startIngredientAmount: number;
+  setStartIngredientAmount: Dispatch<SetStateAction<number>>;
   torchColor: string;
   setTorchColor: Dispatch<SetStateAction<string>>;
   torchIntensity: number;
@@ -131,6 +133,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [winRounds, setWinRounds] = useState(10);
   const [danceSatiationBoost, setDanceSatiationBoost] = useState(5);
   const [teaSatiationAmount, setTeaSatiationAmount] = useState(100);
+  const [startIngredientAmount, setStartIngredientAmount] = useState(3);
   const [torchColor, setTorchColor] = useState<string>(() => {
     try {
       return localStorage.getItem("torchColor") ?? DEFAULT_TORCH_HEX;
@@ -193,6 +196,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setDanceSatiationBoost,
         teaSatiationAmount,
         setTeaSatiationAmount,
+        startIngredientAmount,
+        setStartIngredientAmount,
         torchColor,
         setTorchColor,
         torchIntensity,

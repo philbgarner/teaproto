@@ -42,6 +42,8 @@ export default function SettingsTabs({
   setDanceSatiationBoost,
   teaSatiationAmount,
   setTeaSatiationAmount,
+  startIngredientAmount,
+  setStartIngredientAmount,
   onResetToDefaults,
   dungeonSeed,
   setDungeonSeed,
@@ -208,6 +210,14 @@ export default function SettingsTabs({
               max={200}
               step={5}
               onChange={(v) => setTeaSatiationAmount(Math.round(v))}
+            />
+            <SliderRow
+              label="Starting ingredients"
+              value={startIngredientAmount}
+              min={0}
+              max={20}
+              step={1}
+              onChange={(v) => setStartIngredientAmount(Math.round(v))}
             />
             {onResetToDefaults && (
               <button

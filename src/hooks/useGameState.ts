@@ -96,6 +96,7 @@ export interface UseGameStateParams {
   winRounds: number;
   danceSatiationBoost: number;
   teaSatiationAmount: number;
+  startIngredientAmount: number;
   keybindings: any;
 }
 
@@ -132,6 +133,7 @@ export function useGameState({
   adventurerLootPerChest,
   winRounds,
   teaSatiationAmount,
+  startIngredientAmount,
   keybindings,
 }: UseGameStateParams) {
   // Tile atlas + texture
@@ -626,9 +628,9 @@ export function useGameState({
     setAdvAttackDirs([]);
     setDamageNumbers([]);
     setIngredients({
-      hotPeppers: START_AMT_INGREDIENTS,
-      wildHerbs: START_AMT_INGREDIENTS,
-      frostLeaves: START_AMT_INGREDIENTS,
+      hotPeppers: startIngredientAmount,
+      wildHerbs: startIngredientAmount,
+      frostLeaves: startIngredientAmount,
     });
     setIngredientDrops([...initialIngredientDrops]);
     setChests([...initialChests]);

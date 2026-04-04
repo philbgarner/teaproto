@@ -48,6 +48,8 @@ export default function App() {
     setDanceSatiationBoost,
     teaSatiationAmount,
     setTeaSatiationAmount,
+    startIngredientAmount,
+    setStartIngredientAmount,
     torchColor,
     setTorchColor,
     torchIntensity,
@@ -101,6 +103,7 @@ export default function App() {
     winRounds,
     danceSatiationBoost,
     teaSatiationAmount,
+    startIngredientAmount,
     keybindings,
   });
 
@@ -173,6 +176,7 @@ export default function App() {
               setWinRounds(10);
               setDanceSatiationBoost(5);
               setTeaSatiationAmount(100);
+              setStartIngredientAmount(3);
               setTrapDensity(1.0);
               setMaxDoors(3);
             },
@@ -180,6 +184,8 @@ export default function App() {
             setDanceSatiationBoost,
             teaSatiationAmount,
             setTeaSatiationAmount,
+            startIngredientAmount,
+            setStartIngredientAmount,
             tempDropPerStep,
             setTempDropPerStep,
             heatingPerStep,
