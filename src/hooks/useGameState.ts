@@ -646,9 +646,9 @@ export function useGameState({
     xpDropsRef.current = [];
     playerHpRef.current = PLAYER_MAX_HP;
     ingredientsRef.current = {
-      "hot-pepper": 0,
-      "wild-herb": 0,
-      "frost-leaf": 0,
+      "hot-pepper": startIngredientAmount,
+      "wild-herb": startIngredientAmount,
+      "frost-leaf": startIngredientAmount,
     };
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
@@ -1101,7 +1101,9 @@ export function useGameState({
       newAdventurers.filter((a) => a.alive).length,
     );
     const mobPlayerOccupied = new Set([
-      ...newMobPositions.map((p) => `${p.x}_${p.z}`),
+      ...newMobPositions
+        .filter((_, i) => newMobHps[i] > 0)
+        .map((p) => `${p.x}_${p.z}`),
     ]);
 
     const intendedMoves = newAdventurers.map((advInit) => {
@@ -1274,6 +1276,16 @@ export function useGameState({
           newChests.splice(chestIdx, 1);
           if (pickedChest.mimic) {
             adv = { ...adv, alive: false, hp: 0 };
+            for (let ci = 0; ci < (adv.inventoryIngredients?.length ?? 0); ci++) {
+              const ing = adv.inventoryIngredients![ci];
+              newIngredientDrops.push({
+                id: ing.id,
+                name: ing.name,
+                x: adv.x,
+                z: adv.z,
+                dropKey: `inv_mimic_${Date.now()}_${ci}`,
+              });
+            }
             stepMessage = `The ${adv.name} opened a mimic chest and was devoured!`;
             return {
               adv,
@@ -1294,6 +1306,21 @@ export function useGameState({
               adv = { ...adv, keys: (adv.keys ?? 0) + keyCount };
             }
           }
+          // Pick up random ingredients from chest
+          const chestIngTypes = [
+            { id: "hot-pepper", name: "Hot Pepper" },
+            { id: "wild-herb", name: "Wild Herbs" },
+            { id: "frost-leaf", name: "Frost Leaf" },
+          ];
+          const chestIngCount = 1 + Math.floor(Math.random() * 3);
+          const pickedIngs: { id: string; name: string }[] = [];
+          for (let ci = 0; ci < chestIngCount; ci++) {
+            pickedIngs.push(chestIngTypes[Math.floor(Math.random() * chestIngTypes.length)]);
+          }
+          adv = {
+            ...adv,
+            inventoryIngredients: [...(adv.inventoryIngredients ?? []), ...pickedIngs],
+          };
         }
 
         // Check state transition
@@ -1669,6 +1696,16 @@ export function useGameState({
             dropKey: `ing_trap_${Date.now()}_${i}`,
           });
         }
+        for (let ci = 0; ci < (adv.inventoryIngredients?.length ?? 0); ci++) {
+          const ing = adv.inventoryIngredients![ci];
+          newIngredientDrops.push({
+            id: ing.id,
+            name: ing.name,
+            x: adv.x,
+            z: adv.z,
+            dropKey: `inv_trap_${Date.now()}_${i}_${ci}`,
+          });
+        }
         stepMessage = `The ${adv.name} was slain by a spike trap! (+${xpReward} gold)`;
       } else {
         newAdventurers[i] = { ...adv, hp: newHp };
@@ -1803,6 +1840,16 @@ export function useGameState({
                 x: adv.x,
                 z: adv.z,
                 dropKey: `ing_${Date.now()}_${j}`,
+              });
+            }
+            for (let ci = 0; ci < (adv.inventoryIngredients?.length ?? 0); ci++) {
+              const ing = adv.inventoryIngredients![ci];
+              newIngredientDrops.push({
+                id: ing.id,
+                name: ing.name,
+                x: adv.x,
+                z: adv.z,
+                dropKey: `inv_${Date.now()}_${j}_${ci}`,
               });
             }
             stepMessage = `${mob.name} slew the ${adv.name}! (+${xpReward} gold, ${tmpl?.drop?.name ?? "?"} dropped)`;

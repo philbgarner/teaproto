@@ -77,8 +77,8 @@ export function StatusBar({
         <span className={styles.facing}>Facing: {facing}</span>
         <span className={styles.xp}>Gold: {playerXp}</span>
         <span className={styles.ingredients}>
-          Hot Peppers: {ingredients.hotPeppers} · Herbs: {ingredients.wildHerbs}{" "}
-          · Frost Leaves: {ingredients.frostLeaves}
+          Hot Peppers: {ingredients["hot-pepper"]} · Herbs:{" "}
+          {ingredients["wild-herb"]} · Frost Leaves: {ingredients["frost-leaf"]}
           {ingredients.dust}
         </span>
         <span className={styles.roomTemp}>

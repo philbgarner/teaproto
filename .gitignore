@@ -27,5 +27,8 @@ dist-ssr
 # Exclude submodule folder, dev can link it and pull.
 # roguelike-mazetools
 
+# Build script exclusion
+buildbutler.sh
+
 # Exclude Licensed Music from Repo
 public/music/MUS_*.ogg

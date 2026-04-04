@@ -20,7 +20,7 @@ export const RECIPES: Recipe[] = [
   {
     id: "iced-tea",
     name: "Iced Tea",
-    timeToBrew: 20,
+    timeToBrew: 10,
     idealTemperatureRange: [85, 100],
     ingredientId: "frost-leaf",
     ingredientName: "Frost Leaf",
@@ -29,7 +29,7 @@ export const RECIPES: Recipe[] = [
   {
     id: "spicy-tea",
     name: "Spicy Tea",
-    timeToBrew: 18,
+    timeToBrew: 10,
     idealTemperatureRange: [70, 85],
     ingredientId: "hot-pepper",
     ingredientName: "Hot Pepper",
@@ -38,7 +38,7 @@ export const RECIPES: Recipe[] = [
   {
     id: "green-tea",
     name: "Green Tea",
-    timeToBrew: 25,
+    timeToBrew: 10,
     idealTemperatureRange: [65, 80],
     ingredientId: "wild-herb",
     ingredientName: "Wild Herbs",
