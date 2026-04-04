@@ -2,11 +2,21 @@ import ModalPanel from "./ModalPanel";
 import { formatKey } from "./formatKey";
 
 const KEY_DISPLAY = {
-  " ": "space", space: "space",
-  up: "↑", down: "↓", left: "←", right: "→",
-  escape: "esc", enter: "enter", backspace: "bksp",
-  tab: "tab", delete: "del", home: "home", end: "end",
-  pageup: "pgup", pagedown: "pgdn",
+  " ": "space",
+  space: "space",
+  up: "↑",
+  down: "↓",
+  left: "←",
+  right: "→",
+  escape: "esc",
+  enter: "enter",
+  backspace: "bksp",
+  tab: "tab",
+  delete: "del",
+  home: "home",
+  end: "end",
+  pageup: "pgup",
+  pagedown: "pgdn",
 };
 
 /**
@@ -20,8 +30,15 @@ const KEY_DISPLAY = {
  *   keybindings: object,
  * }} props
  */
-export function SummonMenu({ mobs, selectedIndex, onSelectMob, onCancel, keybindings }) {
-  const fmtKeys = (keys) => (keys ?? []).map((k) => formatKey(k, KEY_DISPLAY)).join("/") || "—";
+export function SummonMenu({
+  mobs,
+  selectedIndex,
+  onSelectMob,
+  onCancel,
+  keybindings,
+}) {
+  const fmtKeys = (keys) =>
+    (keys ?? []).map((k) => formatKey(k, KEY_DISPLAY)).join("/") || "—";
 
   return (
     <ModalPanel
@@ -39,7 +56,11 @@ export function SummonMenu({ mobs, selectedIndex, onSelectMob, onCancel, keybind
           return (
             <div
               key={i}
-              onClick={() => onSelectMob(i)}
+              onClick={() => {
+                if (mob.hasMet) {
+                  onSelectMob(i);
+                }
+              }}
               style={{
                 padding: "6px 8px",
                 cursor: "pointer",
@@ -53,15 +74,19 @@ export function SummonMenu({ mobs, selectedIndex, onSelectMob, onCancel, keybind
                   : "1px solid transparent",
                 fontSize: 13,
                 color: "#eee",
+                opacity: mob.hasMet ? "1.0" : "0.3",
               }}
+              disable={!mob.hasMet}
             >
               <span style={{ color: "#fa0" }}>[{i + 1}]</span>{" "}
-              {mob.name ?? "Monster"}
+              {mob.name ?? "Monster"} {!mob.hasMet ? "(Has not met you)" : ""}
             </div>
           );
         })}
         <div style={{ marginTop: 10, color: "#555", fontSize: 11 }}>
-          {fmtKeys(keybindings?.optionPrev)}/{fmtKeys(keybindings?.optionNext)} to navigate · {fmtKeys(keybindings?.optionSelect)} to select · number to pick · {fmtKeys(keybindings?.cancel)} to cancel
+          {fmtKeys(keybindings?.optionPrev)}/{fmtKeys(keybindings?.optionNext)}{" "}
+          to navigate · {fmtKeys(keybindings?.optionSelect)} to select · number
+          to pick · {fmtKeys(keybindings?.cancel)} to cancel
         </div>
       </div>
     </ModalPanel>

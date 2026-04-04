@@ -574,6 +574,10 @@ export function useGameState({
     mobHpsRef.current = initialMobs.map((m) => m.hp ?? MOB_HP);
   }
   const mobRpsEffectsRef = useRef<string[]>(initialMobs.map(() => "none"));
+  const [mobHasMet, setMobHasMet] = useState<boolean[]>(() =>
+    initialMobs.map(() => false),
+  );
+  const mobHasMetRef = useRef<boolean[]>(initialMobs.map(() => false));
   const mobSummonSet = useRef<Map<number, { x: number; z: number }>>(new Map());
 
   // Dance tracking: counts consecutive q/e turns while sharing a cell with a mob/adventurer
@@ -661,6 +665,9 @@ export function useGameState({
     ruinedNotifiedRef.current = new Set();
     adventurerSightingsRef.current = new Set();
     mobSummonSet.current = new Map();
+    const freshHasMet = initialMobs.map(() => false);
+    mobHasMetRef.current = freshHasMet;
+    setMobHasMet(freshHasMet);
     firstTeaDeliveredRef.current = false;
 
     // Pre-explore exactly: kitchen (startRoomId) + one monster room + connecting corridor
@@ -1011,6 +1018,28 @@ export function useGameState({
     const { x: px, z: pz } = logicalRef.current;
     const pgx = Math.floor(px);
     const pgz = Math.floor(pz);
+
+    // --- Mark mobs as met when player steps directly beside them ---
+    {
+      const positions = mobPositionsRef.current;
+      const hasMet = mobHasMetRef.current;
+      let changed = false;
+      for (let i = 0; i < positions.length; i++) {
+        if (!hasMet[i]) {
+          const dx = Math.abs(positions[i].x - pgx);
+          const dz = Math.abs(positions[i].z - pgz);
+          if (dx + dz <= 1) {
+            hasMet[i] = true;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        mobHasMetRef.current = [...hasMet];
+        setMobHasMet([...hasMet]);
+      }
+    }
+
     const remainingDrops: any[] = [];
     let xpGained = 0;
     for (const drop of newXpDrops) {
@@ -2626,6 +2655,10 @@ export function useGameState({
         showMsg("Can't summon here — a monster is already here.");
         return;
       }
+      if (!mobHasMetRef.current[summonMenuCursor]) {
+        showMsg(`You haven't met ${initialMobs[summonMenuCursor].name} yet.`);
+        return;
+      }
       mobSummonSet.current.set(summonMenuCursor, { x: pgx, z: pgz });
       showMsg(`${initialMobs[summonMenuCursor].name} is on its way!`);
       setShowSummonMenu(false);
@@ -2647,6 +2680,10 @@ export function useGameState({
           mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)
         ) {
           showMsg("Can't summon here — a monster is already here.");
+          return;
+        }
+        if (!mobHasMetRef.current[num - 1]) {
+          showMsg(`You haven't met ${initialMobs[num - 1].name} yet.`);
           return;
         }
         mobSummonSet.current.set(num - 1, { x: pgx, z: pgz });
@@ -2840,6 +2877,7 @@ export function useGameState({
     summonMob: (mobIdx: number, targetX: number, targetZ: number) => {
       mobSummonSet.current.set(mobIdx, { x: targetX, z: targetZ });
     },
+    mobHasMet,
     // refs for cross-hook wiring
     logicalRef,
     doMoveRef,
