@@ -1110,6 +1110,7 @@ export function useGameState({
         doorStatesRef.current.get(playerDoorKey) ?? "closed";
       if (playerDoorState === "closed") {
         setDoorStates((prev) => new Map(prev).set(playerDoorKey, "open"));
+        sounds.slideUp.play();
         showMsg("You open the door.");
       }
     }
@@ -2462,6 +2463,7 @@ export function useGameState({
           setDoorStates((prev) =>
             new Map(prev).set(facingTarget.doorKey, "open"),
           );
+          sounds.slideUp.play();
           showMsg("You open the door.");
         }
       }
