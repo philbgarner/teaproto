@@ -1090,8 +1090,9 @@ export function GameView({
 
             {gs.showSummonMenu && (
               <SummonMenu
-                mobs={(ds.initialMobs as any[]).map((m: any) => ({
+                mobs={(ds.initialMobs as any[]).map((m: any, i: number) => ({
                   name: m.name,
+                  hasMet: gs.mobHasMet[i] ?? false,
                 }))}
                 selectedIndex={gs.summonMenuCursor}
                 onSelectMob={(mobIdx: number) => {
