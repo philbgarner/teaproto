@@ -302,6 +302,13 @@ export const STATUS_RGB: Record<string, [number, number, number]> = {
   sated: [0.0, 0.5, 1.0],
   refreshed: [0.2, 1.0, 0.3],
 };
+/** Per-RPS effect outline colour [r, g, b, a] in 0–1 range. */
+export const RPS_OUTLINE_COLOR: Record<string, [number, number, number, number]> = {
+  bleeding: [1.0, 0.15, 0.15, 1.0],
+  freezing:  [0.3,  0.7,  1.0, 1.0],
+  poisoned: [0.2,  0.9,  0.2, 1.0],
+};
+
 export const STATUS_CSS: Record<string, string> = {
   ecstatic: "#c3f",
   gasping: "#f22",

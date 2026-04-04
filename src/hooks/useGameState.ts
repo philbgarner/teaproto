@@ -50,6 +50,7 @@ import {
   LOS_RADIUS,
   MOB_DEFENSE,
   SPIKE_TRAP_DAMAGE,
+  RPS_OUTLINE_COLOR,
 } from "../gameConstants";
 import {
   normalizeUvRect,
@@ -713,6 +714,7 @@ export function useGameState({
             CHAR_SHEET_H,
           ),
           unconscious: mobHps[i] <= 0,
+          outlineColor: RPS_OUTLINE_COLOR[mobRpsEffects[i]] ?? ([0, 0, 0, 0] as [number, number, number, number]),
         };
       }),
       ...adventurers
@@ -745,6 +747,7 @@ export function useGameState({
     mobStatuses,
     mobSatiations,
     mobHps,
+    mobRpsEffects,
     adventurers,
   ]);
 
