@@ -214,7 +214,7 @@ export class ComponentRegistry {
         }
     }
 
-    removeQuantityFromSlot(slotEntity: Entity, quantity: number = 1) {
+    removeQuantityFromSlot(slotEntity: Entity, quantity: number = 1, keepEntityRef: boolean = false) {
         if (quantity <= 0) return; // prevent negative removal
 
         const inventorySlot = this.components.inventorySlot.get(slotEntity);
@@ -224,17 +224,19 @@ export class ComponentRegistry {
         inventorySlot.count -= quantity;
 
         if (inventorySlot.count <= 0) {
-            inventorySlot.object = null;
+            if (!keepEntityRef) {
+                inventorySlot.object = null;
+            }
             inventorySlot.count = 0;
             console.log(`Slot ${slotEntity} is now empty`);
         }
     }
 
-    removeObjectFromSlot(slotEntity: Entity) {
+    removeObjectFromSlot(slotEntity: Entity, keepEntityRef: boolean = false) {
         const slot = this.components.inventorySlot.get(slotEntity);
         if (!slot) return;
         console.log(`Removing object from slot ${slotEntity}`);
-        this.removeQuantityFromSlot(slotEntity, slot.count);
+        this.removeQuantityFromSlot(slotEntity, slot.count, keepEntityRef);
     }
 
     exchangeObjectInSlots(fromSlotEntity: Entity, toSlotEntity: Entity) {
