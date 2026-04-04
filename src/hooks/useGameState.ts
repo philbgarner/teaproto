@@ -97,6 +97,7 @@ export interface UseGameStateParams {
   winRounds: number;
   danceSatiationBoost: number;
   teaSatiationAmount: number;
+  teaHpRestorePercent: number;
   startIngredientAmount: number;
   keybindings: any;
 }
@@ -134,6 +135,7 @@ export function useGameState({
   adventurerLootPerChest,
   winRounds,
   teaSatiationAmount,
+  teaHpRestorePercent,
   startIngredientAmount,
   keybindings,
 }: UseGameStateParams) {
@@ -2352,6 +2354,14 @@ export function useGameState({
           setMobSatiations(next);
         }
 
+        function applyMobHpRestore(amount: number) {
+          const maxHp = mob.hp ?? MOB_HP;
+          const next = [...mobHpsRef.current!];
+          next[facingTarget.mobIdx] = Math.min(maxHp, next[facingTarget.mobIdx] + amount);
+          mobHpsRef.current = next;
+          setMobHps(next);
+        }
+
         const currentRpsEffect = mobRpsEffectsRef.current[facingTarget.mobIdx];
         const countersEffect = tea.recipe.countersEffect;
         if (countersEffect && currentRpsEffect === countersEffect) {
@@ -2362,12 +2372,14 @@ export function useGameState({
           applyMobSatiation(
             Math.round(teaSatiationAmount * (1 + supersatiationBonus / 100)),
           );
+          applyMobHpRestore(Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)));
           showSpeechBubble(
             mobBubbleId,
             `This ${tea.name} is exactly what I needed — I feel so much better!`,
           );
         } else {
           applyMobSatiation(teaSatiationAmount);
+          applyMobHpRestore(Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)));
           showSpeechBubble(
             mobBubbleId,
             `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,

@@ -73,6 +73,8 @@ interface SettingsContextValue {
   setDanceSatiationBoost: Dispatch<SetStateAction<number>>;
   teaSatiationAmount: number;
   setTeaSatiationAmount: Dispatch<SetStateAction<number>>;
+  teaHpRestorePercent: number;
+  setTeaHpRestorePercent: Dispatch<SetStateAction<number>>;
   startIngredientAmount: number;
   setStartIngredientAmount: Dispatch<SetStateAction<number>>;
   torchColor: string;
@@ -133,6 +135,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [winRounds, setWinRounds] = useState(10);
   const [danceSatiationBoost, setDanceSatiationBoost] = useState(5);
   const [teaSatiationAmount, setTeaSatiationAmount] = useState(100);
+  const [teaHpRestorePercent, setTeaHpRestorePercent] = useState(25);
   const [startIngredientAmount, setStartIngredientAmount] = useState(3);
   const [torchColor, setTorchColor] = useState<string>(() => {
     try {
@@ -196,6 +199,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setDanceSatiationBoost,
         teaSatiationAmount,
         setTeaSatiationAmount,
+        teaHpRestorePercent,
+        setTeaHpRestorePercent,
         startIngredientAmount,
         setStartIngredientAmount,
         torchColor,

@@ -42,6 +42,8 @@ export default function SettingsTabs({
   setDanceSatiationBoost,
   teaSatiationAmount,
   setTeaSatiationAmount,
+  teaHpRestorePercent,
+  setTeaHpRestorePercent,
   startIngredientAmount,
   setStartIngredientAmount,
   onResetToDefaults,
@@ -210,6 +212,15 @@ export default function SettingsTabs({
               max={200}
               step={5}
               onChange={(v) => setTeaSatiationAmount(Math.round(v))}
+            />
+            <SliderRow
+              label="Tea HP restore"
+              value={teaHpRestorePercent}
+              min={0}
+              max={100}
+              step={5}
+              onChange={(v) => setTeaHpRestorePercent(Math.round(v))}
+              format={(v) => `${v}%`}
             />
             <SliderRow
               label="Starting ingredients"
