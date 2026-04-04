@@ -61,7 +61,7 @@ export function SummonMenu({ mobs, selectedIndex, onSelectMob, onCancel, keybind
           );
         })}
         <div style={{ marginTop: 10, color: "#555", fontSize: 11 }}>
-          {fmtKeys(keybindings?.optionPrev)}/{fmtKeys(keybindings?.optionNext)} to navigate · {fmtKeys(keybindings?.optionSelect)} to select · number to pick · esc to cancel
+          {fmtKeys(keybindings?.optionPrev)}/{fmtKeys(keybindings?.optionNext)} to navigate · {fmtKeys(keybindings?.optionSelect)} to select · number to pick · {fmtKeys(keybindings?.cancel)} to cancel
         </div>
       </div>
     </ModalPanel>
