@@ -1,6 +1,6 @@
 /**
  * Full-screen overlay shown when the game ends (win or loss). Displays a
- * summary and a "Play Again" button.
+ * summary, the dungeon seed, and options to replay or return to the title.
  *
  * Only renders when `gameState` is not `"playing"`.
  *
@@ -10,7 +10,10 @@
  *   currentRound: number,
  *   turnCount: number,
  *   winRounds: number,
- *   onPlayAgain: () => void,
+ *   seed: number,
+ *   onPlaySameSeed: () => void,
+ *   onPlayNewSeed: () => void,
+ *   onReturnToTitle: () => void,
  * }} props
  */
 export function GameOverOverlay({
@@ -19,11 +22,26 @@ export function GameOverOverlay({
   currentRound,
   turnCount,
   winRounds,
-  onPlayAgain,
+  seed,
+  onPlaySameSeed,
+  onPlayNewSeed,
+  onReturnToTitle,
 }) {
   if (gameState === "playing") return null;
 
   const won = gameState === "won";
+  const accent = won ? "#5d5" : "#c44";
+
+  const btnBase = {
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    padding: "10px 20px",
+    fontSize: 14,
+    cursor: "pointer",
+    fontFamily: "'Metamorphous', serif",
+    flex: 1,
+  };
 
   return (
     <div
@@ -41,11 +59,12 @@ export function GameOverOverlay({
       <div
         style={{
           background: "#111",
-          border: `2px solid ${won ? "#5d5" : "#c44"}`,
+          border: `2px solid ${accent}`,
           borderRadius: 8,
           padding: "40px 52px",
           textAlign: "center",
-          maxWidth: 420,
+          maxWidth: 440,
+          width: "90vw",
         }}
       >
         <div
@@ -58,15 +77,16 @@ export function GameOverOverlay({
         >
           {won ? "Victory!" : "Game Over"}
         </div>
+
         {won ? (
-          <div style={{ color: "#aaa", marginBottom: 24, lineHeight: 1.6 }}>
+          <div style={{ color: "#aaa", marginBottom: 16, lineHeight: 1.6 }}>
             You survived {winRounds} rounds of adventurers and kept the dungeon
             cozy.
             <br />
             The monsters are very grateful.
           </div>
         ) : (
-          <div style={{ color: "#aaa", marginBottom: 24, lineHeight: 1.6 }}>
+          <div style={{ color: "#aaa", marginBottom: 16, lineHeight: 1.6 }}>
             {gameOverReason}
             <br />
             <span style={{ fontSize: 12, color: "#666" }}>
@@ -75,21 +95,45 @@ export function GameOverOverlay({
             </span>
           </div>
         )}
-        <button
-          onClick={onPlayAgain}
+
+        <div
           style={{
-            background: won ? "#2a5" : "#922",
-            color: "#fff",
-            border: "none",
+            marginBottom: 28,
+            padding: "8px 16px",
+            background: "#1a1a1a",
             borderRadius: 4,
-            padding: "10px 28px",
-            fontSize: 15,
-            cursor: "pointer",
-            fontFamily: "'Metamorphous', serif",
+            border: "1px solid #333",
+            fontSize: 13,
+            color: "#888",
+            letterSpacing: 1,
           }}
         >
-          Play Again
-        </button>
+          Seed:{" "}
+          <span style={{ color: "#bbb", fontFamily: "monospace", fontSize: 15 }}>
+            {seed}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            onClick={onPlaySameSeed}
+            style={{ ...btnBase, background: won ? "#2a5" : "#922" }}
+          >
+            Same Seed
+          </button>
+          <button
+            onClick={onPlayNewSeed}
+            style={{ ...btnBase, background: "#446" }}
+          >
+            New Seed
+          </button>
+          <button
+            onClick={onReturnToTitle}
+            style={{ ...btnBase, background: "#333" }}
+          >
+            Title Screen
+          </button>
+        </div>
       </div>
     </div>
   );

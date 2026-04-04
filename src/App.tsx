@@ -8,7 +8,7 @@ import { GameOverOverlay } from "./components/GameOverOverlay";
 import { DifficultyModal } from "./components/DifficultyModal";
 import "./App.css";
 
-export default function App() {
+export default function App({ onReturnToTitle }: { onReturnToTitle?: () => void } = {}) {
   const {
     dungeonSeed,
     setDungeonSeed,
@@ -147,6 +147,7 @@ export default function App() {
       ],
       keybindings,
       startYaw: ds.spawnYaw,
+      resetKey: forceReset,
     },
   );
 
@@ -264,10 +265,14 @@ export default function App() {
           currentRound={gs.currentRound}
           turnCount={gs.turnCount}
           winRounds={winRounds}
-          onPlayAgain={() => {
-          setForceReset(prev => prev + 1);
-        }}
-      />
+          seed={dungeonSeed}
+          onPlaySameSeed={() => setForceReset(prev => prev + 1)}
+          onPlayNewSeed={() => {
+            setDungeonSeed(Math.floor(Math.random() * 999999));
+            setForceReset(prev => prev + 1);
+          }}
+          onReturnToTitle={onReturnToTitle}
+        />
       }
     />
   );

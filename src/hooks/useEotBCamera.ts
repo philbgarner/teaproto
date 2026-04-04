@@ -25,6 +25,7 @@ export interface EotBCameraOptions {
     [key: string]: string[];
   };
   startYaw?: number;
+  resetKey?: number;
 }
 
 export function useEotBCamera(
@@ -42,6 +43,7 @@ export function useEotBCamera(
     blockedPositions,
     keybindings,
     startYaw = 0,
+    resetKey = 0,
   }: EotBCameraOptions,
 ): {
   camera: CameraState;
@@ -70,6 +72,7 @@ export function useEotBCamera(
   }));
   const [prevStartX, setPrevStartX] = useState(startX);
   const [prevStartZ, setPrevStartZ] = useState(startZ);
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
   const solidRef = useRef(solidData);
   const onStepRef = useRef(onStep);
   const onRotationRef = useRef(onRotation);
@@ -78,9 +81,10 @@ export function useEotBCamera(
   const onBlockedMoveRef = useRef(onBlockedMove);
   const canPhaseWallsRef = useRef(canPhaseWalls ?? false);
 
-  if (prevStartX !== startX || prevStartZ !== startZ) {
+  if (prevStartX !== startX || prevStartZ !== startZ || prevResetKey !== resetKey) {
     setPrevStartX(startX);
     setPrevStartZ(startZ);
+    setPrevResetKey(resetKey);
     setCamera({ x: startX, z: startZ, yaw: startYaw });
   }
 
@@ -96,7 +100,7 @@ export function useEotBCamera(
       startTime: 0,
       animating: false,
     };
-  }, [startX, startZ]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [startX, startZ, resetKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     solidRef.current = solidData;
