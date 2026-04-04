@@ -1065,9 +1065,7 @@ export function GameView({
                       [recipe.ingredientId]:
                         gs.ingredientsRef.current[recipe.ingredientId] - 1,
                     };
-                    gs.ingredientsRef.current = newIng;
-                    gs.setIngredients(newIng);
-                    gs.setIngredientsECS(newIng);
+                    gs.applyIngredients(newIng);
                     console.log("new ing", newIng);
                   }
                   gs.setStoveStates((prev: Map<string, any>) => {

@@ -30,6 +30,18 @@ type PlayerData = PlayerActor & {
 
 type Keybindings = typeof DEFAULT_KEYBINDINGS;
 
+export type DungeonStats = {
+  adventurersDefeated: number;
+  teaomaticDestroyedBy: string | null;
+  monstersResuscitated: number;
+  monstersFellUnconscious: number;
+  damageToAdventurers: number;
+  damageToMonsters: number;
+  danceWithMonsters: number;
+  danceWithAdventurers: number;
+  ingredientsPickedUp: number;
+};
+
 interface SettingsContextValue {
   playerData: PlayerData;
   setPlayerData: Dispatch<SetStateAction<PlayerData>>;
@@ -89,6 +101,8 @@ interface SettingsContextValue {
   setMusicVolume: Dispatch<SetStateAction<number>>;
   sfxVolume: number;
   setSfxVolume: Dispatch<SetStateAction<number>>;
+  dungeonStats: DungeonStats | undefined;
+  setDungeonStats: Dispatch<SetStateAction<DungeonStats | undefined>>;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -121,6 +135,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     })(),
   });
 
+  const [dungeonStats, setDungeonStats] = useState<DungeonStats | undefined>(undefined);
   const [dungeonSeed, setDungeonSeed] = useState(42);
   const [dungeonWidth, setDungeonWidth] = useState(32);
   const [dungeonHeight, setDungeonHeight] = useState(32);
@@ -238,6 +253,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setMusicVolume,
         sfxVolume,
         setSfxVolume,
+        dungeonStats,
+        setDungeonStats,
       }}
     >
       {children}

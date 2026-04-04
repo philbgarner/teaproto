@@ -34,6 +34,15 @@ export function GameRoot() {
     setPhase("game");
   }
 
+  function handleReturnToTitle() {
+    setGameOpacity(0);
+    setTimeout(() => {
+      setTitleOpacity(0);
+      setPhase("title");
+      setTimeout(() => setTitleOpacity(1), 50);
+    }, 400);
+  }
+
   return (
     <SettingsProvider>
       <div
@@ -54,7 +63,7 @@ export function GameRoot() {
               transition: "opacity 0.55s ease-in",
             }}
           >
-            <App />
+            <App onReturnToTitle={handleReturnToTitle} />
           </div>
         )}
 

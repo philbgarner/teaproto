@@ -198,9 +198,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
         "frost-leaf": 1,
         "wild-herb": 0,
       };
-      gs.setIngredients(startIngredients);
-      gs.ingredientsRef.current = startIngredients;
-      gs.setIngredientsECS(startIngredients);
+      gs.applyIngredients(startIngredients);
       // Monster starts unconscious (satiation -1 = gasping/red)
       gs.setMobSatiations([-1]);
       gs.mobSatiationsRef.current = [-1];
@@ -279,9 +277,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       "wild-herb": 0,
       "frost-leaf": 0,
     };
-    gs.setIngredients(empty);
-    gs.ingredientsRef.current = empty;
-    gs.setIngredientsECS(empty);
+    gs.applyIngredients(empty);
   }, [gs.stoveStates, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // T7: Monster revived — drop gold, explain the endgame condition
@@ -342,9 +338,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
         "wild-herb": 1,
         "frost-leaf": 1,
       };
-      gs.setIngredients(unlocked);
-      gs.ingredientsRef.current = unlocked;
-      gs.setIngredientsECS(unlocked);
+      gs.applyIngredients(unlocked);
     }
 
     // T6: Near the sprung trap and open door at (10–11, 8)
