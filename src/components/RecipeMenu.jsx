@@ -1,11 +1,21 @@
 import { formatKey } from "./formatKey";
 
 const KEY_DISPLAY = {
-  " ": "space", space: "space",
-  up: "↑", down: "↓", left: "←", right: "→",
-  escape: "esc", enter: "enter", backspace: "bksp",
-  tab: "tab", delete: "del", home: "home", end: "end",
-  pageup: "pgup", pagedown: "pgdn",
+  " ": "space",
+  space: "space",
+  up: "↑",
+  down: "↓",
+  left: "←",
+  right: "→",
+  escape: "esc",
+  enter: "enter",
+  backspace: "bksp",
+  tab: "tab",
+  delete: "del",
+  home: "home",
+  end: "end",
+  pageup: "pgup",
+  pagedown: "pgdn",
 };
 
 /**
@@ -26,8 +36,17 @@ const KEY_DISPLAY = {
  *   keybindings: object,
  * }} props
  */
-export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, showMsg, selectedIndex, keybindings }) {
-  const fmtKeys = (keys) => (keys ?? []).map((k) => formatKey(k, KEY_DISPLAY)).join("/") || "—";
+export function RecipeMenu({
+  recipes,
+  ingredients,
+  onSelectRecipe,
+  onCancel,
+  showMsg,
+  selectedIndex,
+  keybindings,
+}) {
+  const fmtKeys = (keys) =>
+    (keys ?? []).map((k) => formatKey(k, KEY_DISPLAY)).join("/") || "—";
   return (
     <div
       style={{
@@ -56,8 +75,7 @@ export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, sho
       </div>
       {recipes.map((recipe, i) => {
         const locked =
-          recipe.ingredientId &&
-          (ingredients[recipe.ingredientId] ?? 0) < 1;
+          recipe.ingredientId && (ingredients[recipe.ingredientId] ?? 0) < 1;
         const have = recipe.ingredientId
           ? (ingredients[recipe.ingredientId] ?? 0)
           : null;
@@ -67,7 +85,9 @@ export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, sho
             key={recipe.id}
             onClick={() => {
               if (locked) {
-                showMsg(`You need ${recipe.ingredientName} to brew ${recipe.name}!`);
+                showMsg(
+                  `You need ${recipe.ingredientName} to brew ${recipe.name}!`,
+                );
                 return;
               }
               onSelectRecipe(recipe);
@@ -80,20 +100,19 @@ export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, sho
               background: locked
                 ? "rgba(80,0,0,0.3)"
                 : isCursor
-                ? "rgba(255,200,0,0.15)"
-                : "rgba(255,255,255,0.05)",
-              border: isCursor ? "1px solid rgba(255,200,0,0.4)" : "1px solid transparent",
+                  ? "rgba(255,200,0,0.15)"
+                  : "rgba(255,255,255,0.05)",
+              border: isCursor
+                ? "1px solid rgba(255,200,0,0.4)"
+                : "1px solid transparent",
               fontSize: 13,
               opacity: locked ? 0.6 : 1,
             }}
           >
-            <span style={{ color: locked ? "#955" : "#fa0" }}>
-              [{i + 1}]
-            </span>{" "}
+            <span style={{ color: locked ? "#955" : "#fa0" }}>[{i + 1}]</span>{" "}
             {recipe.name}{" "}
             <span style={{ color: "#777" }}>
-              ({recipe.timeToBrew} steps,{" "}
-              {recipe.idealTemperatureRange[0]}–
+              ({recipe.timeToBrew} steps, {recipe.idealTemperatureRange[0]}–
               {recipe.idealTemperatureRange[1]}°)
             </span>
             {recipe.ingredientId && (
@@ -111,7 +130,9 @@ export function RecipeMenu({ recipes, ingredients, onSelectRecipe, onCancel, sho
         );
       })}
       <div style={{ marginTop: 10, color: "#555", fontSize: 11 }}>
-        {fmtKeys(keybindings?.optionPrev)}/{fmtKeys(keybindings?.optionNext)} to navigate · {fmtKeys(keybindings?.optionSelect)} to select · number to pick · esc to cancel
+        {fmtKeys(keybindings?.optionPrev)}/{fmtKeys(keybindings?.optionNext)} to
+        navigate · {fmtKeys(keybindings?.optionSelect)} to select · number to
+        pick · {fmtKeys(keybindings?.cancel)} to cancel
       </div>
     </div>
   );

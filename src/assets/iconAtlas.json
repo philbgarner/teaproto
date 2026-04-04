@@ -4,5 +4,10 @@
     { "id": 1, "name": "coins1", "uv": [32, 128] },
     { "id": 2, "name": "coins2", "uv": [64, 128] }
   ],
+  "ingredients": [
+    { "id": 1, "name": "Hot Pepper", "uv": [224, 128] },
+    { "id": 2, "name": "Frost Leaf", "uv": [192, 128] },
+    { "id": 3, "name": "Wild Herbs", "uv": [160, 128] }
+  ],
   "bones": [{ "id": 1, "name": "bone", "uv": [224, 64] }]
 }

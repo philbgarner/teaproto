@@ -41,11 +41,19 @@ export interface MobilePlacement {
   uvRectHead?: [number, number, number, number];
   /** When true, the head bobbing animation is suppressed. */
   unconscious?: boolean;
+  /** Current satiation value; used to determine face state (angry when ≤ 0). */
+  satiation?: number;
   /**
    * Billboard geometry size in map cells [width, height].
    * A map cell is 3×3 world units. Defaults to [1, 1].
    */
   geometrySize?: [number, number];
+  /**
+   * RGBA outline colour [r, g, b, a] in 0–1 range.
+   * When alpha > 0, a 2-texel wide silhouette outline is drawn in this colour.
+   * Pass [0,0,0,0] (or omit) for no outline.
+   */
+  outlineColor?: [number, number, number, number];
   meta?: Record<string, unknown>;
 }
 

@@ -40,10 +40,13 @@ function preloadAll() {
         img.onload = resolve;
         img.onerror = resolve; // don't block on a missing asset
         img.src = BASE + src;
-      })
+      }),
   );
 
-  const fontPromise = new FontFace("Metamorphous", `url(${BASE}fonts/Metamorphous.ttf)`)
+  const fontPromise = new FontFace(
+    "Metamorphous",
+    `url(${BASE}fonts/Metamorphous.ttf)`,
+  )
     .load()
     .then((face) => document.fonts.add(face))
     .catch(() => {});
@@ -82,7 +85,7 @@ export function ClickToBegin({ onBegin }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "#000",
+        background: "#2459c5",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

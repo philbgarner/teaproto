@@ -19,6 +19,7 @@ import { RECIPES } from "../tea";
 import type { Tea } from "../tea";
 import { useSettings } from "../SettingsContext";
 import type { Entity } from "../../roguelike-mazetools/src/examples/ECS/Components";
+import { useSoundHelper } from "../hooks/useSoundHelper";
 import { getChestKeyCount } from "../../roguelike-mazetools/src/examples/ECS/ObjectDefinition";
 import { useMusic } from "./useMusic";
 import { useMessage } from "./useMessage";
@@ -49,6 +50,7 @@ import {
   LOS_RADIUS,
   MOB_DEFENSE,
   SPIKE_TRAP_DAMAGE,
+  RPS_OUTLINE_COLOR,
 } from "../gameConstants";
 import {
   normalizeUvRect,
@@ -72,6 +74,8 @@ export interface UseGameStateParams {
   adventurerSpawnRooms: { x: number; z: number; dist: number }[];
   initialIngredientDrops: any[];
   initialChests: any[];
+  initialDisarmedTraps?: string[];
+  initialOpenDoors?: string[];
   spawnX: number;
   spawnZ: number;
   spawnYaw: number;
@@ -90,6 +94,11 @@ export interface UseGameStateParams {
   traversalFactor: number;
   adventurerDreadRate: number;
   adventurerLootPerChest: number;
+  winRounds: number;
+  danceSatiationBoost: number;
+  teaSatiationAmount: number;
+  teaHpRestorePercent: number;
+  startIngredientAmount: number;
   keybindings: any;
 }
 
@@ -99,11 +108,14 @@ export function useGameState({
   floorData,
   wallData,
   ceilingData,
+  danceSatiationBoost,
   temperatureData,
   initialMobs,
   adventurerSpawnRooms,
   initialIngredientDrops,
   initialChests,
+  initialDisarmedTraps = [],
+  initialOpenDoors = [],
   spawnX,
   spawnZ,
   spawnYaw,
@@ -121,6 +133,10 @@ export function useGameState({
   traversalFactor,
   adventurerDreadRate,
   adventurerLootPerChest,
+  winRounds,
+  teaSatiationAmount,
+  teaHpRestorePercent,
+  startIngredientAmount,
   keybindings,
 }: UseGameStateParams) {
   // Tile atlas + texture
@@ -258,6 +274,7 @@ export function useGameState({
     recipe: (typeof RECIPES)[number],
     temperature: number,
   ) {
+    sounds.teacup.play();
     const handInventory = getHandInventory(hand);
     const entity = registry.createEntity();
     registry.components.description.add(entity, { name: recipe.name });
@@ -274,6 +291,7 @@ export function useGameState({
   }
 
   function removeTeaFromHand(hand: "left" | "right") {
+    sounds.teacup.play();
     const handInventory = getHandInventory(hand);
     const inv = registry.components.inventory.get(handInventory);
     if (!inv?.slots[0]) return;
@@ -340,7 +358,9 @@ export function useGameState({
   const [showRecipeMenu, setShowRecipeMenu] = useState(false);
   const [recipeMenuCursor, setRecipeMenuCursor] = useState(0);
   const [activeStoveKey, setActiveStoveKey] = useState<string | null>(null);
-  const { message, displayedText, setMessage, showMsg } = useMessage();
+  const [showSummonMenu, setShowSummonMenu] = useState(false);
+  const [summonMenuCursor, setSummonMenuCursor] = useState(0);
+  const { message, displayedText, setMessage, showMsg, messageLog, logDialog } = useMessage();
   const ruinedNotifiedRef = useRef(new Set<string>());
 
   // ---------------------------------------------------------------------------
@@ -375,8 +395,17 @@ export function useGameState({
         speechBubblesRef.current = nextRef;
         delete speechBubbleTimersRef.current[entityId];
       }, duration);
+
+      let speakerName: string | undefined;
+      if (entityId.startsWith("mob_")) {
+        const idx = parseInt(entityId.slice(4), 10);
+        speakerName = initialMobs[idx]?.name;
+      } else {
+        speakerName = adventurersRef.current.find((a) => a.id === entityId)?.name;
+      }
+      logDialog(speakerName ?? entityId, text);
     },
-    [],
+    [initialMobs, logDialog],
   );
   // Map<regionId, cumulativeRise> — only regions containing cozy objects heat up
   const [roomTempRise, setRoomTempRise] = useState<Map<number, number>>(
@@ -456,7 +485,8 @@ export function useGameState({
   const [doorStates, setDoorStates] = useState<Map<string, DoorState>>(() => {
     const m = new Map<string, DoorState>();
     for (const d of doorPlacements) {
-      m.set(`${d.x}_${d.z}`, "closed");
+      const key = `${d.x}_${d.z}`;
+      m.set(key, initialOpenDoors.includes(key) ? "open" : "closed");
     }
     return m;
   });
@@ -490,15 +520,15 @@ export function useGameState({
   >([]);
   const [damageNumbers, setDamageNumbers] = useState<DamageNumberData[]>([]);
   const [disarmedTraps, setDisarmedTraps] = useState<Set<string>>(
-    () => new Set(),
+    () => new Set(initialDisarmedTraps),
   );
-  const disarmedTrapsRef = useRef<Set<string>>(new Set());
+  const disarmedTrapsRef = useRef<Set<string>>(new Set(initialDisarmedTraps));
 
-  // Ingredient inventory  { rations: 0, herbs: 0, dust: 0 }
+  // Ingredient inventory
   const [ingredients, setIngredients] = useState<Record<string, number>>({
-    rations: 0,
-    herbs: 0,
-    dust: 0,
+    "hot-pepper": 1,
+    "wild-herb": 1,
+    "frost-leaf": 1,
   });
   const [ingredientDrops, setIngredientDrops] = useState<any[]>([]);
 
@@ -517,9 +547,9 @@ export function useGameState({
   const xpDropsRef = useRef<any[]>([]);
   const playerHpRef = useRef(PLAYER_MAX_HP);
   const ingredientsRef = useRef<Record<string, number>>({
-    rations: 0,
-    herbs: 0,
-    dust: 0,
+    "hot-pepper": 1,
+    "wild-herb": 1,
+    "frost-leaf": 1,
   });
   const ingredientDropsRef = useRef<any[]>([]);
   // Sync ref kept in step with ECS hand state so onStep can read without a dep
@@ -539,7 +569,6 @@ export function useGameState({
   // Explored mask — Uint8Array(W*H), 1 = cell has been seen by the player
   const exploredMaskRef = useRef<Uint8Array | null>(null);
   const firstTeaDeliveredRef = useRef(false);
-  const firstWarmRoomTeaRef = useRef(false);
 
   // Track which adventurers have already reacted to spotting the ghost (player)
   const adventurerSightingsRef = useRef(new Set<string>());
@@ -554,6 +583,18 @@ export function useGameState({
     mobHpsRef.current = initialMobs.map((m) => m.hp ?? MOB_HP);
   }
   const mobRpsEffectsRef = useRef<string[]>(initialMobs.map(() => "none"));
+  const [mobHasMet, setMobHasMet] = useState<boolean[]>(() =>
+    initialMobs.map(() => false),
+  );
+  const mobHasMetRef = useRef<boolean[]>(initialMobs.map(() => false));
+  const mobSummonSet = useRef<Map<number, { x: number; z: number }>>(new Map());
+
+  // Dance tracking: counts consecutive q/e turns while sharing a cell with a mob/adventurer
+  const danceStateRef = useRef<{
+    mobIdx: number | null;
+    advId: string | null;
+    count: number;
+  }>({ mobIdx: null, advId: null, count: 0 });
 
   // Hidden passages
   const passagesRef = useRef<any[]>([]);
@@ -572,13 +613,7 @@ export function useGameState({
   }, [traversalFactor]);
   const traversalStartRef = useRef({ totalSteps: 0, factor: 2.0 });
 
-  const { play: playMainTheme } = useMusic(
-    `${import.meta.env.BASE_URL}music/MUS_1_MainTheme_Cozy.ogg`,
-    {
-      volume: 1.0,
-      loop: true,
-    },
-  );
+  const { sounds } = useSoundHelper();
 
   // Reset all game state whenever the dungeon regenerates
   useEffect(() => {
@@ -623,7 +658,11 @@ export function useGameState({
     playerXpRef.current = 0;
     xpDropsRef.current = [];
     playerHpRef.current = PLAYER_MAX_HP;
-    ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
+    ingredientsRef.current = {
+      "hot-pepper": startIngredientAmount,
+      "wild-herb": startIngredientAmount,
+      "frost-leaf": startIngredientAmount,
+    };
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
     mobHpsRef.current = freshHps;
@@ -632,8 +671,11 @@ export function useGameState({
     mobPositionsRef.current = freshPositions;
     ruinedNotifiedRef.current = new Set();
     adventurerSightingsRef.current = new Set();
+    mobSummonSet.current = new Map();
+    const freshHasMet = initialMobs.map(() => false);
+    mobHasMetRef.current = freshHasMet;
+    setMobHasMet(freshHasMet);
     firstTeaDeliveredRef.current = false;
-    firstWarmRoomTeaRef.current = false;
 
     // Pre-explore exactly: kitchen (startRoomId) + one monster room + connecting corridor
     exploredMaskRef.current = buildInitialExploredMask(
@@ -651,9 +693,9 @@ export function useGameState({
     );
     setPassageTraversal({ kind: "idle" });
 
-    playMainTheme();
+    sounds.mainThemeDungeon.play();
     showMsg(
-      "You have a Green Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
+      "You have an Iced Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
     );
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -688,6 +730,10 @@ export function useGameState({
             CHAR_SHEET_H,
           ),
           unconscious: mobHps[i] <= 0,
+          satiation: mobSatiations[i],
+          outlineColor:
+            RPS_OUTLINE_COLOR[mobRpsEffects[i]] ??
+            ([0, 0, 0, 0] as [number, number, number, number]),
         };
       }),
       ...adventurers
@@ -720,6 +766,7 @@ export function useGameState({
     mobStatuses,
     mobSatiations,
     mobHps,
+    mobRpsEffects,
     adventurers,
   ]);
 
@@ -829,6 +876,36 @@ export function useGameState({
   // On each player step: cool tea, count down brewing, run game loop
   const onStep = useCallback(() => {
     if (gameState !== "playing") return;
+
+    // --- Dance resolution: player moves away after 3+ turns with a co-located entity ---
+    {
+      const ds = danceStateRef.current;
+      if (ds.count >= 3) {
+        if (ds.mobIdx !== null) {
+          const mobEntityId = `mob_${ds.mobIdx}`;
+          showSpeechBubble(
+            mobEntityId,
+            "Thank you for the dance, dear ghost!",
+            6000,
+          );
+          const nextSatiations = [...mobSatiationsRef.current!];
+          nextSatiations[ds.mobIdx!] = Math.min(
+            150,
+            nextSatiations[ds.mobIdx!] + danceSatiationBoost,
+          );
+          mobSatiationsRef.current = nextSatiations;
+          setMobSatiations(nextSatiations);
+        } else if (ds.advId !== null) {
+          showSpeechBubble(
+            ds.advId,
+            "Most peculiar... dancing with a phantom!",
+            6000,
+          );
+        }
+      }
+      danceStateRef.current = { mobIdx: null, advId: null, count: 0 };
+    }
+
     // --- Tea cooling ---
     // Check if player is in a warm or cozy room (roomTemp > 127)
     {
@@ -844,38 +921,27 @@ export function useGameState({
       );
       const inWarmRoom = playerRoomTemp > 127;
 
-      const hands = playerHandsRef.current;
-      const carryingTea = hands.left || hands.right;
-      if (inWarmRoom && carryingTea && !firstWarmRoomTeaRef.current) {
-        firstWarmRoomTeaRef.current = true;
-        showMsg(
-          "The warmth of this room keeps your tea from cooling too much — it won't drop below mid-range here!",
-        );
+      let handsChanged = false;
+      for (const handInventory of [leftHandInventory, rightHandInventory]) {
+        const inv = registry.components.inventory.get(handInventory);
+        if (!inv?.slots[0]) continue;
+        const slot = registry.components.inventorySlot.get(inv.slots[0]);
+        if (!slot?.object) continue;
+        const entity = slot.object;
+        const tempComp = registry.components.temperature.get(entity);
+        const teaComp = registry.components.tea.get(entity);
+        if (!tempComp || !teaComp) continue;
+        const rawTemp = tempComp.currentTemperature - tempDropPerStep;
+        const newTemp = inWarmRoom
+          ? Math.max(
+              rawTemp,
+              (tempComp.minTemperature + tempComp.maxTemperature) / 2,
+            )
+          : rawTemp;
+        tempComp.currentTemperature = newTemp;
+        handsChanged = true;
       }
-
-      {
-        let handsChanged = false;
-        for (const handInventory of [leftHandInventory, rightHandInventory]) {
-          const inv = registry.components.inventory.get(handInventory);
-          if (!inv?.slots[0]) continue;
-          const slot = registry.components.inventorySlot.get(inv.slots[0]);
-          if (!slot?.object) continue;
-          const entity = slot.object;
-          const tempComp = registry.components.temperature.get(entity);
-          const teaComp = registry.components.tea.get(entity);
-          if (!tempComp || !teaComp) continue;
-          const rawTemp = tempComp.currentTemperature - tempDropPerStep;
-          const newTemp = inWarmRoom
-            ? Math.max(
-                rawTemp,
-                (tempComp.minTemperature + tempComp.maxTemperature) / 2,
-              )
-            : rawTemp;
-          tempComp.currentTemperature = newTemp;
-          handsChanged = true;
-        }
-        if (handsChanged) setHandsVersion((v) => v + 1);
-      }
+      if (handsChanged) setHandsVersion((v) => v + 1);
     }
 
     // --- Stove brewing countdown ---
@@ -889,6 +955,7 @@ export function useGameState({
           next.set(key, {
             brewing: { ...state.brewing, stepsRemaining: 0, ready: true },
           });
+          sounds.tea_ready.play();
         } else {
           next.set(key, {
             brewing: { ...state.brewing, stepsRemaining: steps },
@@ -959,6 +1026,28 @@ export function useGameState({
     const { x: px, z: pz } = logicalRef.current;
     const pgx = Math.floor(px);
     const pgz = Math.floor(pz);
+
+    // --- Mark mobs as met when player steps directly beside them ---
+    {
+      const positions = mobPositionsRef.current;
+      const hasMet = mobHasMetRef.current;
+      let changed = false;
+      for (let i = 0; i < positions.length; i++) {
+        if (!hasMet[i]) {
+          const dx = Math.abs(positions[i].x - pgx);
+          const dz = Math.abs(positions[i].z - pgz);
+          if (dx + dz <= 1) {
+            hasMet[i] = true;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        mobHasMetRef.current = [...hasMet];
+        setMobHasMet([...hasMet]);
+      }
+    }
+
     const remainingDrops: any[] = [];
     let xpGained = 0;
     for (const drop of newXpDrops) {
@@ -971,6 +1060,7 @@ export function useGameState({
     if (xpGained > 0) {
       newPlayerXp += xpGained;
       stepMessage = `Collected ${xpGained} gold! (Total: ${newPlayerXp})`;
+      sounds.coins.play();
     }
     newXpDrops = remainingDrops;
 
@@ -1051,7 +1141,9 @@ export function useGameState({
       newAdventurers.filter((a) => a.alive).length,
     );
     const mobPlayerOccupied = new Set([
-      ...newMobPositions.map((p) => `${p.x}_${p.z}`),
+      ...newMobPositions
+        .filter((_, i) => newMobHps[i] > 0)
+        .map((p) => `${p.x}_${p.z}`),
     ]);
 
     const intendedMoves = newAdventurers.map((advInit) => {
@@ -1158,7 +1250,8 @@ export function useGameState({
             isBlocked: (x: number, y: number) => {
               const isLockedDoor =
                 doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                adv.template !== "rogue" && (adv.keys ?? 0) === 0;
+                adv.template !== "rogue" &&
+                (adv.keys ?? 0) === 0;
               return (
                 isLockedDoor ||
                 (mobPlayerOccupied.has(`${x}_${y}`) &&
@@ -1223,6 +1316,20 @@ export function useGameState({
           newChests.splice(chestIdx, 1);
           if (pickedChest.mimic) {
             adv = { ...adv, alive: false, hp: 0 };
+            for (
+              let ci = 0;
+              ci < (adv.inventoryIngredients?.length ?? 0);
+              ci++
+            ) {
+              const ing = adv.inventoryIngredients![ci];
+              newIngredientDrops.push({
+                id: ing.id,
+                name: ing.name,
+                x: adv.x,
+                z: adv.z,
+                dropKey: `inv_mimic_${Date.now()}_${ci}`,
+              });
+            }
             stepMessage = `The ${adv.name} opened a mimic chest and was devoured!`;
             return {
               adv,
@@ -1235,11 +1342,34 @@ export function useGameState({
           }
           newLoot += adventurerLootPerChestRef.current;
           if (pickedChest.ecsData) {
-            const keyCount = getChestKeyCount(pickedChest.ecsData.registry, pickedChest.ecsData.chestEntity);
+            const keyCount = getChestKeyCount(
+              pickedChest.ecsData.registry,
+              pickedChest.ecsData.chestEntity,
+            );
             if (keyCount > 0) {
               adv = { ...adv, keys: (adv.keys ?? 0) + keyCount };
             }
           }
+          // Pick up random ingredients from chest
+          const chestIngTypes = [
+            { id: "hot-pepper", name: "Hot Pepper" },
+            { id: "wild-herb", name: "Wild Herbs" },
+            { id: "frost-leaf", name: "Frost Leaf" },
+          ];
+          const chestIngCount = 1 + Math.floor(Math.random() * 3);
+          const pickedIngs: { id: string; name: string }[] = [];
+          for (let ci = 0; ci < chestIngCount; ci++) {
+            pickedIngs.push(
+              chestIngTypes[Math.floor(Math.random() * chestIngTypes.length)],
+            );
+          }
+          adv = {
+            ...adv,
+            inventoryIngredients: [
+              ...(adv.inventoryIngredients ?? []),
+              ...pickedIngs,
+            ],
+          };
         }
 
         // Check state transition
@@ -1281,7 +1411,8 @@ export function useGameState({
                 isBlocked: (x: number, y: number) => {
                   const isLockedDoor =
                     doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                    adv.template !== "rogue" && (adv.keys ?? 0) === 0;
+                    adv.template !== "rogue" &&
+                    (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
                 fourDir: true,
@@ -1331,7 +1462,8 @@ export function useGameState({
                 isBlocked: (x: number, y: number) => {
                   const isLockedDoor =
                     doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-                    adv.template !== "rogue" && (adv.keys ?? 0) === 0;
+                    adv.template !== "rogue" &&
+                    (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
                 fourDir: true,
@@ -1411,7 +1543,8 @@ export function useGameState({
           isBlocked: (x: number, y: number) => {
             const isLockedDoor =
               doorStatesRef.current.get(`${x}_${y}`) === "locked" &&
-              adv.template !== "rogue" && (adv.keys ?? 0) === 0;
+              adv.template !== "rogue" &&
+              (adv.keys ?? 0) === 0;
             return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
           },
           fourDir: true,
@@ -1535,7 +1668,10 @@ export function useGameState({
         const key = `${adv.x}_${adv.z}`;
         const state = doorUpdates.get(key);
         if (state === undefined) continue;
-        if (state === "locked" && (adv.template === "rogue" || (adv.keys ?? 0) > 0)) {
+        if (
+          state === "locked" &&
+          (adv.template === "rogue" || (adv.keys ?? 0) > 0)
+        ) {
           doorUpdates.set(key, "open");
           anyDoorChanged = true;
           if (adv.template !== "rogue" && (adv.keys ?? 0) > 0) {
@@ -1609,6 +1745,16 @@ export function useGameState({
             dropKey: `ing_trap_${Date.now()}_${i}`,
           });
         }
+        for (let ci = 0; ci < (adv.inventoryIngredients?.length ?? 0); ci++) {
+          const ing = adv.inventoryIngredients![ci];
+          newIngredientDrops.push({
+            id: ing.id,
+            name: ing.name,
+            x: adv.x,
+            z: adv.z,
+            dropKey: `inv_trap_${Date.now()}_${i}_${ci}`,
+          });
+        }
         stepMessage = `The ${adv.name} was slain by a spike trap! (+${xpReward} gold)`;
       } else {
         newAdventurers[i] = { ...adv, hp: newHp };
@@ -1619,8 +1765,36 @@ export function useGameState({
     // --- Conscious mob AI: move toward nearest adventurer in line of sight ---
     console.log("[onStep] mob AI start");
     for (let i = 0; i < initialMobs.length; i++) {
-      if (newMobSatiations[i] <= 0) continue; // unconscious
+      if (newMobHps[i] <= 0) continue; // unconscious
       const pos = newMobPositions[i];
+
+      // Summon: pathfind toward stored target position
+      if (mobSummonSet.current.has(i)) {
+        const target = mobSummonSet.current.get(i)!;
+        const dist = Math.abs(pos.x - target.x) + Math.abs(pos.z - target.z);
+        if (dist <= 1) {
+          mobSummonSet.current.delete(i);
+        } else {
+          const summonAstar = aStar8(
+            { width: dungeonWidth, height: dungeonHeight },
+            (x: number, y: number) => isWalkableForLos(x, y),
+            { x: pos.x, y: pos.z },
+            { x: target.x, y: target.z },
+            { fourDir: true },
+          );
+          if (summonAstar && summonAstar.path.length > 1) {
+            const step = summonAstar.path[1];
+            const blockedByMob = newMobPositions.some(
+              (p: any, j: number) =>
+                j !== i && p.x === step.x && p.z === step.y,
+            );
+            if (!blockedByMob) {
+              newMobPositions[i] = { x: step.x, z: step.y };
+            }
+          }
+        }
+        continue;
+      }
 
       // Find nearest visible adventurer within LOS_RADIUS
       let chaseTarget: any = null;
@@ -1671,7 +1845,7 @@ export function useGameState({
 
     // --- Conscious mob counterattack ---
     for (let i = 0; i < initialMobs.length; i++) {
-      if (newMobSatiations[i] <= 0) continue; // unconscious
+      if (newMobHps[i] <= 0) continue; // unconscious
       const mob = initialMobs[i];
       const mobPos = newMobPositions[i];
       for (let j = 0; j < newAdventurers.length; j++) {
@@ -1716,6 +1890,20 @@ export function useGameState({
                 dropKey: `ing_${Date.now()}_${j}`,
               });
             }
+            for (
+              let ci = 0;
+              ci < (adv.inventoryIngredients?.length ?? 0);
+              ci++
+            ) {
+              const ing = adv.inventoryIngredients![ci];
+              newIngredientDrops.push({
+                id: ing.id,
+                name: ing.name,
+                x: adv.x,
+                z: adv.z,
+                dropKey: `inv_${Date.now()}_${j}_${ci}`,
+              });
+            }
             stepMessage = `${mob.name} slew the ${adv.name}! (+${xpReward} gold, ${tmpl?.drop?.name ?? "?"} dropped)`;
           } else {
             newAdventurers[j] = { ...adv, hp: newHp };
@@ -1744,7 +1932,7 @@ export function useGameState({
     }
 
     // --- Win condition ---
-    if (newRound >= WIN_ROUNDS) {
+    if (newRound >= winRounds) {
       setGameState("won");
       return;
     }
@@ -1944,7 +2132,47 @@ export function useGameState({
     spawnAdventurersForRound,
     stovePlacements,
     doorPlacements,
+    danceSatiationBoost,
   ]);
+
+  const onTurn = useCallback(() => {
+    if (gameState !== "playing") return;
+    const { x, z } = logicalRef.current;
+    const px = Math.floor(x);
+    const pz = Math.floor(z);
+
+    // Check for co-located mob
+    const mobIdx = mobPositionsRef.current.findIndex(
+      (p, i) =>
+        p.x === px && p.z === pz && (mobSatiationsRef.current?.[i] ?? 0) > 0,
+    );
+    if (mobIdx !== -1) {
+      const ds = danceStateRef.current;
+      if (ds.mobIdx === mobIdx) {
+        danceStateRef.current = { ...ds, count: ds.count + 1 };
+      } else {
+        danceStateRef.current = { mobIdx, advId: null, count: 1 };
+      }
+      return;
+    }
+
+    // Check for co-located adventurer
+    const adv = adventurersRef.current.find(
+      (a) => a.alive && a.x === px && a.z === pz,
+    );
+    if (adv) {
+      const ds = danceStateRef.current;
+      if (ds.advId === adv.id) {
+        danceStateRef.current = { ...ds, count: ds.count + 1 };
+      } else {
+        danceStateRef.current = { mobIdx: null, advId: adv.id, count: 1 };
+      }
+      return;
+    }
+
+    // Not co-located with anyone — reset
+    danceStateRef.current = { mobIdx: null, advId: null, count: 0 };
+  }, [gameState, mobPositionsRef, adventurersRef, mobSatiationsRef]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onBlockedMove = useCallback((dx: number, dz: number) => {
     const passages = passagesRef.current;
@@ -2053,6 +2281,7 @@ export function useGameState({
             showMsg("Passage locked.");
           }
           setPassageMask(newMask);
+          sounds.twinkle.play();
           return;
         }
       }
@@ -2101,6 +2330,7 @@ export function useGameState({
           showMsg(
             `Brewing ${state.brewing.recipe.name}... ${state.brewing.stepsRemaining} steps remaining.`,
           );
+          sounds.denySelection.play();
         }
       } else if (facingTarget.type === "trap") {
         const key = `${facingTarget.x}_${facingTarget.z}`;
@@ -2109,6 +2339,7 @@ export function useGameState({
         disarmedTrapsRef.current = newDisarmed;
         setDisarmedTraps(new Set(newDisarmed));
         showMsg("You reset the spike trap.");
+        sounds.trap_armed.play();
       } else if (facingTarget.type === "mob") {
         const mob = initialMobs[facingTarget.mobIdx];
         const hand = leftHandTea ? "left" : rightHandTea ? "right" : null;
@@ -2119,15 +2350,15 @@ export function useGameState({
               ? rightHandTea
               : null;
         const mobStatus = mobStatuses[facingTarget.mobIdx];
-        const isUnconscious = mobSatiations[facingTarget.mobIdx] <= 0;
+        const isUnconscious = mobHps[facingTarget.mobIdx] <= 0;
         const mobBubbleId = `mob_${facingTarget.mobIdx}`;
-        if (tea && !isUnconscious && mobStatus === "ecstatic") {
-          showSpeechBubble(
-            mobBubbleId,
-            "Oh, I couldn't possibly! I'm far too full right now — perhaps later.",
-          );
-          return;
-        }
+        // if (tea && !isUnconscious && mobStatus === "ecstatic") {
+        //   showSpeechBubble(
+        //     mobBubbleId,
+        //     "Oh, I couldn't possibly! I'm far too full right now — perhaps later.",
+        //   );
+        //   return;
+        // }
         if (!tea) {
           const preferredRecipe = RECIPES.find(
             (r) => r.id === mob.preferredRecipeId,
@@ -2172,34 +2403,46 @@ export function useGameState({
           mobSatiationsRef.current = next;
           setMobSatiations(next);
         }
-        if (tea.temperature < lo) {
-          applyMobSatiation(10);
-          showSpeechBubble(
-            mobBubbleId,
-            `This ${tea.name} is too cold... How disappointing.`,
+
+        function applyMobHpRestore(amount: number) {
+          const maxHp = mob.hp ?? MOB_HP;
+          const next = [...mobHpsRef.current!];
+          next[facingTarget.mobIdx] = Math.min(
+            maxHp,
+            next[facingTarget.mobIdx] + amount,
           );
-        } else if (tea.temperature > hi) {
-          applyMobSatiation(30);
+          mobHpsRef.current = next;
+          setMobHps(next);
+        }
+
+        const currentRpsEffect = mobRpsEffectsRef.current[facingTarget.mobIdx];
+        const countersEffect = tea.recipe.countersEffect;
+        if (countersEffect && currentRpsEffect === countersEffect) {
+          const nextRpsEffects = [...mobRpsEffectsRef.current];
+          nextRpsEffects[facingTarget.mobIdx] = "none";
+          mobRpsEffectsRef.current = nextRpsEffects;
+          setMobRpsEffects(nextRpsEffects);
+          applyMobSatiation(
+            Math.round(teaSatiationAmount * (1 + supersatiationBonus / 100)),
+          );
+          applyMobHpRestore(
+            Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)),
+          );
           showSpeechBubble(
             mobBubbleId,
-            `Ouch! This ${tea.name} is scalding hot! Dreadfully disappointing.`,
+            `This ${tea.name} is exactly what I needed — I feel so much better!`,
           );
         } else {
-          const isPreferred = mob.preferredRecipeId === tea.recipe.id;
-          const bonus = isPreferred ? 100 * (supersatiationBonus / 100) : 0;
-          applyMobSatiation(100 + bonus);
-          if (isPreferred) {
-            showSpeechBubble(
-              mobBubbleId,
-              `My favourite! This ${tea.name} is absolutely perfect — I am overjoyed!`,
-            );
-          } else {
-            showSpeechBubble(
-              mobBubbleId,
-              `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
-            );
-          }
+          applyMobSatiation(teaSatiationAmount);
+          applyMobHpRestore(
+            Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)),
+          );
+          showSpeechBubble(
+            mobBubbleId,
+            `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
+          );
         }
+        sounds.twinkle.play();
       } else if (facingTarget.type === "door") {
         const state =
           doorStatesRef.current.get(facingTarget.doorKey) ?? "closed";
@@ -2207,11 +2450,13 @@ export function useGameState({
           setDoorStates((prev) =>
             new Map(prev).set(facingTarget.doorKey, "closed"),
           );
+          sounds.slideDown.play();
           showMsg("You close the door.");
         } else if (state === "closed") {
           setDoorStates((prev) =>
             new Map(prev).set(facingTarget.doorKey, "locked"),
           );
+          sounds.key_close.play();
           showMsg("You lock the door.");
         } else {
           setDoorStates((prev) =>
@@ -2228,15 +2473,19 @@ export function useGameState({
         setShowRecipeMenu(false);
         return;
       }
+      if (showSummonMenu) {
+        setShowSummonMenu(false);
+        return;
+      }
       doInteract();
     };
     const waitHandler = (e: KeyboardEvent) => {
-      if (showRecipeMenu) return;
+      if (showRecipeMenu || showSummonMenu) return;
       e.preventDefault();
       onStep();
     };
     const discardLeftHandler = (e: KeyboardEvent) => {
-      if (showRecipeMenu) return;
+      if (showRecipeMenu || showSummonMenu) return;
       e.preventDefault();
       if (gameState !== "playing") return;
       if (leftHandTea) {
@@ -2255,7 +2504,7 @@ export function useGameState({
       }
     };
     const discardRightHandler = (e: KeyboardEvent) => {
-      if (showRecipeMenu) return;
+      if (showRecipeMenu || showSummonMenu) return;
       e.preventDefault();
       if (gameState !== "playing") return;
       if (rightHandTea) {
@@ -2315,17 +2564,20 @@ export function useGameState({
         showMsg(
           `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
         );
+        sounds.acceptSelection.play();
       }
     };
 
     const recipeOptionNextHandler = (e: KeyboardEvent) => {
       if (!showRecipeMenu) return;
       e.preventDefault();
+      sounds.selectionChanged.play();
       setRecipeMenuCursor((c) => (c + 1) % RECIPES.length);
     };
     const recipeOptionPrevHandler = (e: KeyboardEvent) => {
       if (!showRecipeMenu) return;
       e.preventDefault();
+      sounds.selectionChanged.play();
       setRecipeMenuCursor((c) => (c - 1 + RECIPES.length) % RECIPES.length);
     };
     const recipeOptionSelectHandler = (e: KeyboardEvent) => {
@@ -2364,6 +2616,88 @@ export function useGameState({
       showMsg(
         `Started brewing ${recipe.name}! ${recipe.timeToBrew} steps until ready.`,
       );
+      sounds.acceptSelection.play();
+    };
+
+    const summonOpenHandler = (e: KeyboardEvent) => {
+      if (showRecipeMenu || showSummonMenu) return;
+      if (gameState !== "playing") return;
+      if (initialMobs.length === 0) return;
+      e.preventDefault();
+      setSummonMenuCursor(0);
+      setShowSummonMenu(true);
+    };
+    const summonCloseHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      setShowSummonMenu(false);
+    };
+    const summonOptionNextHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      sounds.selectionChanged.play();
+      setSummonMenuCursor((c) => (c + 1) % initialMobs.length);
+    };
+    const summonOptionPrevHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      sounds.selectionChanged.play();
+      setSummonMenuCursor(
+        (c) => (c - 1 + initialMobs.length) % initialMobs.length,
+      );
+    };
+    const summonOptionSelectHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      const { x: px, z: pz } = logicalRef.current;
+      const pgx = Math.floor(px);
+      const pgz = Math.floor(pz);
+      if (solidData[pgz * dungeonWidth + pgx] !== 0) {
+        showMsg("Can't summon here — you're standing on a wall.");
+        return;
+      }
+      if (
+        mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)
+      ) {
+        showMsg("Can't summon here — a monster is already here.");
+        return;
+      }
+      if (!mobHasMetRef.current[summonMenuCursor]) {
+        showMsg(`You haven't met ${initialMobs[summonMenuCursor].name} yet.`);
+        return;
+      }
+      mobSummonSet.current.set(summonMenuCursor, { x: pgx, z: pgz });
+      showMsg(`${initialMobs[summonMenuCursor].name} is on its way!`);
+      setShowSummonMenu(false);
+      sounds.acceptSelection.play();
+    };
+    const summonSelectHandler = (e: KeyboardEvent) => {
+      if (!showSummonMenu) return;
+      e.preventDefault();
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= initialMobs.length) {
+        const { x: px, z: pz } = logicalRef.current;
+        const pgx = Math.floor(px);
+        const pgz = Math.floor(pz);
+        if (solidData[pgz * dungeonWidth + pgx] !== 0) {
+          showMsg("Can't summon here — you're standing on a wall.");
+          return;
+        }
+        if (
+          mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)
+        ) {
+          showMsg("Can't summon here — a monster is already here.");
+          return;
+        }
+        if (!mobHasMetRef.current[num - 1]) {
+          showMsg(`You haven't met ${initialMobs[num - 1].name} yet.`);
+          return;
+        }
+        mobSummonSet.current.set(num - 1, { x: pgx, z: pgz });
+        showMsg(`${initialMobs[num - 1].name} is on its way!`);
+        setShowSummonMenu(false);
+        sounds.acceptSelection.play();
+      }
     };
 
     const interactKeys = keybindings.interact.join(",");
@@ -2373,17 +2707,26 @@ export function useGameState({
     const optionNextKeys = (keybindings.optionNext ?? []).join(",");
     const optionPrevKeys = (keybindings.optionPrev ?? []).join(",");
     const optionSelectKeys = (keybindings.optionSelect ?? []).join(",");
+    const summonKeys = (keybindings.summon ?? []).join(",");
+    const cancelKeys = (keybindings.cancel ?? []).join(",");
 
     if (interactKeys) hotkeys(interactKeys, interactHandler as any);
     if (waitKeys) hotkeys(waitKeys, waitHandler as any);
     if (discardLeftKeys) hotkeys(discardLeftKeys, discardLeftHandler as any);
     if (discardRightKeys) hotkeys(discardRightKeys, discardRightHandler as any);
     if (optionNextKeys) hotkeys(optionNextKeys, recipeOptionNextHandler as any);
+    if (optionNextKeys) hotkeys(optionNextKeys, summonOptionNextHandler as any);
     if (optionPrevKeys) hotkeys(optionPrevKeys, recipeOptionPrevHandler as any);
+    if (optionPrevKeys) hotkeys(optionPrevKeys, summonOptionPrevHandler as any);
     if (optionSelectKeys)
       hotkeys(optionSelectKeys, recipeOptionSelectHandler as any);
-    hotkeys("escape", recipeCloseHandler as any);
+    if (optionSelectKeys)
+      hotkeys(optionSelectKeys, summonOptionSelectHandler as any);
+    if (cancelKeys) hotkeys(cancelKeys, recipeCloseHandler as any);
+    if (cancelKeys) hotkeys(cancelKeys, summonCloseHandler as any);
     hotkeys("1,2,3,4,5,6,7,8,9", recipeSelectHandler as any);
+    hotkeys("1,2,3,4,5,6,7,8,9", summonSelectHandler as any);
+    if (summonKeys) hotkeys(summonKeys, summonOpenHandler as any);
 
     return () => {
       if (interactKeys) hotkeys.unbind(interactKeys, interactHandler as any);
@@ -2394,15 +2737,25 @@ export function useGameState({
         hotkeys.unbind(discardRightKeys, discardRightHandler as any);
       if (optionNextKeys)
         hotkeys.unbind(optionNextKeys, recipeOptionNextHandler as any);
+      if (optionNextKeys)
+        hotkeys.unbind(optionNextKeys, summonOptionNextHandler as any);
       if (optionPrevKeys)
         hotkeys.unbind(optionPrevKeys, recipeOptionPrevHandler as any);
+      if (optionPrevKeys)
+        hotkeys.unbind(optionPrevKeys, summonOptionPrevHandler as any);
       if (optionSelectKeys)
         hotkeys.unbind(optionSelectKeys, recipeOptionSelectHandler as any);
-      hotkeys.unbind("escape", recipeCloseHandler as any);
+      if (optionSelectKeys)
+        hotkeys.unbind(optionSelectKeys, summonOptionSelectHandler as any);
+      if (cancelKeys) hotkeys.unbind(cancelKeys, recipeCloseHandler as any);
+      if (cancelKeys) hotkeys.unbind(cancelKeys, summonCloseHandler as any);
       hotkeys.unbind("1,2,3,4,5,6,7,8,9", recipeSelectHandler as any);
+      hotkeys.unbind("1,2,3,4,5,6,7,8,9", summonSelectHandler as any);
+      if (summonKeys) hotkeys.unbind(summonKeys, summonOpenHandler as any);
     };
   }, [
     showRecipeMenu,
+    showSummonMenu,
     stoveStates,
     leftHandTea,
     rightHandTea,
@@ -2414,10 +2767,12 @@ export function useGameState({
     showSpeechBubble,
     onStep,
     supersatiationBonus,
+    teaSatiationAmount,
     ingredients,
     gameState,
     keybindings,
     recipeMenuCursor,
+    summonMenuCursor,
   ]);
 
   return {
@@ -2450,10 +2805,15 @@ export function useGameState({
     setRecipeMenuCursor,
     activeStoveKey,
     setActiveStoveKey,
+    showSummonMenu,
+    setShowSummonMenu,
+    summonMenuCursor,
+    setSummonMenuCursor,
     message,
     displayedText,
     setMessage,
     showMsg,
+    messageLog,
     speechBubbles,
     showSpeechBubble,
     roomTempRise,
@@ -2518,9 +2878,14 @@ export function useGameState({
     traversalStartRef,
     // callbacks
     onStep,
+    onTurn,
     onBlockedMove,
     spawnAdventurersForRound,
     getFacingTarget,
+    summonMob: (mobIdx: number, targetX: number, targetZ: number) => {
+      mobSummonSet.current.set(mobIdx, { x: targetX, z: targetZ });
+    },
+    mobHasMet,
     // refs for cross-hook wiring
     logicalRef,
     doMoveRef,

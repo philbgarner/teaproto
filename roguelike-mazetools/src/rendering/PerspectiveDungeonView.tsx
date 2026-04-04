@@ -446,6 +446,8 @@ attribute float aIsDamaged;    // 1.0 while taking a damage flash
 attribute vec4  aUvRectBody;   // x, y, w, h in normalized texture space
 attribute vec4  aUvRectHead;   // x, y, w, h in normalized texture space
 attribute float aUnconscious;  // 1.0 if unconscious, else 0.0
+attribute vec4  aOutlineColor; // RGBA outline colour; alpha=0 means no outline
+attribute float aHeadOffset;   // normalized UV x offset for head state (0=normal, 64px=angry, 128px=dead)
 varying vec2  vUv;
 varying float vTileId;
 varying float vFogDist;
@@ -454,6 +456,8 @@ varying float vIsDamaged;
 varying vec4  vUvRectBody;
 varying vec4  vUvRectHead;
 varying float vUnconscious;
+varying vec4  vOutlineColor;
+varying float vHeadOffset;
 
 void main() {
   vUv = uv;
@@ -462,6 +466,8 @@ void main() {
   vUvRectBody = aUvRectBody;
   vUvRectHead = aUvRectHead;
   vUnconscious = aUnconscious;
+  vOutlineColor = aOutlineColor;
+  vHeadOffset = aHeadOffset;
   vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);
   vWorldPos = worldPos.xz;
   vec4 eyePos = viewMatrix * worldPos;
@@ -475,6 +481,7 @@ uniform sampler2D uAtlas;
 uniform float uColumns;
 uniform float uRows;
 uniform vec3  uFogColor;
+uniform vec2  uTexelSize;  // 1/atlasWidth, 1/atlasHeight — for outline sampling
 ${TORCH_UNIFORMS_GLSL}
 varying vec2  vUv;
 varying float vTileId;
@@ -484,6 +491,8 @@ varying float vIsDamaged;    // 1.0 while this mobile is taking damage (per-inst
 varying vec4  vUvRectBody;
 varying vec4  vUvRectHead;
 varying float vUnconscious;
+varying vec4  vOutlineColor; // RGBA per-instance outline colour; alpha=0 = no outline
+varying float vHeadOffset;   // normalized UV x offset for head state
 
 ${TORCH_HASH_GLSL}
 ${TORCH_FNS_GLSL}
@@ -501,17 +510,19 @@ void main() {
     bodyMin  = vec2(col / uColumns, 1.0 - (row + 1.0) / uRows);
     bodySize = vec2(1.0 / uColumns, 1.0 / uRows);
   }
-  vec4 bodyColor = texture2D(uAtlas, bodyMin + vUv * bodySize);
+  vec2 bodyUv = bodyMin + vUv * bodySize;
+  vec4 bodyColor = texture2D(uAtlas, bodyUv);
 
   // Sample head layer on top of body, with optional bobbing animation.
   vec4 headColor = vec4(0.0);
+  vec2 headUvBase = vec2(0.0);
   if (vUvRectHead.z > 0.0) {
     float bob = (vUnconscious < 0.5) ? abs(sin(uTime * 1.53)) * 0.0024 : 0.0;
-    vec2 headUv = vec2(
-      vUvRectHead.x + vUv.x * vUvRectHead.z,
+    headUvBase = vec2(
+      vUvRectHead.x + vUv.x * vUvRectHead.z + vHeadOffset * uTexelSize.x,
       vUvRectHead.y + vUv.y * vUvRectHead.w + bob + 0.0025
     );
-    headColor = texture2D(uAtlas, headUv);
+    headColor = texture2D(uAtlas, headUvBase);
   }
 
   // Composite: head on top of body.
@@ -521,6 +532,24 @@ void main() {
   } else if (bodyColor.a >= 0.5) {
     color = bodyColor;
   } else {
+    // Transparent fragment — draw a 2-texel silhouette outline if active.
+    if (vOutlineColor.a > 0.0) {
+      vec2 o = uTexelSize * 2.0;
+      bool edge = texture2D(uAtlas, bodyUv + vec2( o.x, 0.0)).a >= 0.5
+               || texture2D(uAtlas, bodyUv + vec2(-o.x, 0.0)).a >= 0.5
+               || texture2D(uAtlas, bodyUv + vec2(0.0,  o.y)).a >= 0.5
+               || texture2D(uAtlas, bodyUv + vec2(0.0, -o.y)).a >= 0.5;
+      if (!edge && vUvRectHead.z > 0.0) {
+        edge = texture2D(uAtlas, headUvBase + vec2( o.x, 0.0)).a >= 0.5
+            || texture2D(uAtlas, headUvBase + vec2(-o.x, 0.0)).a >= 0.5
+            || texture2D(uAtlas, headUvBase + vec2(0.0,  o.y)).a >= 0.5
+            || texture2D(uAtlas, headUvBase + vec2(0.0, -o.y)).a >= 0.5;
+      }
+      if (edge) {
+        gl_FragColor = vOutlineColor;
+        return;
+      }
+    }
     discard;
   }
 
@@ -570,6 +599,7 @@ function SceneMobiles({
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const isDamagedRef = useRef<THREE.InstancedBufferAttribute | null>(null);
+  const headOffsetRef = useRef<THREE.InstancedBufferAttribute | null>(null);
   const attackStartRef = useRef<Map<number, number>>(new Map());
   const count = placements.length;
 
@@ -616,6 +646,38 @@ function SceneMobiles({
     geo.setAttribute("aIsDamaged", isDamagedAttr);
     isDamagedRef.current = isDamagedAttr;
 
+    const headOffsetArr = new Float32Array(count);
+    placements.forEach((p, i) => {
+      if (p.type !== "adventurer") {
+        const geomW = p.geometrySize?.[0] ?? 1;
+        if (p.unconscious) {
+          headOffsetArr[i] = 128.0 * geomW;
+        } else if (p.satiation !== undefined && p.satiation <= 0) {
+          headOffsetArr[i] = 64.0 * geomW;
+        }
+      }
+    });
+    const headOffsetAttr = new THREE.InstancedBufferAttribute(headOffsetArr, 1);
+    geo.setAttribute("aHeadOffset", headOffsetAttr);
+    headOffsetRef.current = headOffsetAttr;
+
+    const outlineColorArr = new Float32Array(count * 4);
+    placements.forEach((p, i) => {
+      const c = p.outlineColor ?? [0, 0, 0, 0];
+      outlineColorArr[i * 4] = c[0];
+      outlineColorArr[i * 4 + 1] = c[1];
+      outlineColorArr[i * 4 + 2] = c[2];
+      outlineColorArr[i * 4 + 3] = c[3];
+    });
+    geo.setAttribute(
+      "aOutlineColor",
+      new THREE.InstancedBufferAttribute(outlineColorArr, 4),
+    );
+
+    const imgEl = atlas.texture.image as HTMLImageElement | null;
+    const texW = imgEl?.naturalWidth ?? imgEl?.width ?? 256;
+    const texH = imgEl?.naturalHeight ?? imgEl?.height ?? 256;
+
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uAtlas: { value: atlas.texture },
@@ -625,6 +687,7 @@ function SceneMobiles({
         uFogNear: { value: fogNear },
         uFogFar: { value: fogFar },
         uTime: { value: 0 },
+        uTexelSize: { value: new THREE.Vector2(1 / texW, 1 / texH) },
         ...makeTorchUniforms(tintColors),
       },
       vertexShader: MOBILE_VERT,
@@ -669,6 +732,29 @@ function SceneMobiles({
         }
       }
       if (changed) isDamagedRef.current.needsUpdate = true;
+    }
+
+    // Update per-instance head state offset (normal=0, angry=64px, dead=128px)
+    if (headOffsetRef.current) {
+      const arr = headOffsetRef.current.array as Float32Array;
+      let changed = false;
+      for (let i = 0; i < count; i++) {
+        const p = placements[i];
+        let offset = 0.0;
+        if (p.type !== "adventurer") {
+          const geomW = p.geometrySize?.[0] ?? 1;
+          if (p.unconscious) {
+            offset = 128.0 * geomW;
+          } else if (p.satiation !== undefined && p.satiation <= 0) {
+            offset = 64.0 * geomW;
+          }
+        }
+        if (arr[i] !== offset) {
+          arr[i] = offset;
+          changed = true;
+        }
+      }
+      if (changed) headOffsetRef.current.needsUpdate = true;
     }
 
     const camPos = camera.position;

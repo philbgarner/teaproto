@@ -12,6 +12,7 @@ const SETTINGS_KEYS = [
   "traversalFactor",
   "adventurerDreadRate",
   "adventurerLootPerChest",
+  "winRounds",
   "dungeonSeed",
   "dungeonWidth",
   "dungeonHeight",
@@ -32,6 +33,7 @@ const SETTERS = {
   traversalFactor: "setTraversalFactor",
   adventurerDreadRate: "setAdventurerDreadRate",
   adventurerLootPerChest: "setAdventurerLootPerChest",
+  winRounds: "setWinRounds",
   dungeonSeed: "setDungeonSeed",
   dungeonWidth: "setDungeonWidth",
   dungeonHeight: "setDungeonHeight",
@@ -55,6 +57,7 @@ const DEFAULT_PRESETS = [
       traversalFactor: 2.0,
       adventurerDreadRate: 0.5,
       adventurerLootPerChest: 5,
+      winRounds: 7,
     },
   },
   {
@@ -68,6 +71,7 @@ const DEFAULT_PRESETS = [
       traversalFactor: 2.0,
       adventurerDreadRate: 1.0,
       adventurerLootPerChest: 10,
+      winRounds: 10,
     },
   },
   {
@@ -81,6 +85,7 @@ const DEFAULT_PRESETS = [
       traversalFactor: 2.0,
       adventurerDreadRate: 2.0,
       adventurerLootPerChest: 15,
+      winRounds: 15,
     },
   },
 ];

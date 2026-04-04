@@ -19,8 +19,8 @@ export const TILE_SIZE = 3;
 export const CEILING_H = 3;
 
 // Character sprite sheet dimensions (public/textures/characters.png)
-export const CHAR_SHEET_W = 512;
-export const CHAR_SHEET_H = 512;
+export const CHAR_SHEET_W = 1024;
+export const CHAR_SHEET_H = 352;
 
 // Default tile IDs derived from atlas.json entries (row-major in 512×1024 sheet)
 export function _atlasUvToId(uv: [number, number]): number {
@@ -147,36 +147,36 @@ export const MOB_TYPES: MobType[] = [
     type: "bat",
     name: "Bat",
     geometrySize: [2, 1],
-    uvRectBody: { x: 128, y: 384, w: 128, h: 64 },
-    uvRectHead: { x: 256, y: 448, w: 128, h: 64 },
+    uvRectBody: { x: 256, y: 288, w: 128, h: 64 },
+    uvRectHead: { x: 384, y: 288, w: 128, h: 64 },
   },
   {
     type: "dragon",
     name: "Dragon",
     geometrySize: [2, 1],
-    uvRectBody: { x: 384, y: 384, w: 128, h: 64 },
-    uvRectHead: { x: 384, y: 448, w: 128, h: 64 },
+    uvRectBody: { x: 512, y: 192, w: 128, h: 64 },
+    uvRectHead: { x: 640, y: 192, w: 128, h: 64 },
   },
   {
     type: "goblin",
     name: "Goblin",
     geometrySize: [1, 1],
-    uvRectBody: { x: 64, y: 256, w: 64, h: 64 },
-    uvRectHead: { x: 128, y: 320, w: 64, h: 64 },
+    uvRectBody: { x: 128, y: 192, w: 64, h: 64 },
+    uvRectHead: { x: 192, y: 192, w: 64, h: 64 },
   },
   {
     type: "troll",
     name: "Troll",
     geometrySize: [1, 1],
-    uvRectBody: { x: 64, y: 128, w: 64, h: 64 },
-    uvRectHead: { x: 128, y: 128, w: 64, h: 64 },
+    uvRectBody: { x: 128, y: 96, w: 64, h: 64 },
+    uvRectHead: { x: 192, y: 96, w: 64, h: 64 },
   },
   {
     type: "skeleton",
     name: "Skeleton",
     geometrySize: [1, 1],
-    uvRectBody: { x: 64, y: 0, w: 64, h: 64 },
-    uvRectHead: { x: 128, y: 64, w: 64, h: 64 },
+    uvRectBody: { x: 128, y: 0, w: 64, h: 64 },
+    uvRectHead: { x: 192, y: 0, w: 64, h: 64 },
   },
 ];
 export const MOB_TYPE_MAP: Record<string, MobType> = Object.fromEntries(
@@ -255,10 +255,10 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     defense: 2,
     xp: 30,
     colorRgb: [1.0, 0.15, 0.15],
-    drop: { id: "rations", name: "Iron Rations" },
+    drop: { id: "frost-leaf", name: "Frost Leaf" },
     geometrySize: [1, 1],
-    uvRectBody: { x: 256, y: 64, w: 64, h: 64 },
-    uvRectHead: { x: 320, y: 64, w: 64, h: 64 },
+    uvRectBody: { x: 640, y: 0, w: 64, h: 64 },
+    uvRectHead: { x: 704, y: 0, w: 64, h: 64 },
     rpsEffect: "bleeding",
   },
   {
@@ -269,10 +269,10 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     defense: 1,
     xp: 25,
     colorRgb: [0.9, 0.1, 0.9],
-    drop: { id: "herbs", name: "Wild Herbs" },
+    drop: { id: "hot-pepper", name: "Hot Pepper" },
     geometrySize: [1, 1],
-    uvRectBody: { x: 256, y: 0, w: 64, h: 64 },
-    uvRectHead: { x: 320, y: 0, w: 64, h: 64 },
+    uvRectBody: { x: 448, y: 0, w: 64, h: 64 },
+    uvRectHead: { x: 512, y: 0, w: 64, h: 64 },
     rpsEffect: "poisoned",
   },
   {
@@ -283,10 +283,10 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     defense: 0,
     xp: 40,
     colorRgb: [0.2, 0.3, 1.0],
-    drop: { id: "dust", name: "Arcane Dust" },
-    geometrySize: [2, 2],
-    uvRectBody: { x: 320, y: 128, w: 128, h: 128 },
-    uvRectHead: { x: 192, y: 256, w: 128, h: 128 },
+    drop: { id: "wild-herb", name: "Wild Herbs" },
+    geometrySize: [2, 1],
+    uvRectBody: { x: 512, y: 96, w: 128, h: 64 },
+    uvRectHead: { x: 640, y: 96, w: 128, h: 64 },
     rpsEffect: "freezing",
   },
 ];
@@ -302,6 +302,13 @@ export const STATUS_RGB: Record<string, [number, number, number]> = {
   sated: [0.0, 0.5, 1.0],
   refreshed: [0.2, 1.0, 0.3],
 };
+/** Per-RPS effect outline colour [r, g, b, a] in 0–1 range. */
+export const RPS_OUTLINE_COLOR: Record<string, [number, number, number, number]> = {
+  bleeding: [1.0, 0.15, 0.15, 1.0],
+  freezing:  [0.3,  0.7,  1.0, 1.0],
+  poisoned: [0.2,  0.9,  0.2, 1.0],
+};
+
 export const STATUS_CSS: Record<string, string> = {
   ecstatic: "#c3f",
   gasping: "#f22",

@@ -67,12 +67,28 @@ interface SettingsContextValue {
   setAdventurerDreadRate: Dispatch<SetStateAction<number>>;
   adventurerLootPerChest: number;
   setAdventurerLootPerChest: Dispatch<SetStateAction<number>>;
+  winRounds: number;
+  setWinRounds: Dispatch<SetStateAction<number>>;
+  danceSatiationBoost: number;
+  setDanceSatiationBoost: Dispatch<SetStateAction<number>>;
+  teaSatiationAmount: number;
+  setTeaSatiationAmount: Dispatch<SetStateAction<number>>;
+  teaHpRestorePercent: number;
+  setTeaHpRestorePercent: Dispatch<SetStateAction<number>>;
+  startIngredientAmount: number;
+  setStartIngredientAmount: Dispatch<SetStateAction<number>>;
   torchColor: string;
   setTorchColor: Dispatch<SetStateAction<string>>;
   torchIntensity: number;
   setTorchIntensity: Dispatch<SetStateAction<number>>;
   keybindings: Keybindings;
   setKeybindings: (next: Keybindings) => void;
+  showActionLog: boolean;
+  setShowActionLog: Dispatch<SetStateAction<boolean>>;
+  musicVolume: number;
+  setMusicVolume: Dispatch<SetStateAction<number>>;
+  sfxVolume: number;
+  setSfxVolume: Dispatch<SetStateAction<number>>;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -122,6 +138,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [traversalFactor, setTraversalFactor] = useState(2.0);
   const [adventurerDreadRate, setAdventurerDreadRate] = useState(1.0);
   const [adventurerLootPerChest, setAdventurerLootPerChest] = useState(10);
+  const [winRounds, setWinRounds] = useState(10);
+  const [danceSatiationBoost, setDanceSatiationBoost] = useState(5);
+  const [teaSatiationAmount, setTeaSatiationAmount] = useState(100);
+  const [teaHpRestorePercent, setTeaHpRestorePercent] = useState(25);
+  const [startIngredientAmount, setStartIngredientAmount] = useState(3);
   const [torchColor, setTorchColor] = useState<string>(() => {
     try {
       return localStorage.getItem("torchColor") ?? DEFAULT_TORCH_HEX;
@@ -138,6 +159,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   });
   const [keybindings, setKeybindings] = useKeybindings();
+  const [showActionLog, setShowActionLog] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem("showActionLog");
+      return stored !== null ? stored === "true" : true;
+    } catch {
+      return true;
+    }
+  });
+  const [musicVolume, setMusicVolume] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem("musicVolume");
+      return stored !== null ? parseFloat(stored) : 1.0;
+    } catch {
+      return 1.0;
+    }
+  });
+  const [sfxVolume, setSfxVolume] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem("sfxVolume");
+      return stored !== null ? parseFloat(stored) : 1.0;
+    } catch {
+      return 1.0;
+    }
+  });
 
   return (
     <SettingsContext.Provider
@@ -178,12 +223,28 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAdventurerDreadRate,
         adventurerLootPerChest,
         setAdventurerLootPerChest,
+        winRounds,
+        setWinRounds,
+        danceSatiationBoost,
+        setDanceSatiationBoost,
+        teaSatiationAmount,
+        setTeaSatiationAmount,
+        teaHpRestorePercent,
+        setTeaHpRestorePercent,
+        startIngredientAmount,
+        setStartIngredientAmount,
         torchColor,
         setTorchColor,
         torchIntensity,
         setTorchIntensity,
         keybindings,
         setKeybindings,
+        showActionLog,
+        setShowActionLog,
+        musicVolume,
+        setMusicVolume,
+        sfxVolume,
+        setSfxVolume,
       }}
     >
       {children}
@@ -193,6 +254,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
 export function useSettings(): SettingsContextValue {
   const ctx = useContext(SettingsContext);
-  if (!ctx) throw new Error("useSettings must be used within a SettingsProvider");
+  if (!ctx)
+    throw new Error("useSettings must be used within a SettingsProvider");
   return ctx;
 }

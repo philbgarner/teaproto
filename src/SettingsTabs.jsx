@@ -36,6 +36,17 @@ export default function SettingsTabs({
   setAdventurerDreadRate,
   adventurerLootPerChest,
   setAdventurerLootPerChest,
+  winRounds,
+  setWinRounds,
+  danceSatiationBoost,
+  setDanceSatiationBoost,
+  teaSatiationAmount,
+  setTeaSatiationAmount,
+  teaHpRestorePercent,
+  setTeaHpRestorePercent,
+  startIngredientAmount,
+  setStartIngredientAmount,
+  onResetToDefaults,
   dungeonSeed,
   setDungeonSeed,
   dungeonWidth,
@@ -61,6 +72,12 @@ export default function SettingsTabs({
   onPickerBlur,
   keybindings,
   setKeybindings,
+  showActionLog,
+  setShowActionLog,
+  musicVolume,
+  setMusicVolume,
+  sfxVolume,
+  setSfxVolume,
 }) {
   const [activeTab, setActiveTab] = useState("difficulty");
   const [seedInput, setSeedInput] = useState(String(dungeonSeed));
@@ -93,6 +110,7 @@ export default function SettingsTabs({
         {tab("world", "world")}
         {tab("lighting", "lighting")}
         {tab("keys", "keys")}
+        {tab("ui/sound", "ui/sound")}
       </div>
 
       <div className={styles.content}>
@@ -177,6 +195,57 @@ export default function SettingsTabs({
               onChange={setTrapDensity}
               format={(v) => `${v.toFixed(1)}×`}
             />
+            <SliderRow
+              label="Rounds to win"
+              value={winRounds}
+              min={1}
+              max={50}
+              step={1}
+              onChange={(v) => setWinRounds(Math.round(v))}
+            />
+            <SliderRow
+              label="Dance satiation boost"
+              value={danceSatiationBoost}
+              min={0}
+              max={50}
+              step={1}
+              onChange={(v) => setDanceSatiationBoost(Math.round(v))}
+              format={(v) => `+${v}`}
+            />
+            <SliderRow
+              label="Tea satiation"
+              value={teaSatiationAmount}
+              min={10}
+              max={200}
+              step={5}
+              onChange={(v) => setTeaSatiationAmount(Math.round(v))}
+            />
+            <SliderRow
+              label="Tea HP restore"
+              value={teaHpRestorePercent}
+              min={0}
+              max={100}
+              step={5}
+              onChange={(v) => setTeaHpRestorePercent(Math.round(v))}
+              format={(v) => `${v}%`}
+            />
+            <SliderRow
+              label="Starting ingredients"
+              value={startIngredientAmount}
+              min={0}
+              max={20}
+              step={1}
+              onChange={(v) => setStartIngredientAmount(Math.round(v))}
+            />
+            {onResetToDefaults && (
+              <button
+                className={styles.seedBtn}
+                style={{ alignSelf: "flex-start", marginTop: "8px" }}
+                onClick={onResetToDefaults}
+              >
+                reset to defaults
+              </button>
+            )}
           </>
         )}
 
@@ -295,6 +364,49 @@ export default function SettingsTabs({
                 onBlur={() => onPickerBlur?.()}
                 className={styles.colorPicker}
               />
+            </div>
+          </>
+        )}
+
+        {activeTab === "ui/sound" && (
+          <>
+            <SliderRow
+              label="Music volume"
+              value={musicVolume}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={(v) => {
+                setMusicVolume(v);
+                try { localStorage.setItem("musicVolume", String(v)); } catch { /* */ }
+              }}
+              format={(v) => `${Math.round(v * 100)}%`}
+            />
+            <SliderRow
+              label="SFX volume"
+              value={sfxVolume}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={(v) => {
+                setSfxVolume(v);
+                try { localStorage.setItem("sfxVolume", String(v)); } catch { /* */ }
+              }}
+              format={(v) => `${Math.round(v * 100)}%`}
+            />
+            <div className={styles.sliderRow}>
+              <label className={styles.sliderLabel} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={!!showActionLog}
+                  onChange={(e) => {
+                    setShowActionLog(e.target.checked);
+                    try { localStorage.setItem("showActionLog", String(e.target.checked)); } catch { /* */ }
+                  }}
+                  style={{ accentColor: "#f8a81a", width: 14, height: 14, cursor: "pointer" }}
+                />
+                Show action log
+              </label>
             </div>
           </>
         )}

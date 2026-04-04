@@ -1,0 +1,38 @@
+.menuList {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.menuItem {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #c8a870;
+    font-family: "Metamorphous", serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.1em;
+    text-align: left;
+    padding: 0.5em 0.75em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background-color 0.1s, color 0.1s;
+}
+
+.menuItem:hover {
+    background-color: rgba(248, 168, 26, 0.12);
+    color: #f8a81a;
+}
+
+.menuItem:active {
+    background-color: rgba(248, 168, 26, 0.2);
+}
+
+.helpText {
+    font-family: "Metamorphous", serif;
+    font-size: 0.8rem;
+    color: #c8a870;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    margin: 0;
+}
