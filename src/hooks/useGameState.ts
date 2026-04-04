@@ -287,7 +287,7 @@ export function useGameState({
   }
 
   function setIngredientsECS(ingredients: Record<string, number>): void {
-    console.log("set ECS ingredients");
+    console.log("set ECS ingredients: ", ingredients);
     for (const [ingredientId, quantity] of Object.entries(ingredients)) {
       let slotEntity: Entity | null = null;
       switch (ingredientId) {
@@ -307,7 +307,7 @@ export function useGameState({
           IngredientToOjectId[ingredientId],
         );
         console.log("Adding item to slot", itemToAdd, quantity);
-        registry.removeObjectFromSlot(slotEntity);
+        registry.removeObjectFromSlot(slotEntity, true);
         registry.addObjectToSlot(slotEntity, itemToAdd, quantity);
       }
     }
