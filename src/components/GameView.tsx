@@ -95,7 +95,7 @@ function SpikeTrapMeshes({
 
   const instances = useMemo<TileInstance[]>(() => {
     const result: TileInstance[] = [];
-    const spikeH = ceilingHeight / 3;
+    const spikeH = ceilingHeight;
     const spacing = tileSize / 3;
     const HALF_PI = Math.PI / 2;
 
@@ -379,7 +379,12 @@ function CoinDropMeshes({
   return (
     <>
       {drops.map((drop) => (
-        <CoinBillboard key={drop.id} drop={drop} tileSize={tileSize} mat={mat} />
+        <CoinBillboard
+          key={drop.id}
+          drop={drop}
+          tileSize={tileSize}
+          mat={mat}
+        />
       ))}
     </>
   );
@@ -464,13 +469,14 @@ function ChestMeshes({
     texture.generateMipmaps = false;
     texture.needsUpdate = true;
     return makeMat(CHEST_UV_RECT);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [texture, fogNear, fogFar]);
 
   const mimicMat = useMemo(
     () => makeMat(MIMIC_UV_RECT),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [texture, fogNear, fogFar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [texture, fogNear, fogFar],
+  );
 
   const torchColorObj = useMemo(
     () => (torchColor ? new THREE.Color(torchColor) : undefined),
@@ -498,7 +504,13 @@ function ChestMeshes({
   return (
     <>
       {chests.map((chest) => (
-        <ChestBillboard key={chest.id} chest={chest} tileSize={tileSize} mat={mat} mimicMat={mimicMat} />
+        <ChestBillboard
+          key={chest.id}
+          chest={chest}
+          tileSize={tileSize}
+          mat={mat}
+          mimicMat={mimicMat}
+        />
       ))}
     </>
   );
@@ -583,7 +595,7 @@ function FurnitureMeshes({
         }),
       ]),
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [texture, fogNear, fogFar]);
 
   const torchColorObj = useMemo(
@@ -606,7 +618,12 @@ function FurnitureMeshes({
   return (
     <>
       {items.map((item) => (
-        <FurnitureBillboard key={item.id} item={item} tileSize={tileSize} mat={matsByType[item.type]} />
+        <FurnitureBillboard
+          key={item.id}
+          item={item}
+          tileSize={tileSize}
+          mat={matsByType[item.type]}
+        />
       ))}
     </>
   );
@@ -830,7 +847,11 @@ export function GameView({
                 floorTileMap={FLOOR_TILE_MAP}
                 wallTileMap={WALL_TILE_MAP}
                 ceilingTileMap={CEILING_TILE_MAP}
-                ghostWallRadius={!gs.leftHandTea && !gs.rightHandTea ? TILE_SIZE * 1.5 : undefined}
+                ghostWallRadius={
+                  !gs.leftHandTea && !gs.rightHandTea
+                    ? TILE_SIZE * 1.5
+                    : undefined
+                }
                 style={{ width: "100%", height: "100%" }}
               >
                 <SpikeTrapMeshes
@@ -948,7 +969,9 @@ export function GameView({
 
             {gs.showSummonMenu && (
               <SummonMenu
-                mobs={(ds.initialMobs as any[]).map((m: any) => ({ name: m.name }))}
+                mobs={(ds.initialMobs as any[]).map((m: any) => ({
+                  name: m.name,
+                }))}
                 selectedIndex={gs.summonMenuCursor}
                 onSelectMob={(mobIdx: number) => {
                   const { x: px, z: pz } = gs.logicalRef.current;
