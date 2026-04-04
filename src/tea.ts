@@ -13,11 +13,35 @@ export interface Recipe {
   idealTemperatureRange: [number, number];
   ingredientId: string | null;
   ingredientName: string | null;
+  countersEffect: "bleeding" | "freezing" | "poisoned" | null;
 }
 
 export const RECIPES: Recipe[] = [
-  { id: "green", name: "Green Tea", timeToBrew: 15, idealTemperatureRange: [60, 75], ingredientId: null, ingredientName: null },
-  { id: "black", name: "Black Tea", timeToBrew: 20, idealTemperatureRange: [85, 100], ingredientId: "rations", ingredientName: "Iron Rations" },
-  { id: "oolong", name: "Oolong Tea", timeToBrew: 18, idealTemperatureRange: [70, 85], ingredientId: "herbs", ingredientName: "Wild Herbs" },
-  { id: "herbal", name: "Herbal Brew", timeToBrew: 25, idealTemperatureRange: [65, 80], ingredientId: "dust", ingredientName: "Arcane Dust" },
+  {
+    id: "iced-tea",
+    name: "Iced Tea",
+    timeToBrew: 20,
+    idealTemperatureRange: [85, 100],
+    ingredientId: "frost-leaf",
+    ingredientName: "Frost Leaf",
+    countersEffect: "bleeding",
+  },
+  {
+    id: "spicy-tea",
+    name: "Spicy Tea",
+    timeToBrew: 18,
+    idealTemperatureRange: [70, 85],
+    ingredientId: "hot-pepper",
+    ingredientName: "Hot Pepper",
+    countersEffect: "poisoned",
+  },
+  {
+    id: "green-tea",
+    name: "Green Tea",
+    timeToBrew: 25,
+    idealTemperatureRange: [65, 80],
+    ingredientId: "wild-herbs",
+    ingredientName: "Wild Herbs",
+    countersEffect: "freezing",
+  },
 ];

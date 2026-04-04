@@ -64,6 +64,8 @@ export type MinimapAdventurer = {
 };
 export type MinimapDoor = { x: number; z: number };
 export type MinimapStove = { x: number; z: number };
+export type MinimapGoldDrop = { x: number; z: number; amount: number };
+export type MinimapItemDrop = { x: number; z: number; name?: string };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Floor tiles (flat-color instanced mesh, no texture or shading)
@@ -209,6 +211,84 @@ function ChestIcon({
         <meshBasicMaterial color="#c8a46e" depthTest={false} />
       </mesh>
       {hovered && <Html style={TOOLTIP_STYLE}>Chest</Html>}
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gold drop icon — small yellow rotated square (diamond)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function GoldDropIcon({
+  x,
+  z,
+  tileSize,
+  amount,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+  amount: number;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const wx = (x + 0.5) * tileSize;
+  const wz = (z + 0.5) * tileSize;
+  const s = tileSize * 0.38;
+
+  return (
+    <group position={[wx, 0.03, wz]}>
+      <mesh
+        rotation={[-HALF_PI, 0, Math.PI / 4]}
+        renderOrder={2}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <planeGeometry args={[s, s]} />
+        <meshBasicMaterial color="#f5c842" depthTest={false} />
+      </mesh>
+      {hovered && <Html style={TOOLTIP_STYLE}>{amount} gold</Html>}
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Item drop icon — small purple square
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ItemDropIcon({
+  x,
+  z,
+  tileSize,
+  name,
+}: {
+  x: number;
+  z: number;
+  tileSize: number;
+  name?: string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const wx = (x + 0.5) * tileSize;
+  const wz = (z + 0.5) * tileSize;
+  const s = tileSize * 0.32;
+
+  return (
+    <group position={[wx, 0.04, wz]}>
+      <mesh
+        rotation={[-HALF_PI, 0, 0]}
+        renderOrder={2}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <planeGeometry args={[s, s]} />
+        <meshBasicMaterial color="#c46ef5" depthTest={false} />
+      </mesh>
+      {hovered && <Html style={TOOLTIP_STYLE}>{name ?? "Item"}</Html>}
     </group>
   );
 }
@@ -569,6 +649,91 @@ function TeaomaticIndicator({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Off-screen adventurer indicator — red triangle at viewport edge pointing toward it
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AdventurerIndicator({
+  adventurer,
+  tileSize,
+  propsRef,
+  lerpedYawRef,
+}: {
+  adventurer: MinimapAdventurer;
+  tileSize: number;
+  propsRef: React.RefObject<{
+    playerX: number;
+    playerZ: number;
+    targetYaw: number;
+  }>;
+  lerpedYawRef: React.RefObject<number>;
+}) {
+  const { camera, size } = useThree();
+  const groupRef = useRef<THREE.Group>(null);
+
+  const ax = (adventurer.x + 0.5) * tileSize;
+  const az = (adventurer.z + 0.5) * tileSize;
+
+  useFrame(() => {
+    const group = groupRef.current;
+    if (!group) return;
+
+    const { playerX: px, playerZ: pz } = propsRef.current;
+    const yaw = lerpedYawRef.current;
+
+    const pwx = px * tileSize;
+    const pwz = pz * tileSize;
+
+    const dx = ax - pwx;
+    const dz = az - pwz;
+
+    const cosY = Math.cos(yaw);
+    const sinY = Math.sin(yaw);
+
+    const vx = dx * cosY - dz * sinY;
+    const vy = -dx * sinY - dz * cosY;
+
+    const cam = camera as THREE.OrthographicCamera;
+    const halfW = size.width / (2 * cam.zoom);
+    const halfH = size.height / (2 * cam.zoom);
+
+    if (Math.abs(vx) <= halfW && Math.abs(vy) <= halfH) {
+      group.visible = false;
+      return;
+    }
+    group.visible = true;
+
+    const tx = vx !== 0 ? halfW / Math.abs(vx) : Infinity;
+    const ty = vy !== 0 ? halfH / Math.abs(vy) : Infinity;
+    const t = Math.min(tx, ty) * 0.9;
+
+    const edgeVx = vx * t;
+    const edgeVy = vy * t;
+
+    const worldX = pwx + edgeVx * cosY + edgeVy * -sinY;
+    const worldZ = pwz + edgeVx * -sinY + edgeVy * -cosY;
+
+    group.position.set(worldX, 0.2, worldZ);
+    group.rotation.y = Math.atan2(dx, dz);
+  });
+
+  const triSize = tileSize * 0.55;
+
+  return (
+    <group ref={groupRef}>
+      <mesh rotation={[-HALF_PI, 0, Math.PI]} renderOrder={10}>
+        <coneGeometry args={[triSize * 0.65, triSize * 1.4, 3]} />
+        <meshBasicMaterial
+          color="#ff2222"
+          depthTest={false}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Inner R3F scene
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -591,6 +756,8 @@ type SceneProps = {
   disarmedTraps: Set<string>;
   chests: MinimapChest[];
   furniturePlacements: { x: number; z: number }[];
+  goldDrops: MinimapGoldDrop[];
+  itemDrops: MinimapItemDrop[];
   scale: number;
   setTooltip: (
     t: { pos: { x: number; y: number }; content: ReactNode } | null,
@@ -614,6 +781,8 @@ function MinimapScene({
   disarmedTraps,
   chests,
   furniturePlacements,
+  goldDrops,
+  itemDrops,
   scale,
   setTooltip,
 }: SceneProps) {
@@ -714,6 +883,26 @@ function MinimapScene({
         <ChestIcon key={`chest_${i}`} x={c.x} z={c.z} tileSize={tileSize} />
       ))}
 
+      {goldDrops.map((g, i) => (
+        <GoldDropIcon
+          key={`gold_${i}`}
+          x={g.x}
+          z={g.z}
+          tileSize={tileSize}
+          amount={g.amount}
+        />
+      ))}
+
+      {itemDrops.map((d, i) => (
+        <ItemDropIcon
+          key={`item_${i}`}
+          x={d.x}
+          z={d.z}
+          tileSize={tileSize}
+          name={d.name}
+        />
+      ))}
+
       {trapList.map((t) => (
         <TrapIcon
           key={`trap_${t.x}_${t.z}`}
@@ -808,6 +997,18 @@ function MinimapScene({
           lerpedYawRef={lerpedYawRef}
         />
       )}
+
+      {adventurers
+        .filter((a) => a.alive)
+        .map((a, i) => (
+          <AdventurerIndicator
+            key={`adv_indicator_${i}`}
+            adventurer={a}
+            tileSize={tileSize}
+            propsRef={propsRef}
+            lerpedYawRef={lerpedYawRef}
+          />
+        ))}
     </>
   );
 }
@@ -833,6 +1034,8 @@ export type MinimapProps = {
   disarmedTraps?: Set<string>;
   chests?: MinimapChest[];
   furniturePlacements?: { x: number; z: number }[];
+  goldDrops?: MinimapGoldDrop[];
+  itemDrops?: MinimapItemDrop[];
   /** Orthographic zoom level. Defaults to 4.5. */
   scale?: number;
   // Legacy props kept for call-site compatibility
@@ -859,6 +1062,8 @@ export function Minimap({
   disarmedTraps = new Set(),
   chests = [],
   furniturePlacements = [],
+  goldDrops = [],
+  itemDrops = [],
   scale = DEFAULT_ZOOM,
 }: MinimapProps) {
   const [tooltip, setTooltip] = useState<{
@@ -918,6 +1123,8 @@ export function Minimap({
           disarmedTraps={disarmedTraps}
           chests={chests}
           furniturePlacements={furniturePlacements}
+          goldDrops={goldDrops}
+          itemDrops={itemDrops}
           scale={scale}
           setTooltip={setTooltip}
         />

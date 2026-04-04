@@ -3,8 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
 import { Suspense } from "react";
-import { useSfx } from "../hooks/useSfx";
-import { useMusic } from "../hooks/useMusic";
+import { useSoundHelper } from "../hooks/useSoundHelper";
 import { useSettings } from "../SettingsContext";
 import SettingsTabs from "../SettingsTabs";
 import Credits from "./Credits";
@@ -680,40 +679,24 @@ function SceneContent({
 
 function PreloadedScene({ onMenuReady, onMusicReady, skipRef }) {
   const textures = useTexture(ALL_TEXTURE_PATHS);
-  const { play: playLightningStrike } = useSfx(
-    `${BASE}sfx/dragon-studio-lightning-strike-386161.mp3`,
-    0.25,
-  );
-  const { play: playThunderStrike } = useSfx(
-    `${BASE}sfx/tanweraman-thunder-strike-wav-321628.mp3`,
-    0.25,
-  );
-  const { play: playMusic, fadeOut: fadeOutMusic } = useMusic(
-    `${BASE}music/juliush-awakening-chill-out-music-1295.mp3`,
-    { loop: true, volume: 0.25 },
-  );
-  const { play: playBirds, fadeOut: fadeOutBirds } = useSfx(
-    `${BASE}sfx/loswin23-morning-birds-499429.mp3`,
-    0.2,
-  );
-  const { fadeIn: fadeInSafeZone } = useMusic(
-    `${BASE}music/MUS_8_SafeZone_Cozy.ogg`,
-    { loop: true },
-    1.0,
-  );
+  const { sounds } = useSoundHelper();
 
   useEffect(() => {
-    onMusicReady({ fadeOutMusic, fadeOutBirds, fadeInSafeZone });
-  }, []);
+    onMusicReady({ 
+      fadeOutMusic: sounds.mainTheme.fadeOut, 
+      fadeOutBirds: sounds.birds.fadeOut, 
+      fadeInSafeZone: sounds.safeZoneMusic.fadeIn 
+    });
+  }, [sounds]);
 
   return (
     <SceneContent
       textures={textures}
       onMenuReady={onMenuReady}
-      playLightningStrike={playLightningStrike}
-      playThunderStrike={playThunderStrike}
-      playMusic={playMusic}
-      playBirds={playBirds}
+      playLightningStrike={sounds.lightning.play}
+      playThunderStrike={sounds.thunder.play}
+      playMusic={sounds.mainTheme.play}
+      playBirds={sounds.birds.play}
       skipRef={skipRef}
     />
   );
@@ -737,7 +720,7 @@ export const DIFFICULTY_PRESETS = {
     heatingPerStep: 6.0,
     satiationDropPerStep: 0.1,
     supersatiationBonus: 50,
-    turnsPerWave: 120,
+    turnsPerRound: 120,
     traversalFactor: 2.0,
     adventurerDreadRate: 0.5,
     adventurerLootPerChest: 20,
@@ -747,7 +730,7 @@ export const DIFFICULTY_PRESETS = {
     heatingPerStep: 3.5,
     satiationDropPerStep: 0.3,
     supersatiationBonus: 25,
-    turnsPerWave: 60,
+    turnsPerRound: 60,
     traversalFactor: 1.0,
     adventurerDreadRate: 1.5,
     adventurerLootPerChest: 10,
@@ -757,7 +740,7 @@ export const DIFFICULTY_PRESETS = {
     heatingPerStep: 1.5,
     satiationDropPerStep: 0.6,
     supersatiationBonus: 10,
-    turnsPerWave: 30,
+    turnsPerRound: 30,
     traversalFactor: 0.5,
     adventurerDreadRate: 3.0,
     adventurerLootPerChest: 5,
@@ -788,7 +771,7 @@ export function TitleScreen({ onNewGame, onTutorial }) {
     settings.setHeatingPerStep(preset.heatingPerStep);
     settings.setSatiationDropPerStep(preset.satiationDropPerStep);
     settings.setSupersatiationBonus(preset.supersatiationBonus);
-    settings.setTurnsPerWave(preset.turnsPerWave);
+    settings.setTurnsPerRound(preset.turnsPerRound);
     settings.setTraversalFactor(preset.traversalFactor);
     settings.setAdventurerDreadRate(preset.adventurerDreadRate);
     settings.setAdventurerLootPerChest(preset.adventurerLootPerChest);
@@ -884,7 +867,25 @@ export function TitleScreen({ onNewGame, onTutorial }) {
               </button>
             </div>
             <div className={styles.settingsPanelBody}>
-              <SettingsTabs {...settings} />
+              <SettingsTabs
+                {...settings}
+                onResetToDefaults={() => {
+                  try { localStorage.clear(); } catch { /* */ }
+                  settings.setTempDropPerStep(0.5);
+                  settings.setHeatingPerStep(2.0);
+                  settings.setSatiationDropPerStep(0.5);
+                  settings.setSupersatiationBonus(50);
+                  settings.setTurnsPerRound(120);
+                  settings.setTraversalFactor(2.0);
+                  settings.setAdventurerDreadRate(1.0);
+                  settings.setAdventurerLootPerChest(10);
+                  settings.setWinRounds(10);
+                  settings.setDanceSatiationBoost(5);
+                  settings.setTeaSatiationAmount(100);
+                  settings.setTrapDensity(1.0);
+                  settings.setMaxDoors(3);
+                }}
+              />
             </div>
           </div>
         </div>

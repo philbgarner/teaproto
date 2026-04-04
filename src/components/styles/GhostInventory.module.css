@@ -107,6 +107,17 @@
     text-align: left;
 }
 
+.itemName > img {
+    width: 100%;
+    height: 100%;
+}
+
+.itemName > span {
+    font-size: 8pt;
+    letter-spacing: 0.05rem;
+    line-height: 0.1rem;
+}
+
 .itemCount {
     font-size: 0.9em;
     color: #c8901a;

@@ -15,6 +15,8 @@ export const DEFAULT_KEYBINDINGS = {
   optionNext: ["tab", "down"],
   optionPrev: ["up"],
   optionSelect: ["space"],
+  openMenu: ["m"],
+  summon: ["n"],
 };
 
 function loadKeybindings() {

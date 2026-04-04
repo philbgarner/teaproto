@@ -7,6 +7,7 @@
     flex-direction: column;
     gap: 8px;
     flex-shrink: 0;
+    overflow: hidden;
     background-color: #2a2724;
     background-image: repeating-conic-gradient(
         rgba(0, 0, 0, 0.03) 0% 25%,
@@ -87,6 +88,86 @@
 .checkboxLabel input[type="checkbox"] {
     cursor: pointer;
     accent-color: #f8a81a;
+}
+
+.mobRoster {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-top: 4px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.mobEntry {
+    background-color: #3c3a37;
+    outline: 1px solid #252220;
+    box-shadow:
+        inset 0 1px 0 0 #4a4845,
+        inset 0 -1px 0 0 #1a1816,
+        inset 0 3px 8px rgba(0, 0, 0, 0.4);
+    padding: 4px 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.mobNameRow {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.mobName {
+    font-size: 0.6rem;
+    color: #c8a060;
+    letter-spacing: 0.04em;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+.summonBtn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 0 2px;
+    font-size: 1.1rem;
+    color: #7a6040;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.1s;
+}
+
+.summonBtn:hover:not(:disabled) {
+    color: #f8a81a;
+}
+
+.summonBtn:disabled {
+    color: #3a3530;
+    cursor: default;
+}
+
+.mobRow {
+    font-size: 0.58rem;
+    letter-spacing: 0.02em;
+}
+
+.barTrack {
+    height: 3px;
+    background: #252220;
+    margin-top: 2px;
+    width: 100%;
+}
+
+.barFill {
+    height: 100%;
+    transition: width 0.2s;
 }
 
 .controls {

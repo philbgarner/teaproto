@@ -18,6 +18,8 @@ const ACTION_LABELS = {
   optionNext: "Menu: next option",
   optionPrev: "Menu: prev option",
   optionSelect: "Menu: select option",
+  openMenu: "Open menu",
+  summon: "Summon monster",
 };
 
 const KEY_DISPLAY = {

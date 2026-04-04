@@ -28,14 +28,23 @@ export default function SettingsTabs({
   setSatiationDropPerStep,
   supersatiationBonus,
   setSupersatiationBonus,
-  turnsPerWave,
-  setTurnsPerWave,
+  turnsPerRound,
+  setTurnsPerRound,
   traversalFactor,
   setTraversalFactor,
   adventurerDreadRate,
   setAdventurerDreadRate,
   adventurerLootPerChest,
   setAdventurerLootPerChest,
+  winRounds,
+  setWinRounds,
+  danceSatiationBoost,
+  setDanceSatiationBoost,
+  teaSatiationAmount,
+  setTeaSatiationAmount,
+  startIngredientAmount,
+  setStartIngredientAmount,
+  onResetToDefaults,
   dungeonSeed,
   setDungeonSeed,
   dungeonWidth,
@@ -135,12 +144,12 @@ export default function SettingsTabs({
               format={(v) => `${v}%`}
             />
             <SliderRow
-              label="Turns/wave"
-              value={turnsPerWave}
+              label="Turns/round"
+              value={turnsPerRound}
               min={10}
               max={300}
               step={5}
-              onChange={(v) => setTurnsPerWave(Math.round(v))}
+              onChange={(v) => setTurnsPerRound(Math.round(v))}
             />
             <SliderRow
               label="Passage speed"
@@ -177,6 +186,48 @@ export default function SettingsTabs({
               onChange={setTrapDensity}
               format={(v) => `${v.toFixed(1)}×`}
             />
+            <SliderRow
+              label="Rounds to win"
+              value={winRounds}
+              min={1}
+              max={50}
+              step={1}
+              onChange={(v) => setWinRounds(Math.round(v))}
+            />
+            <SliderRow
+              label="Dance satiation boost"
+              value={danceSatiationBoost}
+              min={0}
+              max={50}
+              step={1}
+              onChange={(v) => setDanceSatiationBoost(Math.round(v))}
+              format={(v) => `+${v}`}
+            />
+            <SliderRow
+              label="Tea satiation"
+              value={teaSatiationAmount}
+              min={10}
+              max={200}
+              step={5}
+              onChange={(v) => setTeaSatiationAmount(Math.round(v))}
+            />
+            <SliderRow
+              label="Starting ingredients"
+              value={startIngredientAmount}
+              min={0}
+              max={20}
+              step={1}
+              onChange={(v) => setStartIngredientAmount(Math.round(v))}
+            />
+            {onResetToDefaults && (
+              <button
+                className={styles.seedBtn}
+                style={{ alignSelf: "flex-start", marginTop: "8px" }}
+                onClick={onResetToDefaults}
+              >
+                reset to defaults
+              </button>
+            )}
           </>
         )}
 

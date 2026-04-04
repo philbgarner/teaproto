@@ -485,9 +485,9 @@ export function useDungeonSetup({
   const initialIngredientDrops = useMemo(() => {
     const rng = makeRng(dungeonSeed ^ 0x1337beef);
     const ingTypes = [
-      { id: "rations", name: "Iron Rations" },
-      { id: "herbs", name: "Wild Herbs" },
-      { id: "dust", name: "Arcane Dust" },
+      { id: "hot-pepper", name: "Hot Pepper" },
+      { id: "wild-herbs", name: "Wild Herbs" },
+      { id: "frost-leaf", name: "Frost Leaf" },
     ];
     const nonEndRooms = Array.from(dungeon.rooms.entries())
       .filter(([id]) => id !== dungeon.endRoomId)
