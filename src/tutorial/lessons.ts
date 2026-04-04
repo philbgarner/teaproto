@@ -5,8 +5,8 @@ export const TUTORIAL_DUNGEON_W = 22;
 export const TUTORIAL_DUNGEON_H = 20;
 
 // Update these when the ice tea recipe is added
-export const ICE_TEA_RECIPE_ID = "ice";
-export const ICE_TEA_INGREDIENT_ID = "frostLeaf";
+export const ICE_TEA_RECIPE_ID = "iced-tea";
+export const ICE_TEA_INGREDIENT_ID = "frost-leaf";
 
 export interface LessonRoom {
   x: number;
@@ -19,7 +19,7 @@ export interface SpecialCell {
   x: number;
   z: number;
   floor?: string; // atlas floor texture name override
-  wall?: string;  // atlas wall texture name override
+  wall?: string; // atlas wall texture name override
 }
 
 export interface LessonConfig {
@@ -127,7 +127,7 @@ export const LESSON_CONFIGS: LessonConfig[] = [
     dungeonW: W,
     dungeonH: H,
     rooms: [
-      { x: 2, y: 7, w: 6, h: 4 },  // Foyer — player starts here
+      { x: 2, y: 7, w: 6, h: 4 }, // Foyer — player starts here
       { x: 11, y: 7, w: 8, h: 4 }, // Preview room — destination
     ],
     startRoomId: 1,
@@ -148,7 +148,7 @@ export const LESSON_CONFIGS: LessonConfig[] = [
     startMessage:
       "Do you have any idea how hard it is to find a job as a poltergeist?\n" +
       "But I was most fortunate to receive a request from the Earl of Grey.\n" +
-      "\"Refresh the dungeon\", he said — cleaning and maintenance, I suppose.\n\n" +
+      '"Refresh the dungeon", he said — cleaning and maintenance, I suppose.\n\n' +
       "The traps and residents of this dungeon won't harm you, and as a ghost you can walk through walls.\n" +
       "Use the minimap to orientate yourself and WASD to move, Q & E to rotate.\n" +
       "When you're ready, head through the wall and into the next room.",
@@ -159,8 +159,8 @@ export const LESSON_CONFIGS: LessonConfig[] = [
     dungeonW: W,
     dungeonH: H,
     rooms: [
-      { x: 1, y: 6, w: 12, h: 5 },  // Main room
-      { x: 17, y: 6, w: 3, h: 5 },  // Secret passage destination
+      { x: 1, y: 6, w: 12, h: 5 }, // Main room
+      { x: 17, y: 6, w: 3, h: 5 }, // Secret passage destination
     ],
     startRoomId: 1,
     endRoomId: 2,
@@ -195,14 +195,14 @@ export const LESSON_CONFIGS: LessonConfig[] = [
     ],
     hazardCells: [{ x: 10, z: 8 }],
     initialDisarmedTraps: ["10_8"], // trap is already sprung by a careless adventurer
-    initialOpenDoors: ["11_8"],     // door was left open
+    initialOpenDoors: ["11_8"], // door was left open
     wallTexture: "Cobblestone",
     floorTexture: "Flagstone",
     startMessage:
       "The Earl certainly has eccentric tastes, like this new-fangled tea machine..\n" +
       "Oh! Perhaps he meant to provide refreshments to the dungeon monsters?\n" +
       "I had better do both — just in case. I can't afford to lose this job.\n\n" +
-      "Interact with the tea machine, monsters, or other items with \"space\".\n" +
+      'Interact with the tea machine, monsters, or other items with "space".\n' +
       "You can always find the machine on the minimap, marked with an orange dot.\n" +
       "Start some tea brewing and explore the room while you wait for it.",
   },

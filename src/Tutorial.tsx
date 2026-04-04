@@ -130,6 +130,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
   const ds = useDungeonTutorialSetup(lessonIndex);
 
   const gs = useGameState({
+    danceSatiationBoost: ds.danceSatiationBoost,
     dungeon: ds.dungeon,
     solidData: ds.solidData,
     floorData: ds.floorData,
@@ -188,10 +189,9 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       gs.clearHands();
       // Give the player one ice-tea ingredient — only ice tea is initially available
       const startIngredients: Record<string, number> = {
-        rations: 0,
-        herbs: 0,
-        dust: 0,
-        [ICE_TEA_INGREDIENT_ID]: 1,
+        hotPeppers: 0,
+        frostLeaves: 1,
+        wildHerbs: 0,
       };
       gs.setIngredients(startIngredients);
       gs.ingredientsRef.current = startIngredients;
@@ -264,15 +264,14 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     gs.showMsg(
       "This brew will take time — 18 steps.\n" +
         "Time only passes in the dungeon when you move from your current position.\n" +
-        "Press \".\" to force time to advance if you prefer.\n" +
+        'Press "." to force time to advance if you prefer.\n' +
         "Come back later to collect your freshly brewed tea.",
     );
     // Clear all ingredients so the player can't queue another brew yet
     const empty: Record<string, number> = {
-      rations: 0,
-      herbs: 0,
-      dust: 0,
-      [ICE_TEA_INGREDIENT_ID]: 0,
+      hotPeppers: 0,
+      wildHerbs: 0,
+      frostLeaves: 0,
     };
     gs.setIngredients(empty);
     gs.ingredientsRef.current = empty;
@@ -332,9 +331,9 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       // Unlock all other teas now that the player has seen a plant
       const unlocked = {
         ...gs.ingredientsRef.current,
-        rations: 1,
-        herbs: 1,
-        dust: 1,
+        hotPeppers: 1,
+        wildHerbs: 1,
+        frostLeaves: 1,
       };
       gs.setIngredients(unlocked);
       gs.ingredientsRef.current = unlocked;
@@ -349,7 +348,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       firedTriggersRef.current.add("T6");
       gs.showMsg(
         "Some careless adventurer has triggered this trap and left the door open.\n" +
-          "It won't harm us, but we should reset it with \"space\" so another adventurer can enjoy it.",
+          'It won\'t harm us, but we should reset it with "space" so another adventurer can enjoy it.',
       );
     }
 

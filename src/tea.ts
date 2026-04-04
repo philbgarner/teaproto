@@ -22,8 +22,8 @@ export const RECIPES: Recipe[] = [
     name: "Iced Tea",
     timeToBrew: 20,
     idealTemperatureRange: [85, 100],
-    ingredientId: "ice-leaf",
-    ingredientName: "Ice Leaf",
+    ingredientId: "frost-leaf",
+    ingredientName: "Frost Leaf",
     countersEffect: "bleeding",
   },
   {

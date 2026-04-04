@@ -14,18 +14,11 @@ import hotkeys from "hotkeys-js";
  *   playerHp: number,
  *   playerMaxHp: number,
  *   playerXp: number,
- *   ingredients: { rations: number, herbs: number, dust: number },
+ *   ingredients: { hotPeppers: 0, wildHerbs: 0, frostLeaves: 0 },
  *   openMenuKeys: string[],
  *   onOpenSettings: () => void,
  * }} props
  */
-function tempBand(temp) {
-  if (temp < 52) return "Cold";
-  if (temp < 103) return "Cool";
-  if (temp < 154) return "Neutral";
-  if (temp < 205) return "Cozy";
-  return "Warm";
-}
 
 const HELP_TEXT = `Welcome to Teaproto.
 
@@ -74,7 +67,7 @@ export function StatusBar({
       },
     },
   ];
-
+  console.log("ingredients", ingredients);
   return (
     <>
       <div className={styles.bar}>
@@ -84,7 +77,8 @@ export function StatusBar({
         <span className={styles.facing}>Facing: {facing}</span>
         <span className={styles.xp}>Gold: {playerXp}</span>
         <span className={styles.ingredients}>
-          Rations: {ingredients.rations} · Herbs: {ingredients.herbs} · Dust:{" "}
+          Hot Peppers: {ingredients.hotPeppers} · Herbs: {ingredients.wildHerbs}{" "}
+          · Frost Leaves: {ingredients.frostLeaves}
           {ingredients.dust}
         </span>
         <span className={styles.roomTemp}>

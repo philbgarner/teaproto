@@ -105,6 +105,7 @@ export function useGameState({
   floorData,
   wallData,
   ceilingData,
+  danceSatiationBoost,
   temperatureData,
   initialMobs,
   adventurerSpawnRooms,
@@ -130,7 +131,6 @@ export function useGameState({
   adventurerDreadRate,
   adventurerLootPerChest,
   winRounds,
-  danceSatiationBoost,
   teaSatiationAmount,
   keybindings,
 }: UseGameStateParams) {
@@ -510,11 +510,11 @@ export function useGameState({
   );
   const disarmedTrapsRef = useRef<Set<string>>(new Set(initialDisarmedTraps));
 
-  // Ingredient inventory  { rations: 0, herbs: 0, dust: 0 }
+  // Ingredient inventory
   const [ingredients, setIngredients] = useState<Record<string, number>>({
-    rations: 0,
-    herbs: 0,
-    dust: 0,
+    hotPeppers: 1,
+    wildHerbs: 1,
+    frostLeaves: 1,
   });
   const [ingredientDrops, setIngredientDrops] = useState<any[]>([]);
 
@@ -533,9 +533,9 @@ export function useGameState({
   const xpDropsRef = useRef<any[]>([]);
   const playerHpRef = useRef(PLAYER_MAX_HP);
   const ingredientsRef = useRef<Record<string, number>>({
-    rations: 0,
-    herbs: 0,
-    dust: 0,
+    hotPeppers: 1,
+    wildHerbs: 1,
+    frostLeaves: 1,
   });
   const ingredientDropsRef = useRef<any[]>([]);
   // Sync ref kept in step with ECS hand state so onStep can read without a dep
@@ -625,7 +625,11 @@ export function useGameState({
     setMobAttackDirs(initialMobs.map(() => null));
     setAdvAttackDirs([]);
     setDamageNumbers([]);
-    setIngredients({ rations: 0, herbs: 0, dust: 0 });
+    setIngredients({
+      hotPeppers: START_AMT_INGREDIENTS,
+      wildHerbs: START_AMT_INGREDIENTS,
+      frostLeaves: START_AMT_INGREDIENTS,
+    });
     setIngredientDrops([...initialIngredientDrops]);
     setChests([...initialChests]);
     chestsRef.current = [...initialChests];
@@ -638,7 +642,7 @@ export function useGameState({
     playerXpRef.current = 0;
     xpDropsRef.current = [];
     playerHpRef.current = PLAYER_MAX_HP;
-    ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
+    ingredientsRef.current = { hotPeppers: 0, wildHerbs: 0, frostLeaves: 0 };
     ingredientDropsRef.current = [...initialIngredientDrops];
     mobSatiationsRef.current = freshSatiations;
     mobHpsRef.current = freshHps;
@@ -2299,7 +2303,9 @@ export function useGameState({
           nextRpsEffects[facingTarget.mobIdx] = "none";
           mobRpsEffectsRef.current = nextRpsEffects;
           setMobRpsEffects(nextRpsEffects);
-          applyMobSatiation(Math.round(teaSatiationAmount * (1 + supersatiationBonus / 100)));
+          applyMobSatiation(
+            Math.round(teaSatiationAmount * (1 + supersatiationBonus / 100)),
+          );
           showSpeechBubble(
             mobBubbleId,
             `This ${tea.name} is exactly what I needed — I feel so much better!`,

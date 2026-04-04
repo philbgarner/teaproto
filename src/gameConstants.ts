@@ -255,7 +255,7 @@ export const ADVENTURER_TYPES: AdventurerType[] = [
     defense: 2,
     xp: 30,
     colorRgb: [1.0, 0.15, 0.15],
-    drop: { id: "ice-leaf", name: "Ice Leaf" },
+    drop: { id: "frost-leaf", name: "Frost Leaf" },
     geometrySize: [1, 1],
     uvRectBody: { x: 640, y: 0, w: 64, h: 64 },
     uvRectHead: { x: 704, y: 0, w: 64, h: 64 },

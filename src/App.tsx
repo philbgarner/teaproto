@@ -117,7 +117,8 @@ export default function App() {
     {
       onStep: gs.onStep,
       onTurn: gs.onTurn,
-      blocked: gs.showRecipeMenu || gs.showSummonMenu || gs.gameState !== "playing",
+      blocked:
+        gs.showRecipeMenu || gs.showSummonMenu || gs.gameState !== "playing",
       onBlockedMove: gs.onBlockedMove,
       canPhaseWalls: !gs.leftHandTea && !gs.rightHandTea,
       blockedPositions: [
@@ -156,7 +157,11 @@ export default function App() {
           onClose={() => gs.setShowSettings(false)}
           settingsProps={{
             onResetToDefaults: () => {
-              try { localStorage.clear(); } catch { /* */ }
+              try {
+                localStorage.clear();
+              } catch {
+                /* */
+              }
               setTempDropPerStep(0.5);
               setHeatingPerStep(2.0);
               setSatiationDropPerStep(0.5);
@@ -244,7 +249,7 @@ export default function App() {
             gs.setPlayerXp(0);
             gs.setXpDrops([]);
             gs.setPlayerHp(PLAYER_MAX_HP);
-            gs.setIngredients({ rations: 0, herbs: 0, dust: 0 });
+            gs.setIngredients({ hotPeppers: 0, wildHerbs: 0, frostLeaves: 0 });
             gs.setIngredientDrops([...ds.initialIngredientDrops]);
             gs.setChests([...ds.initialChests]);
             gs.chestsRef.current = [...ds.initialChests];
@@ -257,7 +262,11 @@ export default function App() {
             gs.playerXpRef.current = 0;
             gs.xpDropsRef.current = [];
             gs.playerHpRef.current = PLAYER_MAX_HP;
-            gs.ingredientsRef.current = { rations: 0, herbs: 0, dust: 0 };
+            gs.ingredientsRef.current = {
+              hotPeppers: 0,
+              wildHerbs: 0,
+              frostLeaves: 0,
+            };
             gs.ingredientDropsRef.current = [...ds.initialIngredientDrops];
             gs.mobSatiationsRef.current = freshSatiations;
             const freshPositions = ds.initialMobs.map((m: any) => ({
