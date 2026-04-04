@@ -360,7 +360,7 @@ export function useGameState({
   const [activeStoveKey, setActiveStoveKey] = useState<string | null>(null);
   const [showSummonMenu, setShowSummonMenu] = useState(false);
   const [summonMenuCursor, setSummonMenuCursor] = useState(0);
-  const { message, displayedText, setMessage, showMsg } = useMessage();
+  const { message, displayedText, setMessage, showMsg, messageLog, logDialog } = useMessage();
   const ruinedNotifiedRef = useRef(new Set<string>());
 
   // ---------------------------------------------------------------------------
@@ -395,8 +395,17 @@ export function useGameState({
         speechBubblesRef.current = nextRef;
         delete speechBubbleTimersRef.current[entityId];
       }, duration);
+
+      let speakerName: string | undefined;
+      if (entityId.startsWith("mob_")) {
+        const idx = parseInt(entityId.slice(4), 10);
+        speakerName = initialMobs[idx]?.name;
+      } else {
+        speakerName = adventurersRef.current.find((a) => a.id === entityId)?.name;
+      }
+      logDialog(speakerName ?? entityId, text);
     },
-    [],
+    [initialMobs, logDialog],
   );
   // Map<regionId, cumulativeRise> — only regions containing cozy objects heat up
   const [roomTempRise, setRoomTempRise] = useState<Map<number, number>>(
@@ -2807,6 +2816,7 @@ export function useGameState({
     displayedText,
     setMessage,
     showMsg,
+    messageLog,
     speechBubbles,
     showSpeechBubble,
     roomTempRise,
