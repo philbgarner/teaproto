@@ -716,7 +716,9 @@ export function useGameState({
             CHAR_SHEET_H,
           ),
           unconscious: mobHps[i] <= 0,
-          outlineColor: RPS_OUTLINE_COLOR[mobRpsEffects[i]] ?? ([0, 0, 0, 0] as [number, number, number, number]),
+          outlineColor:
+            RPS_OUTLINE_COLOR[mobRpsEffects[i]] ??
+            ([0, 0, 0, 0] as [number, number, number, number]),
         };
       }),
       ...adventurers
@@ -1278,7 +1280,11 @@ export function useGameState({
           newChests.splice(chestIdx, 1);
           if (pickedChest.mimic) {
             adv = { ...adv, alive: false, hp: 0 };
-            for (let ci = 0; ci < (adv.inventoryIngredients?.length ?? 0); ci++) {
+            for (
+              let ci = 0;
+              ci < (adv.inventoryIngredients?.length ?? 0);
+              ci++
+            ) {
               const ing = adv.inventoryIngredients![ci];
               newIngredientDrops.push({
                 id: ing.id,
@@ -1317,11 +1323,16 @@ export function useGameState({
           const chestIngCount = 1 + Math.floor(Math.random() * 3);
           const pickedIngs: { id: string; name: string }[] = [];
           for (let ci = 0; ci < chestIngCount; ci++) {
-            pickedIngs.push(chestIngTypes[Math.floor(Math.random() * chestIngTypes.length)]);
+            pickedIngs.push(
+              chestIngTypes[Math.floor(Math.random() * chestIngTypes.length)],
+            );
           }
           adv = {
             ...adv,
-            inventoryIngredients: [...(adv.inventoryIngredients ?? []), ...pickedIngs],
+            inventoryIngredients: [
+              ...(adv.inventoryIngredients ?? []),
+              ...pickedIngs,
+            ],
           };
         }
 
@@ -1718,7 +1729,7 @@ export function useGameState({
     // --- Conscious mob AI: move toward nearest adventurer in line of sight ---
     console.log("[onStep] mob AI start");
     for (let i = 0; i < initialMobs.length; i++) {
-      if (newMobSatiations[i] <= 0) continue; // unconscious
+      if (newMobHps[i] <= 0) continue; // unconscious
       const pos = newMobPositions[i];
 
       // Summon: pathfind toward stored target position
@@ -1799,7 +1810,7 @@ export function useGameState({
 
     // --- Conscious mob counterattack ---
     for (let i = 0; i < initialMobs.length; i++) {
-      if (newMobSatiations[i] <= 0) continue; // unconscious
+      if (newMobHps[i] <= 0) continue; // unconscious
       const mob = initialMobs[i];
       const mobPos = newMobPositions[i];
       for (let j = 0; j < newAdventurers.length; j++) {
@@ -1844,7 +1855,11 @@ export function useGameState({
                 dropKey: `ing_${Date.now()}_${j}`,
               });
             }
-            for (let ci = 0; ci < (adv.inventoryIngredients?.length ?? 0); ci++) {
+            for (
+              let ci = 0;
+              ci < (adv.inventoryIngredients?.length ?? 0);
+              ci++
+            ) {
               const ing = adv.inventoryIngredients![ci];
               newIngredientDrops.push({
                 id: ing.id,
@@ -2300,15 +2315,15 @@ export function useGameState({
               ? rightHandTea
               : null;
         const mobStatus = mobStatuses[facingTarget.mobIdx];
-        const isUnconscious = mobSatiations[facingTarget.mobIdx] <= 0;
+        const isUnconscious = mobHps[facingTarget.mobIdx] <= 0;
         const mobBubbleId = `mob_${facingTarget.mobIdx}`;
-        if (tea && !isUnconscious && mobStatus === "ecstatic") {
-          showSpeechBubble(
-            mobBubbleId,
-            "Oh, I couldn't possibly! I'm far too full right now — perhaps later.",
-          );
-          return;
-        }
+        // if (tea && !isUnconscious && mobStatus === "ecstatic") {
+        //   showSpeechBubble(
+        //     mobBubbleId,
+        //     "Oh, I couldn't possibly! I'm far too full right now — perhaps later.",
+        //   );
+        //   return;
+        // }
         if (!tea) {
           const preferredRecipe = RECIPES.find(
             (r) => r.id === mob.preferredRecipeId,
@@ -2357,7 +2372,10 @@ export function useGameState({
         function applyMobHpRestore(amount: number) {
           const maxHp = mob.hp ?? MOB_HP;
           const next = [...mobHpsRef.current!];
-          next[facingTarget.mobIdx] = Math.min(maxHp, next[facingTarget.mobIdx] + amount);
+          next[facingTarget.mobIdx] = Math.min(
+            maxHp,
+            next[facingTarget.mobIdx] + amount,
+          );
           mobHpsRef.current = next;
           setMobHps(next);
         }
@@ -2372,14 +2390,18 @@ export function useGameState({
           applyMobSatiation(
             Math.round(teaSatiationAmount * (1 + supersatiationBonus / 100)),
           );
-          applyMobHpRestore(Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)));
+          applyMobHpRestore(
+            Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)),
+          );
           showSpeechBubble(
             mobBubbleId,
             `This ${tea.name} is exactly what I needed — I feel so much better!`,
           );
         } else {
           applyMobSatiation(teaSatiationAmount);
-          applyMobHpRestore(Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)));
+          applyMobHpRestore(
+            Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)),
+          );
           showSpeechBubble(
             mobBubbleId,
             `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
