@@ -1681,7 +1681,7 @@ export function useGameState({
         } else {
           const summonAstar = aStar8(
             { width: dungeonWidth, height: dungeonHeight },
-            (x: number, y: number) => isWalkable(x, y),
+            (x: number, y: number) => isWalkableForLos(x, y),
             { x: pos.x, y: pos.z },
             { x: target.x, y: target.z },
             { fourDir: true },
@@ -2517,6 +2517,7 @@ export function useGameState({
         return;
       }
       mobSummonSet.current.set(summonMenuCursor, { x: pgx, z: pgz });
+      showMsg(`${initialMobs[summonMenuCursor].name} is on its way!`);
       setShowSummonMenu(false);
       sounds.acceptSelection.play();
     };
@@ -2537,6 +2538,7 @@ export function useGameState({
           return;
         }
         mobSummonSet.current.set(num - 1, { x: pgx, z: pgz });
+        showMsg(`${initialMobs[num - 1].name} is on its way!`);
         setShowSummonMenu(false);
         sounds.acceptSelection.play();
       }
