@@ -419,6 +419,46 @@ export function useDungeonSetup({
     ];
   }, [stovePlacements, doorPlacements]);
 
+  const initialChests = useMemo(() => {
+    const rng = makeRng(dungeonSeed ^ 0x2aabcdef);
+    const nonEndRooms = [...dungeon.rooms.values()].filter(
+      (r) => (r as any).id !== dungeon.endRoomId,
+    ) as any[];
+    const chests: any[] = [];
+    const usedRooms = new Set<any>();
+    const CHEST_COUNT = 4;
+    for (
+      let i = 0;
+      i < CHEST_COUNT && nonEndRooms.length > usedRooms.size;
+      i++
+    ) {
+      let attempts = 0;
+      while (attempts++ < 50) {
+        const roomIdx = Math.floor(rng() * nonEndRooms.length);
+        const room = nonEndRooms[roomIdx];
+        if (usedRooms.has(room.id)) continue;
+        usedRooms.add(room.id);
+        const cx = room.rect.x + Math.floor(room.rect.w / 2);
+        const cz = room.rect.y + Math.floor(room.rect.h / 2);
+        const idx = cz * dungeonWidth + cx;
+        if (solidData[idx] !== 0) continue;
+        const chestRegistry = new ComponentRegistry();
+        chestRegistry.initializeRegistry();
+        const chestEntity = createChestInstance(chestRegistry);
+        chests.push({
+          id: `chest_${i}`,
+          x: cx,
+          z: cz,
+          value: 10,
+          mimic: rng() < 0.25,
+          ecsData: { registry: chestRegistry, chestEntity },
+        });
+        break;
+      }
+    }
+    return chests;
+  }, [dungeon, solidData, dungeonSeed, dungeonWidth]);
+
   // Passive mobs — one per non-end room (up to 3)
   const initialMobs = useMemo(() => {
     console.log(
@@ -428,6 +468,7 @@ export function useDungeonSetup({
       "MOB_NAMES:",
       MOB_NAMES,
     );
+    const chestPositions = new Set(initialChests.map((c: any) => `${c.x},${c.z}`));
     const mobs: any[] = [];
     let idx = 0;
     for (const [roomId, room] of dungeon.rooms) {
@@ -441,10 +482,24 @@ export function useDungeonSetup({
         idx,
       );
       if (roomId === dungeon.endRoomId || idx >= MOB_NAMES.length) continue;
+      let mx = Math.floor((room as any).rect.x + (room as any).rect.w / 2);
+      let mz = Math.floor((room as any).rect.y + (room as any).rect.h / 2);
+      if (chestPositions.has(`${mx},${mz}`)) {
+        const offsets = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        for (const [ox, oz] of offsets) {
+          const nx = mx + ox;
+          const nz = mz + oz;
+          if (!chestPositions.has(`${nx},${nz}`) && solidData[nz * dungeonWidth + nx] === 0) {
+            mx = nx;
+            mz = nz;
+            break;
+          }
+        }
+      }
       mobs.push({
         id: `mob_${idx}`,
-        x: Math.floor((room as any).rect.x + (room as any).rect.w / 2),
-        z: Math.floor((room as any).rect.y + (room as any).rect.h / 2),
+        x: mx,
+        z: mz,
         name: MOB_NAMES[idx],
         type: MOB_TYPES[idx].type,
         preferredRecipeId: RECIPES[(idx * 3 + 1) % RECIPES.length].id,
@@ -455,7 +510,7 @@ export function useDungeonSetup({
       idx++;
     }
     return mobs;
-  }, [dungeon]);
+  }, [dungeon, initialChests, solidData, dungeonWidth]);
 
   // Adventurer spawn rooms: startRoom first, then other non-end rooms farthest-first.
   // Player spawns in endRoom; adventurers enter from the opposite end (startRoom).
@@ -516,46 +571,6 @@ export function useDungeonSetup({
     }
     return drops;
   }, [dungeon, dungeonSeed]);
-
-  const initialChests = useMemo(() => {
-    const rng = makeRng(dungeonSeed ^ 0x2aabcdef);
-    const nonEndRooms = [...dungeon.rooms.values()].filter(
-      (r) => (r as any).id !== dungeon.endRoomId,
-    ) as any[];
-    const chests: any[] = [];
-    const usedRooms = new Set<any>();
-    const CHEST_COUNT = 4;
-    for (
-      let i = 0;
-      i < CHEST_COUNT && nonEndRooms.length > usedRooms.size;
-      i++
-    ) {
-      let attempts = 0;
-      while (attempts++ < 50) {
-        const roomIdx = Math.floor(rng() * nonEndRooms.length);
-        const room = nonEndRooms[roomIdx];
-        if (usedRooms.has(room.id)) continue;
-        usedRooms.add(room.id);
-        const cx = room.rect.x + Math.floor(room.rect.w / 2);
-        const cz = room.rect.y + Math.floor(room.rect.h / 2);
-        const idx = cz * dungeonWidth + cx;
-        if (solidData[idx] !== 0) continue;
-        const chestRegistry = new ComponentRegistry();
-        chestRegistry.initializeRegistry();
-        const chestEntity = createChestInstance(chestRegistry);
-        chests.push({
-          id: `chest_${i}`,
-          x: cx,
-          z: cz,
-          value: 10,
-          mimic: rng() < 0.25,
-          ecsData: { registry: chestRegistry, chestEntity },
-        });
-        break;
-      }
-    }
-    return chests;
-  }, [dungeon, solidData, dungeonSeed, dungeonWidth]);
 
   return {
     dungeon,

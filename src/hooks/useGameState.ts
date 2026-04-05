@@ -2823,6 +2823,10 @@ export function useGameState({
         showMsg("Can't summon here — a monster is already here.");
         return;
       }
+      if (chestsRef.current.some((c: any) => c.x === pgx && c.z === pgz)) {
+        showMsg("Can't summon here — there's a chest here.");
+        return;
+      }
       if (!mobHasMetRef.current[summonMenuCursor]) {
         showMsg(`You haven't met ${initialMobs[summonMenuCursor].name} yet.`);
         return;
@@ -2848,6 +2852,10 @@ export function useGameState({
           mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)
         ) {
           showMsg("Can't summon here — a monster is already here.");
+          return;
+        }
+        if (chestsRef.current.some((c: any) => c.x === pgx && c.z === pgz)) {
+          showMsg("Can't summon here — there's a chest here.");
           return;
         }
         if (!mobHasMetRef.current[num - 1]) {

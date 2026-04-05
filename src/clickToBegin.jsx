@@ -85,7 +85,7 @@ export function ClickToBegin({ onBegin }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "#2459c5",
+        background: "rgba(18, 71, 179, 1)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
