@@ -2349,6 +2349,84 @@ export function useGameState({
     danceStateRef.current = { mobIdx: null, advId: null, count: 0 };
   }, [gameState, mobPositionsRef, adventurersRef, mobSatiationsRef]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Expose tea interaction function for UI calls
+  const handleTeaInteraction = useCallback((hand: "left" | "right") => {
+    const facingTarget = facingTargetRef.current;
+    if (!facingTarget || facingTarget.type !== "mob") return;
+
+    const mob = initialMobs[facingTarget.mobIdx];
+    const mobBubbleId = `mob_${facingTarget.mobIdx}`;
+    const tea = hand === "left" ? leftHandTea : rightHandTea;
+    if (!tea) return;
+    // const [lo] = tea.recipe.idealTemperatureRange;
+    // const [, hi] = tea.recipe.idealTemperatureRange;
+    const handInventory = getHandInventory(hand!);
+    const itemEntity = registry.useItem(handInventory);
+    if (itemEntity) registry.removeEntity(itemEntity);
+    setHandsVersion((v) => v + 1);
+    if (!firstTeaDeliveredRef.current) {
+      firstTeaDeliveredRef.current = true;
+      showMsg(
+        `Head back to the TeaOMatic and press [${keybindings.interact[0] === " " ? "space" : keybindings.interact[0]}] to brew another tea!`,
+      );
+      setTimeout(() => {
+        showMsg(
+          "With empty hands you can pass through walls — explore the dungeon!",
+        );
+      }, 5500);
+    }
+    function applyMobSatiation(value: number) {
+      const next = [...mobSatiationsRef.current!];
+      next[facingTarget.mobIdx] = value;
+      mobSatiationsRef.current = next;
+      setMobSatiations(next);
+    }
+
+    function applyMobHpRestore(amount: number) {
+      const maxHp = mob.hp ?? MOB_HP;
+      const next = [...mobHpsRef.current!];
+      const wasUnconscious = next[facingTarget.mobIdx] <= 0;
+      next[facingTarget.mobIdx] = Math.min(
+        maxHp,
+        next[facingTarget.mobIdx] + amount,
+      );
+      if (wasUnconscious && amount > 0) {
+        dungeonStatsRef.current.monstersResuscitated++;
+      }
+      mobHpsRef.current = next;
+      setMobHps(next);
+    }
+
+    const currentRpsEffect = mobRpsEffectsRef.current[facingTarget.mobIdx];
+    const countersEffect = tea.recipe.countersEffect;
+    if (countersEffect && currentRpsEffect === countersEffect) {
+      const nextRpsEffects = [...mobRpsEffectsRef.current];
+      nextRpsEffects[facingTarget.mobIdx] = "none";
+      mobRpsEffectsRef.current = nextRpsEffects;
+      setMobRpsEffects(nextRpsEffects);
+      applyMobSatiation(
+        Math.round(teaSatiationAmount * (1 + supersatiationBonus / 100)),
+      );
+      applyMobHpRestore(
+        Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)),
+      );
+      showSpeechBubble(
+        mobBubbleId,
+        `This ${tea.name} is exactly what I needed — I feel so much better!`,
+      );
+    } else {
+      applyMobSatiation(teaSatiationAmount);
+      applyMobHpRestore(
+        Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)),
+      );
+      showSpeechBubble(
+        mobBubbleId,
+        `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
+      );
+    }
+    sounds.twinkle.play();
+  }, [initialMobs, mobStatuses, logicalRef, leftHandInventory, rightHandInventory, showSpeechBubble]);
+
   const onBlockedMove = useCallback((dx: number, dz: number) => {
     const passages = passagesRef.current;
     if (!passages.length) return;
@@ -2555,73 +2633,7 @@ export function useGameState({
           );
           return;
         }
-        const [lo] = tea.recipe.idealTemperatureRange;
-        const [, hi] = tea.recipe.idealTemperatureRange;
-        const handInventory = getHandInventory(hand!);
-        const itemEntity = registry.useItem(handInventory);
-        if (itemEntity) registry.removeEntity(itemEntity);
-        setHandsVersion((v) => v + 1);
-        if (!firstTeaDeliveredRef.current) {
-          firstTeaDeliveredRef.current = true;
-          showMsg(
-            `Head back to the TeaOMatic and press [${keybindings.interact[0] === " " ? "space" : keybindings.interact[0]}] to brew another tea!`,
-          );
-          setTimeout(() => {
-            showMsg(
-              "With empty hands you can pass through walls — explore the dungeon!",
-            );
-          }, 5500);
-        }
-        function applyMobSatiation(value: number) {
-          const next = [...mobSatiationsRef.current!];
-          next[facingTarget.mobIdx] = value;
-          mobSatiationsRef.current = next;
-          setMobSatiations(next);
-        }
-
-        function applyMobHpRestore(amount: number) {
-          const maxHp = mob.hp ?? MOB_HP;
-          const next = [...mobHpsRef.current!];
-          const wasUnconscious = next[facingTarget.mobIdx] <= 0;
-          next[facingTarget.mobIdx] = Math.min(
-            maxHp,
-            next[facingTarget.mobIdx] + amount,
-          );
-          if (wasUnconscious && amount > 0) {
-            dungeonStatsRef.current.monstersResuscitated++;
-          }
-          mobHpsRef.current = next;
-          setMobHps(next);
-        }
-
-        const currentRpsEffect = mobRpsEffectsRef.current[facingTarget.mobIdx];
-        const countersEffect = tea.recipe.countersEffect;
-        if (countersEffect && currentRpsEffect === countersEffect) {
-          const nextRpsEffects = [...mobRpsEffectsRef.current];
-          nextRpsEffects[facingTarget.mobIdx] = "none";
-          mobRpsEffectsRef.current = nextRpsEffects;
-          setMobRpsEffects(nextRpsEffects);
-          applyMobSatiation(
-            Math.round(teaSatiationAmount * (1 + supersatiationBonus / 100)),
-          );
-          applyMobHpRestore(
-            Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)),
-          );
-          showSpeechBubble(
-            mobBubbleId,
-            `This ${tea.name} is exactly what I needed — I feel so much better!`,
-          );
-        } else {
-          applyMobSatiation(teaSatiationAmount);
-          applyMobHpRestore(
-            Math.round((mob.hp ?? MOB_HP) * (teaHpRestorePercent / 100)),
-          );
-          showSpeechBubble(
-            mobBubbleId,
-            `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
-          );
-        }
-        sounds.twinkle.play();
+        handleTeaInteraction(hand!);
       } else if (facingTarget.type === "door") {
         const state =
           doorStatesRef.current.get(facingTarget.doorKey) ?? "closed";
@@ -2973,6 +2985,7 @@ export function useGameState({
     rightHandTea,
     clearHands,
     addTeaToHand,
+    handleTeaInteraction,
     mobSatiations,
     setMobSatiations,
     mobHps,
