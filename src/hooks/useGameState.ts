@@ -1756,7 +1756,8 @@ export function useGameState({
           committed.add(targetKey);
           return { ...adv, x: intendedX, z: intendedZ, debugPath };
         }
-        // Blocked — stay
+        // Blocked — stay; commit current position so no one else moves here
+        committed.add(`${adv.x}_${adv.z}`);
         return { ...adv, debugPath: [] };
       });
     } else {
@@ -1784,6 +1785,8 @@ export function useGameState({
           committed.add(targetKey);
           return { ...adv, x: intendedX, z: intendedZ, debugPath };
         }
+        // Blocked — stay; commit current position so no one else moves here
+        committed.add(`${adv.x}_${adv.z}`);
         return { ...adv, debugPath: [] };
       });
     }

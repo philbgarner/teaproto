@@ -755,6 +755,8 @@ export function TitleScreen({ onNewGame, onTutorial }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showCredits, setShowCredits] = useState(false);
   const [choosingDifficulty, setChoosingDifficulty] = useState(false);
+  const [choosingSeed, setChoosingSeed] = useState(false);
+  const [selectedDifficulty, setSelectedDifficulty] = useState(null);
   const musicRef = useRef({});
   const skipRef = useRef(false);
   const settings = useSettings();
@@ -766,7 +768,16 @@ export function TitleScreen({ onNewGame, onTutorial }) {
 
   function handleDifficulty(level) {
     if (menuFading) return;
+    setSelectedDifficulty(level);
+    setChoosingDifficulty(false);
+    setChoosingSeed(true);
+  }
+
+  function handleSeed(seed) {
+    if (menuFading) return;
+    const level = selectedDifficulty;
     const preset = DIFFICULTY_PRESETS[level];
+    settings.setDungeonSeed(seed === 42 ? 42 : Math.floor(Math.random() * 1_000_000));
     settings.setTempDropPerStep(preset.tempDropPerStep);
     settings.setHeatingPerStep(preset.heatingPerStep);
     settings.setSatiationDropPerStep(preset.satiationDropPerStep);
@@ -820,13 +831,13 @@ export function TitleScreen({ onNewGame, onTutorial }) {
           pointerEvents: menuVisible && !menuFading ? "auto" : "none",
         }}
       >
-        {!choosingDifficulty ? (
+        {!choosingDifficulty && !choosingSeed ? (
           <>
             <MenuItem label="New Game" onClick={handleNewGame} />
             <MenuItem label="Settings" onClick={() => setShowSettings(true)} />
             <MenuItem label="Credits" onClick={() => setShowCredits(true)} />
           </>
-        ) : (
+        ) : choosingDifficulty ? (
           <>
             <MenuItem
               label="Tutorial"
@@ -845,6 +856,11 @@ export function TitleScreen({ onNewGame, onTutorial }) {
               onClick={() => handleDifficulty("normal")}
             />
             <MenuItem label="Hard" onClick={() => handleDifficulty("hard")} />
+          </>
+        ) : (
+          <>
+            <MenuItem label="Seed 42" onClick={() => handleSeed(42)} />
+            <MenuItem label="Random" onClick={() => handleSeed(null)} />
           </>
         )}
       </div>
