@@ -63,6 +63,7 @@ function LessonView({
         // Update facing target immediately when player rotates
         const facingTarget = gs.getFacingTarget(camLogicalRef);
         gs.facingTargetRef.current = facingTarget;
+        gs.onTurn();
       },
       blocked: gs.showRecipeMenu || gs.gameState !== "playing",
       onBlockedMove: onBlockedMove ?? gs.onBlockedMove,

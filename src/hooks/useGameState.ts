@@ -1272,6 +1272,16 @@ export function useGameState({
           inCombat: false,
         };
 
+      // Positions of all other alive adventurers — used as high-cost cells so
+      // adventurers spread out instead of stacking on the same tile.
+      const otherAdvOccupied = new Set(
+        newAdventurers
+          .filter((a) => a.alive && a.id !== adv.id)
+          .map((a) => `${a.x}_${a.z}`),
+      );
+      const advCellCost = (x: number, y: number) =>
+        otherAdvOccupied.has(`${x}_${y}`) ? 80 : 0;
+
       // Ghost sighting: adventurer spots the ghost (player) for the first time
       if (!adventurerSightingsRef.current.has(adv.id)) {
         const playerDist = Math.hypot(adv.x - pgx, adv.z - pgz);
@@ -1374,6 +1384,7 @@ export function useGameState({
                   !(x === combatTarget!.x && y === combatTarget!.z))
               );
             },
+            cellCost: advCellCost,
             fourDir: true,
           },
         );
@@ -1531,6 +1542,7 @@ export function useGameState({
                     (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
+                cellCost: advCellCost,
                 fourDir: true,
               },
             );
@@ -1582,6 +1594,7 @@ export function useGameState({
                     (adv.keys ?? 0) === 0;
                   return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
                 },
+                cellCost: advCellCost,
                 fourDir: true,
               },
             );
@@ -1663,6 +1676,7 @@ export function useGameState({
               (adv.keys ?? 0) === 0;
             return isLockedDoor || mobPlayerOccupied.has(`${x}_${y}`);
           },
+          cellCost: advCellCost,
           fourDir: true,
         },
       );
