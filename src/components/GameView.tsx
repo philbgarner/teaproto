@@ -1181,6 +1181,7 @@ export function GameView({
                 satiation: gs.mobSatiations[i],
                 maxSatiation: 40,
                 rpsEffect: gs.mobRpsEffects[i],
+                hasMet: gs.mobHasMet[i] ?? false,
               }),
             )}
             adventurers={gs.adventurers ?? []}

@@ -33,7 +33,9 @@ function HandSlot({ items, registry, side }) {
   const isEmpty = !name;
 
   return (
-    <div className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""} ${ghostStyles.handSlot}`}>
+    <div
+      className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""} ${ghostStyles.handSlot}`}
+    >
       <div className={ghostStyles.itemImage}>
         {!isEmpty ? (
           <img src={`textures/${IMG_MAPPING[name]}`} />
@@ -41,11 +43,7 @@ function HandSlot({ items, registry, side }) {
           <img src={`textures/hand_${side}.png`} />
         )}
       </div>
-      {!isEmpty && (
-        <div className={ghostStyles.itemText}>
-          {name}
-        </div>
-      )}
+      {!isEmpty && <div className={ghostStyles.itemText}>{name}</div>}
     </div>
   );
 }
@@ -85,17 +83,11 @@ function IngredientSlot({ slot, registry }) {
           <div className={ghostStyles.ingredientImage}>
             <img src={`textures/${ING_MAPPING[name]}`} />
           </div>
-          <div className={ghostStyles.ingredientName}>
-            {name}
-          </div>
-          <div className={ghostStyles.ingredientQuantity}>
-            x{quantity}
-          </div>
+          <div className={ghostStyles.ingredientName}>{name}</div>
+          <div className={ghostStyles.ingredientQuantity}>x{quantity}</div>
         </>
       ) : (
-        <div className={ghostStyles.emptyIngredient}>
-          empty
-        </div>
+        <div className={ghostStyles.emptyIngredient}>empty</div>
       )}
     </div>
   );
@@ -118,7 +110,8 @@ function IngredientRow() {
 
 function MobEntry({ mob, onSummon, summonDisabled }) {
   const effectColor = mob.rpsEffect ? RPS_COLORS[mob.rpsEffect] : undefined;
-  const effectIcon = mob.rpsEffect && mob.rpsEffect !== "none" ? RPS_ICONS[mob.rpsEffect] : null;
+  const effectIcon =
+    mob.rpsEffect && mob.rpsEffect !== "none" ? RPS_ICONS[mob.rpsEffect] : null;
 
   const hpFrac = mob.hp !== undefined && mob.maxHp ? mob.hp / mob.maxHp : null;
   const armorFrac =
@@ -129,25 +122,34 @@ function MobEntry({ mob, onSummon, summonDisabled }) {
   return (
     <div className={styles.mobEntry}>
       <div className={styles.mobNameRow}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", flex: 1, gap: "0.25rem", minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            flex: 1,
+            gap: "0.25rem",
+            minWidth: 0,
+          }}
+        >
           {effectIcon && (
-            <img 
-              src={`textures/${effectIcon}`} 
-              style={{ 
-                width: "24px", 
-                height: "24px", 
+            <img
+              src={`textures/${effectIcon}`}
+              style={{
+                width: "24px",
+                height: "24px",
                 imageRendering: "pixelated",
-                flexShrink: 0
-              }} 
+                flexShrink: 0,
+              }}
             />
           )}
-          <span 
-            className={styles.mobName} 
-            style={{ 
+          <span
+            className={styles.mobName}
+            style={{
               color: effectColor || "inherit",
               overflow: "hidden",
               textOverflow: "ellipsis",
-              whiteSpace: "nowrap"
+              whiteSpace: "nowrap",
             }}
           >
             {mob.name ?? "Monster"}
@@ -263,14 +265,16 @@ export function MinimapSidebar({
       <IngredientRow />
       {mobs.length > 0 && (
         <div className={styles.mobRoster}>
-          {mobs.map((mob, i) => (
-            <MobEntry
-              key={i}
-              mob={mob}
-              onSummon={() => summonMob(i, pgx, pgz)}
-              summonDisabled={summonDisabled}
-            />
-          ))}
+          {mobs
+            .filter((f) => f.hasMet)
+            .map((mob, i) => (
+              <MobEntry
+                key={i}
+                mob={mob}
+                onSummon={() => summonMob(i, pgx, pgz)}
+                summonDisabled={summonDisabled}
+              />
+            ))}
         </div>
       )}
     </div>
