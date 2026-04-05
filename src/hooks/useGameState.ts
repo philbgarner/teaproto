@@ -1750,18 +1750,31 @@ export function useGameState({
         return { ...adv, debugPath: [] };
       });
     } else {
-      // No monsters in LOS — adventurers pass through each other freely.
-      // Only player and mob positions are respected as hard blocks.
+      // No monsters in LOS — adventurers can path through each other freely,
+      // but cannot end their turn on the same square as another adventurer,
+      // conscious mob, or player.
+      const committed = new Set(mobPlayerOccupied);
+      // Pre-commit positions of stationary adventurers
+      for (const { adv, intendedX, intendedZ, isAttack } of intendedMoves) {
+        if (
+          adv.alive &&
+          (isAttack || (intendedX === adv.x && intendedZ === adv.z))
+        ) {
+          committed.add(`${adv.x}_${adv.z}`);
+        }
+      }
       newAdventurers = intendedMoves.map((move) => {
         const { adv, intendedX, intendedZ, debugPath, isAttack } = move;
         if (!adv.alive) return adv;
         if (isAttack || (intendedX === adv.x && intendedZ === adv.z)) {
           return { ...adv, debugPath: [] };
         }
-        if (mobPlayerOccupied.has(`${intendedX}_${intendedZ}`)) {
-          return { ...adv, debugPath: [] };
+        const targetKey = `${intendedX}_${intendedZ}`;
+        if (!committed.has(targetKey)) {
+          committed.add(targetKey);
+          return { ...adv, x: intendedX, z: intendedZ, debugPath };
         }
-        return { ...adv, x: intendedX, z: intendedZ, debugPath };
+        return { ...adv, debugPath: [] };
       });
     }
 
@@ -1870,11 +1883,18 @@ export function useGameState({
       }
     }
 
-    // --- Conscious mob AI: move toward nearest adventurer in line of sight ---
+    // --- Conscious mob AI ---
+    // Other mobs are transparent to pathfinding except at the destination.
+    // Moving through an occupied square swaps the two mobs; the mover then
+    // gets one more step (but only 1 swap per turn total).
+    // Mobs never swap with adventurers.
     console.log("[onStep] mob AI start");
     for (let i = 0; i < initialMobs.length; i++) {
       if (newMobHps[i] <= 0) continue; // unconscious
       const pos = newMobPositions[i];
+
+      let targetX: number;
+      let targetZ: number;
 
       // Summon: pathfind toward stored target position
       if (mobSummonSet.current.has(i)) {
@@ -1882,71 +1902,86 @@ export function useGameState({
         const dist = Math.abs(pos.x - target.x) + Math.abs(pos.z - target.z);
         if (dist <= 1) {
           mobSummonSet.current.delete(i);
-        } else {
-          const summonAstar = aStar8(
-            { width: dungeonWidth, height: dungeonHeight },
-            (x: number, y: number) => isWalkableForLos(x, y),
-            { x: pos.x, y: pos.z },
-            { x: target.x, y: target.z },
-            { fourDir: true },
-          );
-          if (summonAstar && summonAstar.path.length > 1) {
-            const step = summonAstar.path[1];
-            const blockedByMob = newMobPositions.some(
-              (p: any, j: number) =>
-                j !== i && p.x === step.x && p.z === step.y,
-            );
-            if (!blockedByMob) {
-              newMobPositions[i] = { x: step.x, z: step.y };
-            }
+          continue;
+        }
+        targetX = target.x;
+        targetZ = target.z;
+      } else {
+        // Find nearest visible adventurer within LOS_RADIUS
+        let chaseTarget: any = null;
+        let chaseDist = Infinity;
+        for (const adv of newAdventurers) {
+          if (!adv.alive) continue;
+          const d = Math.hypot(pos.x - adv.x, pos.z - adv.z);
+          if (
+            d < chaseDist &&
+            d <= LOS_RADIUS &&
+            hasLineOfSight(pos.x, pos.z, adv.x, adv.z, isWalkable)
+          ) {
+            chaseDist = d;
+            chaseTarget = adv;
           }
         }
-        continue;
+        if (!chaseTarget) continue;
+        // Already adjacent — counterattack section handles damage
+        if (Math.abs(pos.x - chaseTarget.x) + Math.abs(pos.z - chaseTarget.z) === 1)
+          continue;
+        targetX = chaseTarget.x;
+        targetZ = chaseTarget.z;
       }
 
-      // Find nearest visible adventurer within LOS_RADIUS
-      let chaseTarget: any = null;
-      let chaseDist = Infinity;
-      for (const adv of newAdventurers) {
-        if (!adv.alive) continue;
-        const d = Math.hypot(pos.x - adv.x, pos.z - adv.z);
-        if (
-          d < chaseDist &&
-          d <= LOS_RADIUS &&
-          hasLineOfSight(pos.x, pos.z, adv.x, adv.z, isWalkableForLos)
-        ) {
-          chaseDist = d;
-          chaseTarget = adv;
-        }
-      }
-
-      if (!chaseTarget) continue;
-      // Already adjacent — counterattack section handles damage
-      if (
-        Math.abs(pos.x - chaseTarget.x) + Math.abs(pos.z - chaseTarget.z) ===
-        1
-      )
-        continue;
-
-      // Pathfind one step toward the adventurer
-      const mobAstar = aStar8(
+      // Pathfind — other mobs are only impassable at the destination itself
+      const mobPath = aStar8(
         { width: dungeonWidth, height: dungeonHeight },
-        (x: number, y: number) => isWalkableForLos(x, y),
+        (x: number, y: number) => isWalkable(x, y),
         { x: pos.x, y: pos.z },
-        { x: chaseTarget.x, y: chaseTarget.z },
-        { fourDir: true },
+        { x: targetX, y: targetZ },
+        {
+          isBlocked: (x: number, y: number) => {
+            if (newAdventurers.some((a) => a.alive && a.x === x && a.z === y))
+              return true;
+            if (x === targetX && y === targetZ)
+              return newMobPositions.some(
+                (p: any, j: number) => j !== i && p.x === x && p.z === y,
+              );
+            return false;
+          },
+          fourDir: true,
+        },
       );
-      if (mobAstar && mobAstar.path.length > 1) {
-        const step = mobAstar.path[1];
-        // Don't step onto another mob's cell
-        const blockedByMob = newMobPositions.some(
-          (p: any, j: number) => j !== i && p.x === step.x && p.z === step.y,
+
+      if (!mobPath || mobPath.path.length <= 1) continue;
+
+      // Walk the path: swap through occupied squares (max 1 swap), then 1 normal step
+      let hasSwapped = false;
+      let curX = pos.x;
+      let curZ = pos.z;
+
+      for (let s = 1; s < mobPath.path.length; s++) {
+        const nx = mobPath.path[s].x;
+        const nz = mobPath.path[s].y;
+
+        const occupantIdx = newMobPositions.findIndex(
+          (p: any, j: number) => j !== i && p.x === nx && p.z === nz,
         );
-        const blockedByAdventurer = newAdventurers.some(
-          (a) => a.alive && a.x === step.x && a.z === step.y,
-        );
-        if (!blockedByMob && !blockedByAdventurer) {
-          newMobPositions[i] = { x: step.x, z: step.y };
+
+        if (occupantIdx !== -1) {
+          if (!hasSwapped) {
+            // Swap: occupant slides back, this mob advances
+            newMobPositions[occupantIdx] = { x: curX, z: curZ };
+            curX = nx;
+            curZ = nz;
+            newMobPositions[i] = { x: curX, z: curZ };
+            hasSwapped = true;
+            // Continue — mob gets one more step after the swap
+          } else {
+            // Already swapped once this turn; stop here
+            break;
+          }
+        } else {
+          // Square is free (adventurers already blocked by isBlocked above)
+          newMobPositions[i] = { x: nx, z: nz };
+          break;
         }
       }
     }
