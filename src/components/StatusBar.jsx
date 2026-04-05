@@ -51,9 +51,15 @@ export function StatusBar({
   discardLeftKeys,
   discardRightKeys,
   onOpenSettings,
+  onReturnToTitle,
+  dungeonSeed,
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+
+  useEffect(() => {
+    if (dungeonSeed === 42) setShowHelp(true);
+  }, []);
 
   useEffect(() => {
     const keys = (openMenuKeys ?? ["m"]).join(",");
@@ -78,6 +84,13 @@ export function StatusBar({
       onClick: () => {
         setShowMenu(false);
         onOpenSettings?.();
+      },
+    },
+    {
+      label: "Back to Title Screen",
+      onClick: () => {
+        setShowMenu(false);
+        onReturnToTitle?.();
       },
     },
   ];

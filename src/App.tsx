@@ -173,6 +173,8 @@ export default function App({ onReturnToTitle }: { onReturnToTitle?: () => void 
       moveActions={moveActions}
       onInteract={gs.interact}
       onOpenSettings={() => gs.setShowSettings(true)}
+      onReturnToTitle={onReturnToTitle}
+      dungeonSeed={dungeonSeed}
       openMenuKeys={keybindings.openMenu}
       summonMonsterKeys={keybindings.summon}
       discardLeftKeys={keybindings.discardLeft}
