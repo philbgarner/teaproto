@@ -1,5 +1,14 @@
 import { MoveActions } from "../hooks/useEotBCamera";
+import { useSettings } from "../SettingsContext";
 import styles from "./styles/ArrowMovement.module.css";
+
+const KEY_DISPLAY: Record<string, string> = {
+  up: "↑", down: "↓", left: "←", right: "→", space: "Space",
+};
+
+function formatKeys(keys: string[]): string {
+  return keys.map((k) => KEY_DISPLAY[k] ?? k.toUpperCase()).join("/");
+}
 
 interface Props {
   moveActions: MoveActions;
@@ -26,21 +35,23 @@ function MoveBtn({
 }
 
 export function ArrowMovement({ moveActions }: Props) {
+  const { keybindings } = useSettings();
+
   return (
     <div className={styles.dpad}>
       <div className={styles.row}>
-        <MoveBtn onPress={moveActions.turnLeft}    img="turn-left.png"     label="Turn left" />
-        <MoveBtn onPress={moveActions.moveForward} img="move-forward.png"  label="Move forward" />
-        <MoveBtn onPress={moveActions.turnRight}   img="turn-right.png"    label="Turn right" />
+        <MoveBtn onPress={moveActions.turnLeft}    img="turn-left.png"     label={`Turn left (${formatKeys(keybindings.turnLeft)})`} />
+        <MoveBtn onPress={moveActions.moveForward} img="move-forward.png"  label={`Move forward (${formatKeys(keybindings.moveForward)})`} />
+        <MoveBtn onPress={moveActions.turnRight}   img="turn-right.png"    label={`Turn right (${formatKeys(keybindings.turnRight)})`} />
       </div>
       <div className={styles.row}>
-        <MoveBtn onPress={moveActions.strafeLeft}  img="move-left.png"     label="Strafe left" />
+        <MoveBtn onPress={moveActions.strafeLeft}  img="move-left.png"     label={`Strafe left (${formatKeys(keybindings.strafeLeft)})`} />
         <div className={styles.gap} />
-        <MoveBtn onPress={moveActions.strafeRight} img="move-right.png"    label="Strafe right" />
+        <MoveBtn onPress={moveActions.strafeRight} img="move-right.png"    label={`Strafe right (${formatKeys(keybindings.strafeRight)})`} />
       </div>
       <div className={styles.row}>
         <div className={styles.gap} />
-        <MoveBtn onPress={moveActions.moveBackward} img="move-backward.png" label="Move backward" />
+        <MoveBtn onPress={moveActions.moveBackward} img="move-backward.png" label={`Move backward (${formatKeys(keybindings.moveBackward)})`} />
         <div className={styles.gap} />
       </div>
     </div>
