@@ -136,7 +136,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   });
 
   const [dungeonStats, setDungeonStats] = useState<DungeonStats | undefined>(undefined);
-  const [dungeonSeed, setDungeonSeed] = useState(42);
+  const [dungeonSeed, setDungeonSeed] = useState(Math.floor(Math.random() * 1_000_000));
   const [dungeonWidth, setDungeonWidth] = useState(32);
   const [dungeonHeight, setDungeonHeight] = useState(32);
   const [minLeafSize, setMinLeafSize] = useState(6);

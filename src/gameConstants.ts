@@ -130,7 +130,7 @@ export const LERP_DURATION_MS = 150;
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-export const DUNGEON_SEED = 42;
+export const DUNGEON_SEED = Math.floor(Math.random() * 2 ** 32);
 export const DUNGEON_W = 32;
 export const DUNGEON_H = DUNGEON_W;
 
@@ -303,10 +303,13 @@ export const STATUS_RGB: Record<string, [number, number, number]> = {
   refreshed: [0.2, 1.0, 0.3],
 };
 /** Per-RPS effect outline colour [r, g, b, a] in 0–1 range. */
-export const RPS_OUTLINE_COLOR: Record<string, [number, number, number, number]> = {
+export const RPS_OUTLINE_COLOR: Record<
+  string,
+  [number, number, number, number]
+> = {
   bleeding: [1.0, 0.15, 0.15, 1.0],
-  freezing:  [0.3,  0.7,  1.0, 1.0],
-  poisoned: [0.2,  0.9,  0.2, 1.0],
+  freezing: [0.3, 0.7, 1.0, 1.0],
+  poisoned: [0.2, 0.9, 0.2, 1.0],
 };
 
 export const STATUS_CSS: Record<string, string> = {

@@ -205,7 +205,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     }
 
     gs.setMessage(null);
-    const id = setTimeout(() => gs.showMsg(config.startMessage), 200);
+    const id = setTimeout(() => gs.showMsg(config.startMessage, true), 200);
     return () => clearTimeout(id);
   }, [lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -232,7 +232,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       pz < room2.y + room2.h
     ) {
       lessonDoneRef.current = true;
-      gs.showMsg("Something draws you deeper into the dungeon...");
+      gs.showMsg("Something draws you deeper into the dungeon...", true);
       setTimeout(() => setLessonIndex(1), 2500);
     }
   }, [cameraPos, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -270,6 +270,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
         "Time only passes in the dungeon when you move from your current position.\n" +
         'Press "." to force time to advance if you prefer.\n' +
         "Come back later to collect your freshly brewed tea.",
+      true,
     );
     // Clear all ingredients so the player can't queue another brew yet
     const empty: Record<string, number> = {
@@ -290,6 +291,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
           "It's no use to me — whoever heard of monsters carrying gold?\n" +
           "But if you found enough of it, you could persuade a dragon to move in —\n" +
           "that would stop those adventurers once and for all.",
+        true,
       );
       // Spawn a gold pile next to the revived monster
       const goldDrop = { id: "tut_gold_0", x: 6, z: 8, amount: 100 };
@@ -317,6 +319,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
           "Red tea heals green damage, and green tea heals blue damage.\n" +
           "When your tea has brewed, interact with the monster to revive them.\n" +
           "If all the monsters fall unconscious, adventurers will destroy the Teaomatic!",
+        true,
       );
     }
 
@@ -330,6 +333,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       gs.showMsg(
         "Some small plants grow in the dungeon — they're quite cute.\n" +
           "I can harvest this and use it in the Teaomatic to brew different types of tea.",
+        true,
       );
       // Unlock all other teas now that the player has seen a plant
       const unlocked = {
@@ -351,6 +355,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       gs.showMsg(
         "Some careless adventurer has triggered this trap and left the door open.\n" +
           'It won\'t harm us, but we should reset it with "space" so another adventurer can enjoy it.',
+        true,
       );
     }
 
@@ -361,6 +366,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
         "Wait, there's a button here. It must be a secret passage leading to another part of the dungeon.\n" +
           "Walking through walls is great, but I can't do that while holding tea —\n" +
           "if I interact with this passage I can move around the dungeon quicker.",
+        true,
       );
       if (!lessonDoneRef.current) {
         lessonDoneRef.current = true;
@@ -392,6 +398,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
         firedTriggersRef.current.add("T9");
         gs.showMsg(
           "Walking through walls is great, but I can't do that while holding tea.",
+          true,
         );
       }
     },

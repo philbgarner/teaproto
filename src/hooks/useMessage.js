@@ -17,6 +17,7 @@ export function useMessage(duration = 5000, charDelay = 28) {
   const [messageLog, setMessageLog] = useState([]);
   const timerRef = useRef(null);
   const typewriterRef = useRef(null);
+  const inputListenerRef = useRef(null);
 
   const { sounds } = useSoundHelper();
 
@@ -26,10 +27,15 @@ export function useMessage(duration = 5000, charDelay = 28) {
   const clearAll = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (typewriterRef.current) clearInterval(typewriterRef.current);
+    if (inputListenerRef.current) {
+      window.removeEventListener("keydown", inputListenerRef.current);
+      window.removeEventListener("mousedown", inputListenerRef.current);
+      inputListenerRef.current = null;
+    }
   }, []);
 
   const showMsg = useCallback(
-    (text) => {
+    (text, waitForInput = false) => {
       clearAll();
       setMessageState(text);
       setDisplayedText("");
@@ -46,11 +52,22 @@ export function useMessage(duration = 5000, charDelay = 28) {
         if (i >= text.length) clearInterval(typewriterRef.current);
       }, charDelay);
 
-      timerRef.current = setTimeout(() => {
-        clearAll();
-        setMessageState(null);
-        setDisplayedText(null);
-      }, duration);
+      if (waitForInput) {
+        const dismiss = () => {
+          clearAll();
+          setMessageState(null);
+          setDisplayedText(null);
+        };
+        inputListenerRef.current = dismiss;
+        window.addEventListener("keydown", dismiss, { once: true });
+        window.addEventListener("mousedown", dismiss, { once: true });
+      } else {
+        timerRef.current = setTimeout(() => {
+          clearAll();
+          setMessageState(null);
+          setDisplayedText(null);
+        }, duration);
+      }
     },
     [duration, charDelay, clearAll],
   );
