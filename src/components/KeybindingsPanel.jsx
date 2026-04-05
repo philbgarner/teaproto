@@ -20,6 +20,7 @@ const ACTION_LABELS = {
   optionSelect: "Menu: select option",
   openMenu: "Open menu",
   summon: "Summon monster",
+  switchHand: "Switch hand selection",
 };
 
 const KEY_DISPLAY = {
