@@ -859,8 +859,8 @@ export function TitleScreen({ onNewGame, onTutorial }) {
           </>
         ) : (
           <>
-            <MenuItem label="Seed 42" onClick={() => handleSeed(42)} />
-            <MenuItem label="Random" onClick={() => handleSeed(null)} />
+            <MenuItem label="The Earl of Grey's Dungeon" onClick={() => handleSeed(42)} />
+            <MenuItem label="A Random Dungeon" onClick={() => handleSeed(null)} />
           </>
         )}
       </div>
