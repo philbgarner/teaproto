@@ -277,7 +277,7 @@ export function MinimapSidebar({
           className={styles.canvas}
         />
       </div>
-      <HandsRow />
+      <HandsRow handleTeaInteraction={handleTeaInteraction} />
       <IngredientRow />
       <div className={styles.tabBar}>
         <button
