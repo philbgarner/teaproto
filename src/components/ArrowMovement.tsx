@@ -51,8 +51,9 @@ export function ArrowMovement({ moveActions, onInteract }: Props) {
           <button
             className={styles.btn}
             onPointerDown={(e) => { e.preventDefault(); onInteract(); }}
-            title={`Interact (${formatKeys(keybindings.interact)})`}
-          />
+            title={`Interact (${formatKeys(keybindings.interact)})`}>
+              <img src={`textures/large_button_up.png`} alt="Interact" draggable={false} />
+            </button>
         ) : (
           <div className={styles.gap} />
         )}
