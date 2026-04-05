@@ -1639,7 +1639,7 @@ export function useGameState({
 
         // State just switched to seeking — fall through to seeking logic below
         adv = { ...adv, dread: newDread, loot: newLoot, state: "seeking" };
-        stepMessage = `The ${adv.name} is heading for the stove!`;
+        stepMessage = `The ${adv.name} is heading for the TeaOMatic!`;
       }
 
       // seeking state: pathfind to nearest stove
@@ -2564,7 +2564,7 @@ export function useGameState({
         if (!firstTeaDeliveredRef.current) {
           firstTeaDeliveredRef.current = true;
           showMsg(
-            `Head back to the tea machine (stove) in the kitchen and press [${keybindings.interact[0] === " " ? "space" : keybindings.interact[0]}] to brew another tea!`,
+            `Head back to the TeaOMatic and press [${keybindings.interact[0] === " " ? "space" : keybindings.interact[0]}] to brew another tea!`,
           );
           setTimeout(() => {
             showMsg(
