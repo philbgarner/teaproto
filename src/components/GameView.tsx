@@ -864,7 +864,7 @@ export function GameView({
     const preferredRecipe = RECIPES.find(
       (r) => r.id === mob?.preferredRecipeId,
     );
-    const isUnconscious = gs.mobSatiations[facingTarget.mobIdx] <= 0;
+    const isUnconscious = gs.mobHps[facingTarget.mobIdx] <= 0;
     if (isUnconscious) {
       return `${mob?.name} is unconscious — Press [space] to offer tea to revive`;
     }

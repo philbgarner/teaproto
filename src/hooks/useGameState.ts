@@ -562,6 +562,16 @@ export function useGameState({
   const doorStatesRef = useRef(doorStates);
   doorStatesRef.current = doorStates;
 
+  // Re-sync door states when the dungeon regenerates (e.g. seed change in settings)
+  useEffect(() => {
+    const m = new Map<string, DoorState>();
+    for (const d of doorPlacements) {
+      const key = `${d.x}_${d.z}`;
+      m.set(key, "closed");
+    }
+    setDoorStates(m);
+  }, [doorPlacements]);
+
   // Chests state
   const [chests, setChests] = useState<any[]>([]);
   const chestsRef = useRef<any[]>([]);
