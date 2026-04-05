@@ -111,6 +111,21 @@
         0 0 6px rgba(212, 148, 10, 0.4);
 }
 
+.selectedSlot {
+    outline: 2px solid #f8a81a;
+    box-shadow:
+        inset 0 2px 0 0 #a09890,
+        inset 2px 0 0 0 #8a8278,
+        inset 0 -2px 0 0 #2a2724,
+        inset -2px 0 0 0 #302d2a,
+        inset 0 4px 10px rgba(0, 0, 0, 0.45),
+        inset 0 -2px 5px rgba(255, 255, 255, 0.04),
+        inset 0 0 18px rgba(248, 168, 26, 0.15),
+        0 4px 0 0 #1a1816,
+        0 5px 8px rgba(0, 0, 0, 0.7),
+        0 0 10px rgba(248, 168, 26, 0.35);
+}
+
 .emptySlot {
     color: #5a5450;
     cursor: default;

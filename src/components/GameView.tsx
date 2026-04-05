@@ -779,8 +779,10 @@ interface GameViewProps {
   /** Full-screen overlay rendered after the main layout (e.g. GameOverOverlay) */
   gameOverlay?: ReactNode;
   onOpenSettings?: () => void;
+  onReturnToTitle?: () => void;
   openMenuKeys?: string[];
   summonMonsterKeys?: string[];
+  dungeonSeed?: number;
 }
 
 export function GameView({
@@ -799,8 +801,10 @@ export function GameView({
   settingsModal,
   gameOverlay,
   onOpenSettings,
+  onReturnToTitle,
   openMenuKeys,
   summonMonsterKeys,
+  dungeonSeed,
 }: GameViewProps) {
   const mobileFlash = useMemo(
     () => [...(gs.mobDamageFlash ?? []), ...(gs.advDamageFlash ?? [])],
@@ -1224,6 +1228,8 @@ export function GameView({
           openMenuKeys={openMenuKeys}
           summonMonsterKeys={summonMonsterKeys}
           onOpenSettings={onOpenSettings}
+          onReturnToTitle={onReturnToTitle}
+          dungeonSeed={dungeonSeed}
         />
       </div>
 

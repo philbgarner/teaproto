@@ -18,6 +18,7 @@ export const DEFAULT_KEYBINDINGS = {
   openMenu: ["m"],
   summon: ["n"],
   cancel: ["x"],
+  switchHand: ["f"],
 };
 
 function loadKeybindings() {

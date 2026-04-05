@@ -3,6 +3,7 @@ import styles from "./styles/StatusBar.module.css";
 import menuStyles from "./styles/MenuOverlay.module.css";
 import { useEffect, useState } from "react";
 import hotkeys from "hotkeys-js";
+import { useSettings } from "../SettingsContext";
 
 /**
  * Bottom status bar showing position, facing direction, HP, XP, and
@@ -51,9 +52,16 @@ export function StatusBar({
   discardLeftKeys,
   discardRightKeys,
   onOpenSettings,
+  onReturnToTitle,
+  dungeonSeed,
 }) {
+  const { keybindings } = useSettings();
   const [showMenu, setShowMenu] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+
+  useEffect(() => {
+    if (dungeonSeed === 42) setShowHelp(true);
+  }, []);
 
   useEffect(() => {
     const keys = (openMenuKeys ?? ["m"]).join(",");
@@ -80,6 +88,13 @@ export function StatusBar({
         onOpenSettings?.();
       },
     },
+    {
+      label: "Back to Title Screen",
+      onClick: () => {
+        setShowMenu(false);
+        onReturnToTitle?.();
+      },
+    },
   ];
 
   return (
@@ -98,6 +113,9 @@ export function StatusBar({
         </span>
         <span className={styles.roomTemp}>
           {(discardRightKeys?.[0] ?? "x").toUpperCase()}: Discard Right
+        </span>
+        <span className={styles.roomTemp}>
+          {(keybindings?.switchHand?.[0] ?? "f").toUpperCase()}: Change Hand Selection
         </span>
         {summonMonsterKeys?.[0] && (
           <span className={styles.roomTemp}>

@@ -236,7 +236,7 @@ export function useGameState({
   // ---------------------------------------------------------------------------
   // ECS hand inventory
   // ---------------------------------------------------------------------------
-  const { playerData, setDungeonStats } = useSettings();
+  const { playerData, setDungeonStats, selectedHand, setSelectedHand } = useSettings();
   const {
     registry,
     leftHand: leftHandInventory,
@@ -2596,13 +2596,11 @@ export function useGameState({
         sounds.trap_armed.play();
       } else if (facingTarget.type === "mob") {
         const mob = initialMobs[facingTarget.mobIdx];
-        const hand = leftHandTea ? "left" : rightHandTea ? "right" : null;
-        const tea =
-          hand === "left"
-            ? leftHandTea
-            : hand === "right"
-              ? rightHandTea
-              : null;
+        const selectedTea = selectedHand === "left" ? leftHandTea : rightHandTea;
+        const otherHand = selectedHand === "left" ? "right" : "left";
+        const otherTea = selectedHand === "left" ? rightHandTea : leftHandTea;
+        const hand = selectedTea ? selectedHand : otherTea ? otherHand : null;
+        const tea = hand === "left" ? leftHandTea : hand === "right" ? rightHandTea : null;
         const mobStatus = mobStatuses[facingTarget.mobIdx];
         const isUnconscious = mobHps[facingTarget.mobIdx] <= 0;
         const mobBubbleId = `mob_${facingTarget.mobIdx}`;
@@ -2976,7 +2974,17 @@ export function useGameState({
     keybindings,
     recipeMenuCursor,
     summonMenuCursor,
+    selectedHand,
   ]);
+
+  useEffect(() => {
+    const switchHandKeys = (keybindings.switchHand ?? ["f"]).join(",");
+    const handler = () => setSelectedHand((h) => (h === "left" ? "right" : "left"));
+    if (switchHandKeys) hotkeys(switchHandKeys, handler as any);
+    return () => {
+      if (switchHandKeys) hotkeys.unbind(switchHandKeys, handler as any);
+    };
+  }, [keybindings, setSelectedHand]);
 
   return {
     // atlas/texture

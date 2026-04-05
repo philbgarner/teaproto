@@ -29,22 +29,16 @@ const ING_MAPPING = {
   "Wild Herb": "wild_herb.png",
 };
 
-function HandSlot({ items, registry, side, handleTeaInteraction }) {
+function HandSlot({ items, registry, side, isSelected, onClick }) {
   const item = items[0];
   const name = item ? registry.getSlotObjectName(item) : null;
   const isEmpty = !name;
 
-  const handleClick = () => {
-    if (!isEmpty && handleTeaInteraction) {
-      handleTeaInteraction(side);
-    }
-  };
-
   return (
-    <button
-      className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""} ${ghostStyles.handSlot}`}
-      onClick={handleClick}
-      disabled={isEmpty}
+    <div
+      className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""} ${ghostStyles.handSlot} ${isSelected ? ghostStyles.selectedSlot : ""}`}
+      onClick={onClick}
+      style={{ cursor: "pointer" }}
     >
       <div className={ghostStyles.itemImage}>
         {!isEmpty ? (
@@ -54,12 +48,12 @@ function HandSlot({ items, registry, side, handleTeaInteraction }) {
         )}
       </div>
       {!isEmpty && <div className={ghostStyles.itemText}>{name}</div>}
-    </button>
+    </div>
   );
 }
 
-function HandsRow({ handleTeaInteraction }) {
-  const { playerData } = useSettings();
+function HandsRow() {
+  const { playerData, selectedHand, setSelectedHand } = useSettings();
   const { registry, leftHand, rightHand } = playerData.ecsData;
 
   const leftHandItems =
@@ -73,8 +67,20 @@ function HandsRow({ handleTeaInteraction }) {
 
   return (
     <div className={ghostStyles.handsRow}>
-      <HandSlot items={leftHandItems} registry={registry} side="left" handleTeaInteraction={handleTeaInteraction} />
-      <HandSlot items={rightHandItems} registry={registry} side="right" handleTeaInteraction={handleTeaInteraction} />
+      <HandSlot
+        items={leftHandItems}
+        registry={registry}
+        side="left"
+        isSelected={selectedHand === "left"}
+        onClick={() => setSelectedHand("left")}
+      />
+      <HandSlot
+        items={rightHandItems}
+        registry={registry}
+        side="right"
+        isSelected={selectedHand === "right"}
+        onClick={() => setSelectedHand("right")}
+      />
     </div>
   );
 }
@@ -234,7 +240,6 @@ export function MinimapSidebar({
   itemDrops,
   scale,
   summonMob,
-  handleTeaInteraction,
   moveActions,
   onInteract,
 }) {
@@ -277,7 +282,7 @@ export function MinimapSidebar({
           className={styles.canvas}
         />
       </div>
-      <HandsRow handleTeaInteraction={handleTeaInteraction} />
+      <HandsRow />
       <IngredientRow />
       <div className={styles.tabBar}>
         <button
