@@ -124,6 +124,7 @@ export default function App({ onReturnToTitle }: { onReturnToTitle?: () => void 
     camera,
     logicalRef: camLogicalRef,
     doMove,
+    moveActions,
   } = useEotBCamera(
     ds.solidData,
     dungeonWidth,
@@ -169,6 +170,7 @@ export default function App({ onReturnToTitle }: { onReturnToTitle?: () => void 
       torchColor={torchColor}
       torchIntensity={torchIntensity}
       keybindings={keybindings}
+      moveActions={moveActions}
       onOpenSettings={() => gs.setShowSettings(true)}
       openMenuKeys={keybindings.openMenu}
       summonMonsterKeys={keybindings.summon}

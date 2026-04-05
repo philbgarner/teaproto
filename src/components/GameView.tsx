@@ -770,6 +770,7 @@ interface GameViewProps {
   torchColor: string;
   torchIntensity: number;
   keybindings: any;
+  moveActions: any;
   /** Extra content rendered in the top-right corner of the 3D view (e.g. tutorial badge) */
   topRight?: ReactNode;
   /** Settings / difficulty modal rendered inside the main layout */
@@ -791,6 +792,7 @@ export function GameView({
   torchColor,
   torchIntensity,
   keybindings,
+  moveActions,
   topRight,
   settingsModal,
   gameOverlay,
@@ -1193,6 +1195,7 @@ export function GameView({
             furniturePlacements={ds.initialFurniture}
             goldDrops={gs.xpDrops ?? []}
             itemDrops={gs.ingredientDrops ?? []}
+            moveActions={moveActions}
           />
         </div>
 

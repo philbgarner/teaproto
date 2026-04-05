@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useSettings } from "../SettingsContext";
 import { Minimap } from "./Minimap";
+import { ArrowMovement } from "./ArrowMovement";
 import styles from "./styles/MinimapSidebar.module.css";
 import ghostStyles from "./styles/GhostInventory.module.css";
 
@@ -224,12 +226,17 @@ export function MinimapSidebar({
   itemDrops,
   scale,
   summonMob,
+  moveActions,
 }) {
+  const [activeTab, setActiveTab] = useState("move");
+
   const pgx = Math.floor(camera.x);
   const pgz = Math.floor(camera.z);
   const playerOnSolid = solidData[pgz * dungeonWidth + pgx] !== 0;
   const playerCellOccupied = mobs.some((m) => m.x === pgx && m.z === pgz);
   const summonDisabled = playerOnSolid || playerCellOccupied;
+
+  const metMobs = mobs.filter((f) => f.hasMet);
 
   return (
     <div className={styles.sidebar}>
@@ -260,23 +267,39 @@ export function MinimapSidebar({
           className={styles.canvas}
         />
       </div>
-      <div className={styles.controls}></div>
       <HandsRow />
       <IngredientRow />
-      {mobs.length > 0 && (
-        <div className={styles.mobRoster}>
-          {mobs
-            .filter((f) => f.hasMet)
-            .map((mob, i) => (
+      <div className={styles.tabBar}>
+        <button
+          className={`${styles.tab} ${activeTab === "move" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("move")}
+        >
+          move
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === "summon" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("summon")}
+        >
+          summon
+        </button>
+      </div>
+      <div className={styles.tabContent}>
+        {activeTab === "move" && moveActions && (
+          <ArrowMovement moveActions={moveActions} />
+        )}
+        {activeTab === "summon" && metMobs.length > 0 && (
+          <div className={styles.mobRoster}>
+            {metMobs.map((mob, i) => (
               <MobEntry
                 key={i}
                 mob={mob}
-                onSummon={() => summonMob(i, pgx, pgz)}
+                onSummon={() => summonMob(mobs.indexOf(mob), pgx, pgz)}
                 summonDisabled={summonDisabled}
               />
             ))}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
