@@ -103,6 +103,8 @@ interface SettingsContextValue {
   setSfxVolume: Dispatch<SetStateAction<number>>;
   dungeonStats: DungeonStats | undefined;
   setDungeonStats: Dispatch<SetStateAction<DungeonStats | undefined>>;
+  selectedHand: "left" | "right";
+  setSelectedHand: Dispatch<SetStateAction<"left" | "right">>;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -136,6 +138,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   });
 
   const [dungeonStats, setDungeonStats] = useState<DungeonStats | undefined>(undefined);
+  const [selectedHand, setSelectedHand] = useState<"left" | "right">("left");
   const [dungeonSeed, setDungeonSeed] = useState(Math.floor(Math.random() * 1_000_000));
   const [dungeonWidth, setDungeonWidth] = useState(32);
   const [dungeonHeight, setDungeonHeight] = useState(32);
@@ -255,6 +258,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setSfxVolume,
         dungeonStats,
         setDungeonStats,
+        selectedHand,
+        setSelectedHand,
       }}
     >
       {children}

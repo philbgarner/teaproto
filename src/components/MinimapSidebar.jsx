@@ -29,14 +29,16 @@ const ING_MAPPING = {
   "Wild Herb": "wild_herb.png",
 };
 
-function HandSlot({ items, registry, side }) {
+function HandSlot({ items, registry, side, isSelected, onClick }) {
   const item = items[0];
   const name = item ? registry.getSlotObjectName(item) : null;
   const isEmpty = !name;
 
   return (
     <div
-      className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""} ${ghostStyles.handSlot}`}
+      className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""} ${ghostStyles.handSlot} ${isSelected ? ghostStyles.selectedSlot : ""}`}
+      onClick={onClick}
+      style={{ cursor: "pointer" }}
     >
       <div className={ghostStyles.itemImage}>
         {!isEmpty ? (
@@ -51,7 +53,7 @@ function HandSlot({ items, registry, side }) {
 }
 
 function HandsRow() {
-  const { playerData } = useSettings();
+  const { playerData, selectedHand, setSelectedHand } = useSettings();
   const { registry, leftHand, rightHand } = playerData.ecsData;
 
   const leftHandItems =
@@ -65,8 +67,20 @@ function HandsRow() {
 
   return (
     <div className={ghostStyles.handsRow}>
-      <HandSlot items={leftHandItems} registry={registry} side="left" />
-      <HandSlot items={rightHandItems} registry={registry} side="right" />
+      <HandSlot
+        items={leftHandItems}
+        registry={registry}
+        side="left"
+        isSelected={selectedHand === "left"}
+        onClick={() => setSelectedHand("left")}
+      />
+      <HandSlot
+        items={rightHandItems}
+        registry={registry}
+        side="right"
+        isSelected={selectedHand === "right"}
+        onClick={() => setSelectedHand("right")}
+      />
     </div>
   );
 }
