@@ -469,6 +469,9 @@ export function useDungeonSetup({
       MOB_NAMES,
     );
     const chestPositions = new Set(initialChests.map((c: any) => `${c.x},${c.z}`));
+    
+    // Simple random seed using timestamp and Math.random()
+    const rng = makeRng(Date.now() + Math.random() * 1000);
     const mobs: any[] = [];
     let idx = 0;
     for (const [roomId, room] of dungeon.rooms) {
@@ -502,7 +505,7 @@ export function useDungeonSetup({
         z: mz,
         name: MOB_NAMES[idx],
         type: MOB_TYPES[idx].type,
-        preferredRecipeId: RECIPES[(idx * 3 + 1) % RECIPES.length].id,
+        preferredRecipeId: RECIPES[Math.floor(rng() * RECIPES.length)].id,
         attack: MOB_ATTACK,
         defense: MOB_DEFENSE,
         hp: MOB_HP,
