@@ -174,14 +174,60 @@
     transition: width 0.2s;
 }
 
-.controls {
+.tabBar {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    border-bottom: 2px solid #1e1c1a;
+    flex-shrink: 0;
+    box-shadow: 0 2px 0 0 #3a3530;
     margin-top: 4px;
-    font-size: 0.68rem;
-    color: #5a5040;
-    letter-spacing: 0.03em;
-    border-top: 1px solid #1e1c1a;
-    padding-top: 6px;
+}
+
+.tab {
+    flex: 1;
+    padding: 0.35em 0;
+    background-color: #3a3835;
+    border: none;
+    color: #7a7060;
+    font-size: 0.72rem;
+    font-family: "Metamorphous", serif;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    box-shadow:
+        inset 0 1px 0 0 #5a5450,
+        inset 1px 0 0 0 #504844,
+        inset 0 -1px 0 0 #1e1c1a,
+        inset -1px 0 0 0 #252220,
+        inset 0 3px 7px rgba(0, 0, 0, 0.45);
+    outline: 1px solid #1e1c1a;
+    transition: color 0.1s, background-color 0.1s;
+    image-rendering: pixelated;
+    background-image: repeating-conic-gradient(
+        rgba(0, 0, 0, 0.04) 0% 25%,
+        transparent 0% 50%
+    );
+    background-size: 4px 4px;
+}
+
+.tab:hover {
+    color: #c8a040;
+    background-color: #444240;
+}
+
+.tabActive {
+    background-color: #4e4b47;
+    color: #f8a81a;
+    box-shadow:
+        inset 0 1px 0 0 #a09890,
+        inset 1px 0 0 0 #8a8278,
+        inset 0 -1px 0 0 #2a2724,
+        inset -1px 0 0 0 #302d2a,
+        inset 0 3px 7px rgba(0, 0, 0, 0.3);
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.95),
+        0 0 10px rgba(248, 168, 26, 0.2);
+}
+
+.tabContent {
+    min-height: 0;
+    overflow-y: auto;
 }
