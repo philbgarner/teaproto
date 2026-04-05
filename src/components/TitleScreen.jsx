@@ -677,15 +677,19 @@ function SceneContent({
   );
 }
 
-function PreloadedScene({ onMenuReady, onMusicReady, skipRef }) {
+function PreloadedScene({ onMenuReady, onMusicReady, onLoad, skipRef }) {
   const textures = useTexture(ALL_TEXTURE_PATHS);
   const { sounds } = useSoundHelper();
 
   useEffect(() => {
-    onMusicReady({ 
-      fadeOutMusic: sounds.mainTheme.fadeOut, 
-      fadeOutBirds: sounds.birds.fadeOut, 
-      fadeInSafeZone: sounds.safeZoneMusic.fadeIn 
+    onLoad?.();
+  }, []);
+
+  useEffect(() => {
+    onMusicReady({
+      fadeOutMusic: sounds.mainTheme.fadeOut,
+      fadeOutBirds: sounds.birds.fadeOut,
+      fadeInSafeZone: sounds.safeZoneMusic.fadeIn
     });
   }, [sounds]);
 
@@ -750,6 +754,7 @@ export const DIFFICULTY_PRESETS = {
 // ─── Root component ───────────────────────────────────────────────────────────
 
 export function TitleScreen({ onNewGame, onTutorial }) {
+  const [loading, setLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuFading, setMenuFading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -815,13 +820,42 @@ export function TitleScreen({ onNewGame, onTutorial }) {
           <ambientLight color={"0xffffff"} intensity={2} />
           <PreloadedScene
             onMenuReady={() => setMenuVisible(true)}
-            onMusicReady={(fns) => {
-              musicRef.current = fns;
-            }}
+            onMusicReady={(fns) => { musicRef.current = fns; }}
+            onLoad={() => setLoading(false)}
             skipRef={skipRef}
           />
         </Suspense>
       </Canvas>
+
+      {loading && (
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(18, 71, 179, 1)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+        }}>
+          <p style={{
+            color: "rgba(255,255,255,0.7)",
+            fontFamily: "system-ui, sans-serif",
+            fontSize: "18px",
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            animation: "ctb-pulse 2s ease-in-out infinite",
+            margin: 0,
+          }}>
+            Loading…
+          </p>
+          <style>{`
+            @keyframes ctb-pulse {
+              0%, 100% { opacity: 0.3; }
+              50% { opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
 
       <div
         className={styles.menu}
