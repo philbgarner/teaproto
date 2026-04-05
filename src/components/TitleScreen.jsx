@@ -7,6 +7,7 @@ import { useSoundHelper } from "../hooks/useSoundHelper";
 import { useSettings } from "../SettingsContext";
 import SettingsTabs from "../SettingsTabs";
 import Credits from "./Credits";
+import ModalPanel from "./ModalPanel";
 import styles from "./styles/TitleScreen.module.css";
 
 const BASE = import.meta.env.BASE_URL;
@@ -761,6 +762,8 @@ export function TitleScreen({ onNewGame, onTutorial }) {
   const [showCredits, setShowCredits] = useState(false);
   const [choosingDifficulty, setChoosingDifficulty] = useState(false);
   const [choosingSeed, setChoosingSeed] = useState(false);
+  const [showSeedEntry, setShowSeedEntry] = useState(false);
+  const [seedInput, setSeedInput] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState(null);
   const musicRef = useRef({});
   const skipRef = useRef(false);
@@ -783,7 +786,7 @@ export function TitleScreen({ onNewGame, onTutorial }) {
     const level = selectedDifficulty;
     const preset = DIFFICULTY_PRESETS[level];
     settings.setDungeonSeed(
-      seed === 42 ? 42 : Math.floor(Math.random() * 1_000_000),
+      seed != null ? seed : Math.floor(Math.random() * 1_000_000),
     );
     settings.setTempDropPerStep(preset.tempDropPerStep);
     settings.setHeatingPerStep(preset.heatingPerStep);
@@ -906,6 +909,10 @@ export function TitleScreen({ onNewGame, onTutorial }) {
               onClick={() => handleSeed(42)}
             />
             <MenuItem
+              label="Enter Seed"
+              onClick={() => { setSeedInput(""); setShowSeedEntry(true); }}
+            />
+            <MenuItem
               label="A Random Dungeon"
               onClick={() => handleSeed(null)}
             />
@@ -960,6 +967,40 @@ export function TitleScreen({ onNewGame, onTutorial }) {
       )}
 
       <Credits visible={showCredits} onClose={() => setShowCredits(false)} />
+
+      <ModalPanel
+        visible={showSeedEntry}
+        title="Enter Seed"
+        onClose={() => setShowSeedEntry(false)}
+        width="320px"
+      >
+        <input
+          type="number"
+          value={seedInput}
+          onChange={(e) => setSeedInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && seedInput !== "") {
+              setShowSeedEntry(false);
+              handleSeed(parseInt(seedInput, 10));
+            }
+          }}
+          placeholder="Enter a seed number"
+          autoFocus
+          style={{ width: "100%", boxSizing: "border-box", marginBottom: "12px" }}
+        />
+        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+          <button onClick={() => setShowSeedEntry(false)}>Cancel</button>
+          <button
+            disabled={seedInput === ""}
+            onClick={() => {
+              setShowSeedEntry(false);
+              handleSeed(parseInt(seedInput, 10));
+            }}
+          >
+            Continue
+          </button>
+        </div>
+      </ModalPanel>
     </div>
   );
 }

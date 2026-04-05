@@ -1170,6 +1170,7 @@ export function GameView({
             dungeonHeight={dungeonHeight}
             camera={camera}
             summonMob={gs.summonMob}
+            handleTeaInteraction={gs.handleTeaInteraction}
             exploredMaskRef={gs.exploredMaskRef}
             texture={gs.texture}
             atlas={gs.atlas}
