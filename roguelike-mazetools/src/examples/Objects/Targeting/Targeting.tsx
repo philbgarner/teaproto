@@ -1,16 +1,16 @@
 /**
- * Targeting — turn-based dungeon with AoE spell targeting.
+ * Targeting - turn-based dungeon with AoE spell targeting.
  *
  * Controls:
- *   W / ArrowUp    — step forward
- *   S / ArrowDown  — step backward
- *   A              — turn left 90°
- *   D              — turn right 90°
- *   1-4            — select spell
- *   F / Enter      — cast selected spell
- *   Escape         — cancel spell
- *   Space / .      — wait a turn
- *   R              — regenerate dungeon
+ *   W / ArrowUp    - step forward
+ *   S / ArrowDown  - step backward
+ *   A              - turn left 90°
+ *   D              - turn right 90°
+ *   1-4            - select spell
+ *   F / Enter      - cast selected spell
+ *   Escape         - cancel spell
+ *   Space / .      - wait a turn
+ *   R              - regenerate dungeon
  */
 import {
   useCallback,
@@ -1229,7 +1229,7 @@ export default function Targeting() {
             {worldEffects.length !== 1 ? "s" : ""}
           </span>
         )}
-        {gameOver && <span className={styles.dead}>DEAD — press R</span>}
+        {gameOver && <span className={styles.dead}>DEAD - press R</span>}
         <button className={styles.backBtn} onClick={() => navigate("/")}>
           ← Menu
         </button>

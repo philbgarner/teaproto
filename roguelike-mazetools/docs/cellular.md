@@ -1,4 +1,4 @@
-# Cellular Dungeon Generator — `src/cellular.ts`
+# Cellular Dungeon Generator - `src/cellular.ts`
 
 Cellular-automata cave generator. Produces irregular, organic floor regions suited for cave and ruin themes. Output shares the same `DungeonOutputs` texture layout as `BspDungeonOutputs`, so it works directly with `generateContent`, `aStar8`, `computeFov`, and `serialize`.
 
@@ -67,7 +67,7 @@ Generate a cellular-automata cave dungeon. Throws if `width` or `height` ≤ 2.
 1. Fill grid randomly with walls/floor at `fillProbability`.
 2. Run `iterations` smoothing passes using Moore-neighbourhood rules (`birthThreshold`, `survivalThreshold`).
 3. Flood-fill all connected floor regions (4-connected BFS).
-4. Keep only the largest region — all other floor cells are re-solidified, guaranteeing full connectivity.
+4. Keep only the largest region - all other floor cells are re-solidified, guaranteeing full connectivity.
 5. Set `regionId = 1` for surviving cells.
 6. Compute `startPos` as the floor cell nearest to the centroid of the surviving region.
 7. Compute `distanceToWall` by BFS from all wall cells.
@@ -89,7 +89,7 @@ const cave = generateCellularDungeon({
 // Spawn player at the centroid of the cave
 console.log(cave.startPos); // { x: 40, y: 30 } (approximately)
 
-// Use with generateContent — textures share the same layout as BSP
+// Use with generateContent - textures share the same layout as BSP
 generateContent(cave, {
   seed: "cave-1-content",
   callback: ({ x, y, masks, rng }) => {
@@ -104,7 +104,7 @@ generateContent(cave, {
 
 ## Notes
 
-- Unlike BSP, there is no room graph — `regionId` is always 0 (wall) or 1 (floor).
+- Unlike BSP, there is no room graph - `regionId` is always 0 (wall) or 1 (floor).
 - Use `tilesInRadius` or `computeFov` to define patrol zones and visibility, since there are no room IDs.
 - `CellularDungeonOutputs` satisfies `DungeonOutputs` structurally, so all existing engine functions accept it without changes.
 - Default parameters (`fillProbability: 0.45`, `iterations: 5`) produce cave-like layouts with scattered pillars. Increase `fillProbability` for tighter caves; decrease `iterations` for rougher walls.

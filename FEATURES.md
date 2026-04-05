@@ -1,4 +1,4 @@
-# Monster Tea Party — Feature Reference
+# Monster Tea Party - Feature Reference
 
 Prototype built for Dungeon Crawler Jam 2026. All values are current as of the source code in `src/`.
 
@@ -61,7 +61,7 @@ Both screens display wave count and turn count, and offer a **Play Again** butto
 
 Movement is grid-locked with a 150 ms lerp animation. The player fires `onStep` on every movement and on wait.
 
-**Ghost wall phasing**: When both hands are empty, the player can move through solid walls freely (you are a ghost, after all). Carrying any tea disables phasing — you can't drag a cup through stone.
+**Ghost wall phasing**: When both hands are empty, the player can move through solid walls freely (you are a ghost, after all). Carrying any tea disables phasing - you can't drag a cup through stone.
 
 ---
 
@@ -77,7 +77,7 @@ Tea loses `tempDropPerStep` degrees each turn. When temperature falls below the 
 
 | Recipe | Brew Time | Ideal Temp | Ingredient Required |
 |--------|-----------|-----------|---------------------|
-| Green Tea | 15 steps | 60–75° | *(none — always available)* |
+| Green Tea | 15 steps | 60–75° | *(none - always available)* |
 | Black Tea | 20 steps | 85–100° | Iron Rations |
 | Oolong Tea | 18 steps | 70–85° | Wild Herbs |
 | Herbal Brew | 25 steps | 65–80° | Arcane Dust |
@@ -167,13 +167,13 @@ Adventurers spawn at the rooms farthest from the end room.
 
 | Entity | Faction | Stance toward player | Stance toward mobs | Stance toward adventurers |
 |--------|---------|---------------------|--------------------|--------------------------|
-| Player | `player` | — | friendly | neutral |
-| Mobs | `monster` | friendly | — | hostile |
-| Adventurers | `adventurer` | neutral | hostile | — |
+| Player | `player` | - | friendly | neutral |
+| Mobs | `monster` | friendly | - | hostile |
+| Adventurers | `adventurer` | neutral | hostile | - |
 
 Player and mobs are in separate factions but treat each other as friendly. Adventurers are neutral to the player (will not attack) and hostile to mobs.
 
-### AI Behaviour — State Machine
+### AI Behaviour - State Machine
 
 Each adventurer has two states: **exploring** (default on spawn) and **seeking** (rush to the stove).
 
@@ -191,7 +191,7 @@ On spawn, each adventurer is assigned random thresholds (seeded per wave + index
 
 2. Compute current room temperature (base + heating rise). If temp ≤ 127 (neutral or cooler), dread increases by `adventurerDreadRate`. If temp > 127 (warm), dread decreases by half that rate (floor 0).
 3. If standing on a chest, loot it: chest disappears, `loot += lootPerChest`.
-4. If `dread ≥ dreadThreshold` **and** `loot ≥ lootThreshold`: emit a speech bubble ("Enough plunder — now to find the heart of this place!" etc.) and switch to **`seeking`** state.
+4. If `dread ≥ dreadThreshold` **and** `loot ≥ lootThreshold`: emit a speech bubble ("Enough plunder - now to find the heart of this place!" etc.) and switch to **`seeking`** state.
 5. Otherwise: pathfind to the nearest chest. If no chests remain, wander toward a deterministic room target.
 
 **`seeking` state** (when no combat target):
@@ -225,7 +225,7 @@ Four chests are placed at dungeon generation time (seeded), one per non-end room
 - **Minimap colour**: Dark gold (`#b8860b`)
 - Adventurers in `exploring` state pathfind toward the nearest remaining chest.
 - Looting a chest (walking onto it) increases the adventurer's loot meter by `lootPerChest` and removes the chest from the dungeon.
-- Players cannot loot chests directly — chests are for adventurers only.
+- Players cannot loot chests directly - chests are for adventurers only.
 
 ---
 
@@ -335,9 +335,9 @@ All sliders are in the **Difficulty** tab of the settings sidebar.
 |--------|--------|
 | Player | Orange (#f80) with yellow facing arrow |
 | Mob (by satiation status) | Purple / green / blue / yellow / red / grey |
-| Adventurer — Warrior | Red (#e44) |
-| Adventurer — Rogue | Magenta (#e4e) |
-| Adventurer — Mage | Blue (#44e) |
+| Adventurer - Warrior | Red (#e44) |
+| Adventurer - Rogue | Magenta (#e4e) |
+| Adventurer - Mage | Blue (#44e) |
 | XP drop | Yellow (#fd0) |
 | Ingredient drop | Cyan (#0df) |
 | Chest | Dark gold (#b8860b) |

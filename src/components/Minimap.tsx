@@ -120,7 +120,7 @@ function FloorTiles({ cells }: { cells: FloorCell[] }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Furniture dot — small dark grey square
+// Furniture dot - small dark grey square
 // ─────────────────────────────────────────────────────────────────────────────
 
 function FurnitureDot({
@@ -180,7 +180,7 @@ function StoveTile({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Chest icon — tan square tile
+// Chest icon - tan square tile
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ChestIcon({
@@ -216,7 +216,7 @@ function ChestIcon({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Gold drop icon — small yellow rotated square (diamond)
+// Gold drop icon - small yellow rotated square (diamond)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function GoldDropIcon({
@@ -255,7 +255,7 @@ function GoldDropIcon({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Item drop icon — small purple square
+// Item drop icon - small purple square
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ItemDropIcon({
@@ -294,7 +294,7 @@ function ItemDropIcon({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Circle icon — mobs (green) and adventurers (red)
+// Circle icon - mobs (green) and adventurers (red)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ArcRing({
@@ -432,7 +432,7 @@ function CircleIcon({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Door icon — filled rect when closed, faded when open
+// Door icon - filled rect when closed, faded when open
 // ─────────────────────────────────────────────────────────────────────────────
 
 function DoorIcon({
@@ -479,7 +479,7 @@ function DoorIcon({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Trap icon — red square for armed, dark square for disarmed/fired
+// Trap icon - red square for armed, dark square for disarmed/fired
 // ─────────────────────────────────────────────────────────────────────────────
 
 function TrapIcon({
@@ -557,7 +557,7 @@ function PlayerArrow({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Off-screen teaomatic indicator — triangle at viewport edge pointing toward it
+// Off-screen teaomatic indicator - triangle at viewport edge pointing toward it
 // ─────────────────────────────────────────────────────────────────────────────
 
 function TeaomaticIndicator({
@@ -649,7 +649,7 @@ function TeaomaticIndicator({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Off-screen adventurer indicator — red triangle at viewport edge pointing toward it
+// Off-screen adventurer indicator - red triangle at viewport edge pointing toward it
 // ─────────────────────────────────────────────────────────────────────────────
 
 function AdventurerIndicator({

@@ -38,7 +38,13 @@ function makeDataTexture(
   H: number,
   name: string,
 ): THREE.DataTexture {
-  const tex = new THREE.DataTexture(data, W, H, THREE.RedFormat, THREE.UnsignedByteType);
+  const tex = new THREE.DataTexture(
+    data,
+    W,
+    H,
+    THREE.RedFormat,
+    THREE.UnsignedByteType,
+  );
   tex.name = name;
   tex.needsUpdate = true;
   tex.magFilter = THREE.NearestFilter;
@@ -92,7 +98,12 @@ export function buildFullRegionIds(
         full[ci] = corridorId;
         const cx = ci % W;
         const cy = (ci / W) | 0;
-        for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        for (const [dx, dy] of [
+          [-1, 0],
+          [1, 0],
+          [0, -1],
+          [0, 1],
+        ] as const) {
           const nx = cx + dx;
           const ny = cy + dy;
           if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
@@ -117,9 +128,11 @@ export function buildFullRegionIds(
  * `TemperatureMask` for convenient runtime updates.
  *
  * The returned `data` and `texture` point directly at the dungeon's existing
- * temperature buffer — no copy is made.
+ * temperature buffer - no copy is made.
  */
-export function buildTemperatureMask(dungeon: BspDungeonOutputs): TemperatureMask {
+export function buildTemperatureMask(
+  dungeon: BspDungeonOutputs,
+): TemperatureMask {
   const data = dungeon.textures.temperature.image.data as Uint8Array;
   const corridorRegionIds = Array.from(dungeon.rooms.values())
     .filter((r) => r.type === "corridor")

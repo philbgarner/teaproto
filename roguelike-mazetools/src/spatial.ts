@@ -10,11 +10,11 @@ export type SpatialShape = "chebyshev" | "euclidean" | "manhattan";
 
 /**
  * Returns all grid positions within `radius` of (cx, cy) using the chosen metric.
- * Does NOT perform bounds-checking — callers are responsible for clamping.
+ * Does NOT perform bounds-checking - callers are responsible for clamping.
  *
- * "chebyshev"  — square neighbourhood, the standard roguelike "range"
- * "euclidean"  — circular neighbourhood
- * "manhattan"  — diamond neighbourhood
+ * "chebyshev"  - square neighbourhood, the standard roguelike "range"
+ * "euclidean"  - circular neighbourhood
+ * "manhattan"  - diamond neighbourhood
  */
 export function tilesInRadius(
   cx: number,
@@ -91,15 +91,21 @@ export function tilesInLine(from: GridPos, to: GridPos): GridPos[] {
     result.push({ x, y });
     if (x === to.x && y === to.y) break;
     const e2 = 2 * err;
-    if (e2 > -dy) { err -= dy; x += sx; }
-    if (e2 < dx) { err += dx; y += sy; }
+    if (e2 > -dy) {
+      err -= dy;
+      x += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y += sy;
+    }
   }
 
   return result;
 }
 
 /**
- * Callback variant of tilesInRadius — avoids allocating an array.
+ * Callback variant of tilesInRadius - avoids allocating an array.
  * Calls visit(x, y) for each cell; return false from visit to stop early.
  */
 export function visitTilesInRadius(
@@ -121,10 +127,18 @@ export function visitTilesInRadius(
 }
 
 // Internal distance check helper.
-function inRange(dx: number, dy: number, radius: number, shape: SpatialShape): boolean {
+function inRange(
+  dx: number,
+  dy: number,
+  radius: number,
+  shape: SpatialShape,
+): boolean {
   switch (shape) {
-    case "chebyshev":  return Math.max(Math.abs(dx), Math.abs(dy)) <= radius;
-    case "euclidean":  return dx * dx + dy * dy <= radius * radius;
-    case "manhattan":  return Math.abs(dx) + Math.abs(dy) <= radius;
+    case "chebyshev":
+      return Math.max(Math.abs(dx), Math.abs(dy)) <= radius;
+    case "euclidean":
+      return dx * dx + dy * dy <= radius * radius;
+    case "manhattan":
+      return Math.abs(dx) + Math.abs(dy) <= radius;
   }
 }

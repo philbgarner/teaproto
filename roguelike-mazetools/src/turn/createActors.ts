@@ -121,7 +121,7 @@ export const DEFAULT_MONSTER_TEMPLATES: Record<string, MonsterTemplate> = {
     speed: 9,
     rpsEffect: "none";
   },
-  // Humanoid adventurer types — geometry sizes set, uvRect to be filled once sprite sheet is ready
+  // Humanoid adventurer types - geometry sizes set, uvRect to be filled once sprite sheet is ready
   rogue: {
     name: "Rogue",
     glyph: "r",

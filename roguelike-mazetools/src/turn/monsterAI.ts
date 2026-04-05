@@ -3,9 +3,9 @@
 // Monster AI: chase the player using A* with a visibility-gated alert state machine.
 //
 // Alert states:
-//   idle      — unaware; waits until player enters detection radius
-//   chasing   — actively pursuing the player
-//   searching — lost sight; heads to last known position for giveUpTurns then idles
+//   idle      - unaware; waits until player enters detection radius
+//   chasing   - actively pursuing the player
+//   searching - lost sight; heads to last known position for giveUpTurns then idles
 
 import { aStar8 } from "../astar";
 import type { GridPos } from "../astar";

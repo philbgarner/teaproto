@@ -1,4 +1,4 @@
-# BSP Helpers — `src/bspHelpers.ts`
+# BSP Helpers - `src/bspHelpers.ts`
 
 Shared low-level helpers used by `bsp.ts` and `astar.ts`. Exported for consumers that want to build custom priority queues or heuristics.
 

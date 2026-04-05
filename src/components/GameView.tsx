@@ -744,7 +744,7 @@ function FurnitureMeshes({
 }
 
 // ---------------------------------------------------------------------------
-// GameView — shared renderer used by both App and Tutorial
+// GameView - shared renderer used by both App and Tutorial
 // ---------------------------------------------------------------------------
 
 export interface GameViewDs {
@@ -771,6 +771,7 @@ interface GameViewProps {
   torchIntensity: number;
   keybindings: any;
   moveActions: any;
+  onInteract?: () => void;
   /** Extra content rendered in the top-right corner of the 3D view (e.g. tutorial badge) */
   topRight?: ReactNode;
   /** Settings / difficulty modal rendered inside the main layout */
@@ -793,6 +794,7 @@ export function GameView({
   torchIntensity,
   keybindings,
   moveActions,
+  onInteract,
   topRight,
   settingsModal,
   gameOverlay,
@@ -843,24 +845,24 @@ export function GameView({
     if (facingTarget.type === "trap") {
       const interactKey =
         keybindings.interact[0] === " " ? "space" : keybindings.interact[0];
-      return `Spike trap triggered — Press [${interactKey}] to rearm`;
+      return `Spike trap triggered - Press [${interactKey}] to rearm`;
     }
     if (facingTarget.type === "stove") {
       const state = gs.stoveStates.get(facingTarget.stoveKey);
-      if (!state?.brewing) return "TeaOMatic — Press [space] to brew tea";
+      if (!state?.brewing) return "TeaOMatic - Press [space] to brew tea";
       if (state.brewing.ready)
-        return `${state.brewing.recipe.name} is ready! — Press [space] to collect`;
-      return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press [space] for status`;
+        return `${state.brewing.recipe.name} is ready! - Press [space] to collect`;
+      return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps - Press [space] for status`;
     }
     if (facingTarget.type === "door") {
       const interactKey =
         keybindings.interact[0] === " " ? "space" : keybindings.interact[0];
       const state = gs.doorStates?.get(facingTarget.doorKey) ?? "closed";
       if (state === "open")
-        return `Open door — Press [${interactKey}] to close`;
+        return `Open door - Press [${interactKey}] to close`;
       if (state === "closed")
-        return `Closed door — Press [${interactKey}] to lock`;
-      return `Locked door — Press [${interactKey}] to unlock`;
+        return `Closed door - Press [${interactKey}] to lock`;
+      return `Locked door - Press [${interactKey}] to unlock`;
     }
     const mob = ds.initialMobs[facingTarget.mobIdx];
     const preferredRecipe = RECIPES.find(
@@ -868,9 +870,9 @@ export function GameView({
     );
     const isUnconscious = gs.mobHps[facingTarget.mobIdx] <= 0;
     if (isUnconscious) {
-      return `${mob?.name} is unconscious — Press [space] to offer tea to revive`;
+      return `${mob?.name} is unconscious - Press [space] to offer tea to revive`;
     }
-    return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] — Press [space] to offer tea`;
+    return `${mob?.name} [prefers ${preferredRecipe?.name ?? "?"}] - Press [space] to offer tea`;
   }, [
     facingTarget,
     gs.stoveStates,
@@ -1164,6 +1166,7 @@ export function GameView({
             dungeonHeight={dungeonHeight}
             camera={camera}
             summonMob={gs.summonMob}
+            handleTeaInteraction={gs.handleTeaInteraction}
             exploredMaskRef={gs.exploredMaskRef}
             texture={gs.texture}
             atlas={gs.atlas}
@@ -1196,6 +1199,7 @@ export function GameView({
             goldDrops={gs.xpDrops ?? []}
             itemDrops={gs.ingredientDrops ?? []}
             moveActions={moveActions}
+            onInteract={onInteract}
           />
         </div>
 

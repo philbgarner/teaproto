@@ -25,13 +25,13 @@ export type AStar8Options = {
 
 // 8-directional offsets: [dx, dy, cost]
 const DIRS: [number, number, number][] = [
-  [ 0, -1, 10], // N
-  [ 1, -1, 14], // NE
-  [ 1,  0, 10], // E
-  [ 1,  1, 14], // SE
-  [ 0,  1, 10], // S
-  [-1,  1, 14], // SW
-  [-1,  0, 10], // W
+  [0, -1, 10], // N
+  [1, -1, 14], // NE
+  [1, 0, 10], // E
+  [1, 1, 14], // SE
+  [0, 1, 10], // S
+  [-1, 1, 14], // SW
+  [-1, 0, 10], // W
   [-1, -1, 14], // NW
 ];
 
@@ -39,7 +39,7 @@ const DIRS: [number, number, number][] = [
  * Find the shortest 8-directional path from `start` to `goal`.
  *
  * @param dungeon     BSP dungeon outputs (used for grid dimensions only)
- * @param isWalkable  Walkability predicate — use ContentLogic.isWalkable or a custom fn
+ * @param isWalkable  Walkability predicate - use ContentLogic.isWalkable or a custom fn
  * @param start       Starting grid position
  * @param goal        Target grid position
  * @param opts        Optional extra options (runtime blockers, per-cell costs)
@@ -90,7 +90,10 @@ export function aStar8(
         if (px === -1) break;
         ni = py * W + px;
       }
-      if (path[path.length - 1].x !== start.x || path[path.length - 1].y !== start.y) {
+      if (
+        path[path.length - 1].x !== start.x ||
+        path[path.length - 1].y !== start.y
+      ) {
         path.push({ x: start.x, y: start.y });
       }
       path.reverse();

@@ -1,6 +1,6 @@
 // src/factions.ts
 //
-// Faction registry — configurable stance rules between named factions.
+// Faction registry - configurable stance rules between named factions.
 // Pure data, no engine or dungeon dependencies.
 
 export type FactionId = string;

@@ -1,11 +1,11 @@
 /**
- * EotB — Eye of the Beholder style dungeon viewer.
+ * EotB - Eye of the Beholder style dungeon viewer.
  *
  * Movement is grid-locked:
- *   W / ArrowUp    — step forward one cell (lerp animated)
- *   S / ArrowDown  — step backward one cell (lerp animated)
- *   A              — turn left 90° (lerp animated)
- *   D              — turn right 90° (lerp animated)
+ *   W / ArrowUp    - step forward one cell (lerp animated)
+ *   S / ArrowDown  - step backward one cell (lerp animated)
+ *   A              - turn left 90° (lerp animated)
+ *   D              - turn right 90° (lerp animated)
  *
  * Dungeon generated via BSP (rectangular rooms + corridors).
  *
@@ -28,7 +28,7 @@ import { useNavigate } from "react-router-dom";
 import styles from "./EotB.module.css";
 
 // ---------------------------------------------------------------------------
-// Tile atlas — padded sheet: tiles are 16×16 px, first tile at (16,16),
+// Tile atlas - padded sheet: tiles are 16×16 px, first tile at (16,16),
 // step = 24px (16px tile + 8px gap).
 // We repack the 3 needed tiles into a clean 3×1 atlas at load time.
 // ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ function cardinalDir(yaw: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// EotB camera hook — grid-locked movement with lerp animation
+// EotB camera hook - grid-locked movement with lerp animation
 // ---------------------------------------------------------------------------
 
 type CameraState = { x: number; z: number; yaw: number };
@@ -217,7 +217,7 @@ function useEotBCamera(
   camera: CameraState;
   containerRef: React.RefObject<HTMLDivElement>;
 } {
-  // Logical (target) state — always grid-aligned
+  // Logical (target) state - always grid-aligned
   const logicalRef = useRef<CameraState>({ x: startX, z: startZ, yaw: 0 });
 
   // Animation state
@@ -262,7 +262,7 @@ function useEotBCamera(
     setCamera(state);
   }, [startX, startZ]);
 
-  // Keyboard input — only accepts input when not animating
+  // Keyboard input - only accepts input when not animating
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (animRef.current.animating) return;
@@ -270,7 +270,7 @@ function useEotBCamera(
       const { x, z, yaw } = logicalRef.current;
       const solid = solidRef.current;
 
-      // Forward unit vector — yaw is always a multiple of π/2 so sin/cos ≈ 0 or ±1
+      // Forward unit vector - yaw is always a multiple of π/2 so sin/cos ≈ 0 or ±1
       const fdx = Math.round(-Math.sin(yaw));
       const fdz = Math.round(-Math.cos(yaw));
 
@@ -451,7 +451,9 @@ export default function EotB() {
       <div className={styles.uiHeaderBar}>
         <span className={styles.title}>Dungeon Crawler Example</span>
         <span className={styles.seed}>seed: {DUNGEON_SEED}</span>
-        <button className={styles.backBtn} onClick={() => navigate("/")}>← Menu</button>
+        <button className={styles.backBtn} onClick={() => navigate("/")}>
+          ← Menu
+        </button>
       </div>
 
       {/* ── Main area ── */}
@@ -532,7 +534,7 @@ export default function EotB() {
           {cardinalDir(camera.yaw)}
         </span>
         <span className={styles.controls}>
-          W/S — move &nbsp;|&nbsp; A/D — turn 90°
+          W/S - move &nbsp;|&nbsp; A/D - turn 90°
         </span>
       </div>
     </div>

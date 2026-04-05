@@ -99,12 +99,12 @@ const LESSON_0_PASSAGE: HiddenPassage = {
 // Passage:      z=8 from (12,8)→(17,8)
 //
 // Content (all on z=8, player faces east from spawn at x=2.5):
-//   x=2  — tea machine (Teaomatic)
-//   x=5  — unconscious monster (gasping/red, needs ice tea)
-//   x=8  — harvestable ingredient drop ("plant")
-//   x=10 — sprung trap (pre-disarmed)
-//   x=11 — open door
-//   x=12 — antechamber (one tile before east wall + passage button)
+//   x=2  - tea machine (Teaomatic)
+//   x=5  - unconscious monster (gasping/red, needs ice tea)
+//   x=8  - harvestable ingredient drop ("plant")
+//   x=10 - sprung trap (pre-disarmed)
+//   x=11 - open door
+//   x=12 - antechamber (one tile before east wall + passage button)
 
 const LESSON_1_PASSAGE: HiddenPassage = {
   id: 1,
@@ -127,8 +127,8 @@ export const LESSON_CONFIGS: LessonConfig[] = [
     dungeonW: W,
     dungeonH: H,
     rooms: [
-      { x: 2, y: 7, w: 6, h: 4 }, // Foyer — player starts here
-      { x: 11, y: 7, w: 8, h: 4 }, // Preview room — destination
+      { x: 2, y: 7, w: 6, h: 4 }, // Foyer - player starts here
+      { x: 11, y: 7, w: 8, h: 4 }, // Preview room - destination
     ],
     startRoomId: 1,
     endRoomId: 2,
@@ -141,20 +141,20 @@ export const LESSON_CONFIGS: LessonConfig[] = [
     wallTexture: "Cobblestone",
     floorTexture: "fancyTile",
     specialCells: [
-      // Staircase at the western end — player descended from above
+      // Staircase at the western end - player descended from above
       { x: 2, z: 8, floor: "staircaseDown" },
       { x: 2, z: 9, floor: "staircaseDown" },
     ],
     startMessage:
       "Do you have any idea how hard it is to find a job as a poltergeist?\n" +
       "But I was most fortunate to receive a request from the Earl of Grey.\n" +
-      '"Refresh the dungeon", he said — cleaning and maintenance, I suppose.\n\n' +
+      '"Refresh the dungeon", he said - cleaning and maintenance, I suppose.\n\n' +
       "The traps and residents of this dungeon won't harm you, and as a ghost you can walk through walls.\n" +
       "Use the minimap to orientate yourself and WASD to move, Q & E to rotate.\n" +
       "When you're ready, head through the wall and into the next room.",
   },
 
-  // ── Lesson 1 ── The dungeon proper — all tutorial content ─────────────────
+  // ── Lesson 1 ── The dungeon proper - all tutorial content ─────────────────
   {
     dungeonW: W,
     dungeonH: H,
@@ -201,14 +201,14 @@ export const LESSON_CONFIGS: LessonConfig[] = [
     startMessage:
       "The Earl certainly has eccentric tastes, like this new-fangled tea machine..\n" +
       "Oh! Perhaps he meant to provide refreshments to the dungeon monsters?\n" +
-      "I had better do both — just in case. I can't afford to lose this job.\n\n" +
+      "I had better do both - just in case. I can't afford to lose this job.\n\n" +
       'Interact with the tea machine, monsters, or other items with "space".\n' +
       "You can always find the machine on the minimap, marked with an orange dot.\n" +
       "Start some tea brewing and explore the room while you wait for it.",
   },
 ];
 
-// Ingredient drop placed in lesson 1 at (8,8) — the "plant" the player harvests.
+// Ingredient drop placed in lesson 1 at (8,8) - the "plant" the player harvests.
 // Uses "herbs" so picking it up unlocks Oolong Tea as well.
 export const LESSON_1_PLANT_DROP = {
   id: "tut_plant",

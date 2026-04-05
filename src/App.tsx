@@ -171,6 +171,7 @@ export default function App({ onReturnToTitle }: { onReturnToTitle?: () => void 
       torchIntensity={torchIntensity}
       keybindings={keybindings}
       moveActions={moveActions}
+      onInteract={gs.interact}
       onOpenSettings={() => gs.setShowSettings(true)}
       openMenuKeys={keybindings.openMenu}
       summonMonsterKeys={keybindings.summon}

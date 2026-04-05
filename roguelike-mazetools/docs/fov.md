@@ -1,6 +1,6 @@
-# Field of View — `src/fov.ts`
+# Field of View - `src/fov.ts`
 
-Recursive shadowcasting FOV (Björn Bergström's algorithm). Covers all 8 octants. O(r²) with no heap allocations — safe to call every turn per actor.
+Recursive shadowcasting FOV (Björn Bergström's algorithm). Covers all 8 octants. O(r²) with no heap allocations - safe to call every turn per actor.
 
 ---
 
@@ -50,7 +50,7 @@ Compute the set of cells visible from `(originX, originY)` using recursive shado
 function createVisibilityMask(width: number, height: number): Uint8Array
 ```
 
-Allocate a zeroed `Uint8Array` of size `width × height`. Convenience helper — callers that already maintain their own mask don't need this.
+Allocate a zeroed `Uint8Array` of size `width × height`. Convenience helper - callers that already maintain their own mask don't need this.
 
 ---
 
@@ -100,7 +100,7 @@ const visibleMonsters = monsters.filter(m => playerVisible[m.y * dungeon.width +
 ### Multiple sight origins (e.g. torches)
 
 ```ts
-// computeFov is cheap — call it once per light source
+// computeFov is cheap - call it once per light source
 for (const torch of torches) {
   computeFov(torch.x, torch.y, {
     isOpaque: (x, y) => ...,

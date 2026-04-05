@@ -1,6 +1,6 @@
-# Factions & Allegiance — `src/factions.ts`
+# Factions & Allegiance - `src/factions.ts`
 
-Configurable stance registry for turn-based combat. Pure data layer — no engine or dungeon dependencies. The consuming game passes `factionRegistry.isHostile(a.faction, b.faction)` as a guard inside its action validation or AI decision code.
+Configurable stance registry for turn-based combat. Pure data layer - no engine or dungeon dependencies. The consuming game passes `factionRegistry.isHostile(a.faction, b.faction)` as a guard inside its action validation or AI decision code.
 
 ---
 
@@ -122,4 +122,4 @@ pipeline.use((ctx, next) => {
 
 - Relationships are **directional**: `setStance("A", "B", "hostile")` only affects A's attitude toward B. Set both directions explicitly for mutual hostility.
 - Unregistered pairs return `"neutral"` from `getStance` and `false` from `isHostile`.
-- The registry is a plain object with no ties to dungeon or engine state — safe to create once at game startup and share globally.
+- The registry is a plain object with no ties to dungeon or engine state - safe to create once at game startup and share globally.

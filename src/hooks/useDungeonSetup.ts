@@ -144,20 +144,20 @@ export function useDungeonSetup({
         /*
          * context: BspDungeonOutputs Is the data type for generated dungeon output data.
          *
-         * `context.textures` — DataTexture map from dungeon generation (see DungeonOutputs in bsp.ts)
+         * `context.textures` - DataTexture map from dungeon generation (see DungeonOutputs in bsp.ts)
          *
-         * solid           R8   — 255 = wall, 0 = floor
-         * regionId        R8   — which BSP room/corridor region this cell belongs to
-         * distanceToWall  R8   — distance from this cell to the nearest wall
-         * hazards         R8   — hazard data per cell
-         * temperature     R8   — 0 = coldest, 255 = hottest; floors default to 127
-         * floorType       R8   — atlas.json `floorTypes[id]`; 0 = wall/no floor; corridors inherit nearest room
-         * overlays        RGBA — bit-flags for floor overlays; R = IDs 1–8, G = 9–16, B = 17–24, A = 25–32
+         * solid           R8   - 255 = wall, 0 = floor
+         * regionId        R8   - which BSP room/corridor region this cell belongs to
+         * distanceToWall  R8   - distance from this cell to the nearest wall
+         * hazards         R8   - hazard data per cell
+         * temperature     R8   - 0 = coldest, 255 = hottest; floors default to 127
+         * floorType       R8   - atlas.json `floorTypes[id]`; 0 = wall/no floor; corridors inherit nearest room
+         * overlays        RGBA - bit-flags for floor overlays; R = IDs 1–8, G = 9–16, B = 17–24, A = 25–32
          *                        IDs match atlas.json `overlays[id]`; all zeros by default
-         * wallType        R8   — atlas.json `wallTypes[id]`; 0 = floor/no wall; inherits nearest floor cell
-         * wallOverlays    RGBA — same encoding as `overlays` but for walls; IDs match `wallOverlays` in atlas.json
-         * ceilingType     R8   — atlas.json `ceilingTypes[id]`; 0 = unassigned; floor cells default to 1 (Cobblestone)
-         * ceilingOverlays RGBA — same encoding as `overlays` but for ceilings; IDs match `ceilingOverlays` in atlas.json
+         * wallType        R8   - atlas.json `wallTypes[id]`; 0 = floor/no wall; inherits nearest floor cell
+         * wallOverlays    RGBA - same encoding as `overlays` but for walls; IDs match `wallOverlays` in atlas.json
+         * ceilingType     R8   - atlas.json `ceilingTypes[id]`; 0 = unassigned; floor cells default to 1 (Cobblestone)
+         * ceilingOverlays RGBA - same encoding as `overlays` but for ceilings; IDs match `ceilingOverlays` in atlas.json
          */
 
         if (
@@ -188,7 +188,7 @@ export function useDungeonSetup({
         const floorType = context.textures.floorType.image.data[i]; // R8: atlas floorTypes id
         const wallType = context.textures.wallType.image.data[i]; // R8: atlas wallTypes id
         const ceilingType = context.textures.ceilingType.image.data[i]; // R8: atlas ceilingTypes id
-        // RGBA overlay bit-flags — each channel stores 8 slots; R=IDs 1-8, G=9-16, B=17-24, A=25-32
+        // RGBA overlay bit-flags - each channel stores 8 slots; R=IDs 1-8, G=9-16, B=17-24, A=25-32
         const oi = i * 4;
         const overlays = context.textures.overlays.image.data; // floor overlays; read at oi+[0..3]
         const wallOverlays = context.textures.wallOverlays.image.data; // wall overlays; read at oi+[0..3]
@@ -216,7 +216,7 @@ export function useDungeonSetup({
     return furniture;
   }, [dungeon]);
 
-  // Stove placements — 1 stove in end room at centre
+  // Stove placements - 1 stove in end room at centre
   const stovePlacements = useMemo(() => {
     const room = dungeon.rooms.get(dungeon.endRoomId);
     if (!room) return [];
@@ -361,7 +361,7 @@ export function useDungeonSetup({
     return placements;
   }, [dungeon, maxDoors]);
 
-  // Spike trap placement — within Manhattan distance 2 of any door cell
+  // Spike trap placement - within Manhattan distance 2 of any door cell
   const hazardData = useMemo(() => {
     const hazArr = dungeon.textures.hazards.image.data as Uint8Array;
     hazArr.fill(0);
@@ -459,7 +459,7 @@ export function useDungeonSetup({
     return chests;
   }, [dungeon, solidData, dungeonSeed, dungeonWidth]);
 
-  // Passive mobs — one per non-end room (up to 3)
+  // Passive mobs - one per non-end room (up to 3)
   const initialMobs = useMemo(() => {
     console.log(
       dungeon.rooms.size,
@@ -488,11 +488,19 @@ export function useDungeonSetup({
       let mx = Math.floor((room as any).rect.x + (room as any).rect.w / 2);
       let mz = Math.floor((room as any).rect.y + (room as any).rect.h / 2);
       if (chestPositions.has(`${mx},${mz}`)) {
-        const offsets = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const offsets = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ];
         for (const [ox, oz] of offsets) {
           const nx = mx + ox;
           const nz = mz + oz;
-          if (!chestPositions.has(`${nx},${nz}`) && solidData[nz * dungeonWidth + nx] === 0) {
+          if (
+            !chestPositions.has(`${nx},${nz}`) &&
+            solidData[nz * dungeonWidth + nx] === 0
+          ) {
             mx = nx;
             mz = nz;
             break;

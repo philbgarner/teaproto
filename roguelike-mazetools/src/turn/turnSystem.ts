@@ -61,7 +61,7 @@ export type TurnSystemDeps = {
   }) => void;
   /**
    * Emit a game event (damage, death, xp gain, etc.) to the React layer.
-   * Called synchronously — callers must NOT setState directly from here.
+   * Called synchronously - callers must NOT setState directly from here.
    */
   onEvent?: (event: TurnEvent) => void;
 };
@@ -129,7 +129,7 @@ export function tickUntilPlayer(
     const actor = current.actors[actorId];
     if (!actor || !actor.alive) continue;
 
-    // Player's turn — pause and hand control back to UI.
+    // Player's turn - pause and hand control back to UI.
     if (actorId === current.playerId) {
       return { ...current, awaitingPlayerInput: true, activeActorId: actorId };
     }

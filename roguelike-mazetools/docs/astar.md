@@ -1,4 +1,4 @@
-# A* Pathfinding — `src/astar.ts`
+# A* Pathfinding - `src/astar.ts`
 
 8-directional A\* using the octile distance heuristic. Integer-scaled costs: orthogonal = 10, diagonal = 14 (≈ 10√2). Diagonal movement through wall corners is blocked.
 
@@ -61,7 +61,7 @@ Find the shortest 8-directional path from `start` to `goal`.
 
 | Parameter | Description |
 |-----------|-------------|
-| `dungeon` | Any `DungeonOutputs` — used for grid dimensions only |
+| `dungeon` | Any `DungeonOutputs` - used for grid dimensions only |
 | `isWalkable` | Base walkability predicate |
 | `start` | Starting cell |
 | `goal` | Target cell |
@@ -130,7 +130,7 @@ const result = aStar8(
 
 ## Notes
 
-- Uses `Int32Array` for g-scores and `Int16Array` for parent pointers — efficient for grids up to ~65K wide/tall.
+- Uses `Int32Array` for g-scores and `Int16Array` for parent pointers - efficient for grids up to ~65K wide/tall.
 - The open set is a binary `MinHeap<number>` (cell indices), heap-allocated once per call.
 - Diagonal moves are blocked if either of the two orthogonal neighbours is impassable (no cutting corners through walls).
 - `cellCost` is added on top of the directional movement cost (10 or 14), not in place of it.

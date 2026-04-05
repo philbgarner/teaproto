@@ -12,6 +12,7 @@ function formatKeys(keys: string[]): string {
 
 interface Props {
   moveActions: MoveActions;
+  onInteract?: () => void;
 }
 
 function MoveBtn({
@@ -34,7 +35,7 @@ function MoveBtn({
   );
 }
 
-export function ArrowMovement({ moveActions }: Props) {
+export function ArrowMovement({ moveActions, onInteract }: Props) {
   const { keybindings } = useSettings();
 
   return (
@@ -46,7 +47,16 @@ export function ArrowMovement({ moveActions }: Props) {
       </div>
       <div className={styles.row}>
         <MoveBtn onPress={moveActions.strafeLeft}  img="move-left.png"     label={`Strafe left (${formatKeys(keybindings.strafeLeft)})`} />
-        <div className={styles.gap} />
+        {onInteract ? (
+          <button
+            className={styles.btn}
+            onPointerDown={(e) => { e.preventDefault(); onInteract(); }}
+            title={`Interact (${formatKeys(keybindings.interact)})`}>
+              <img src={`textures/large_button_up.png`} alt="Interact" draggable={false} />
+            </button>
+        ) : (
+          <div className={styles.gap} />
+        )}
         <MoveBtn onPress={moveActions.strafeRight} img="move-right.png"    label={`Strafe right (${formatKeys(keybindings.strafeRight)})`} />
       </div>
       <div className={styles.row}>

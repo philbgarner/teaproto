@@ -29,14 +29,22 @@ const ING_MAPPING = {
   "Wild Herb": "wild_herb.png",
 };
 
-function HandSlot({ items, registry, side }) {
+function HandSlot({ items, registry, side, handleTeaInteraction }) {
   const item = items[0];
   const name = item ? registry.getSlotObjectName(item) : null;
   const isEmpty = !name;
 
+  const handleClick = () => {
+    if (!isEmpty && handleTeaInteraction) {
+      handleTeaInteraction(side);
+    }
+  };
+
   return (
-    <div
+    <button
       className={`${ghostStyles.inventorySlot} ${isEmpty ? ghostStyles.emptySlot : ""} ${ghostStyles.handSlot}`}
+      onClick={handleClick}
+      disabled={isEmpty}
     >
       <div className={ghostStyles.itemImage}>
         {!isEmpty ? (
@@ -46,11 +54,11 @@ function HandSlot({ items, registry, side }) {
         )}
       </div>
       {!isEmpty && <div className={ghostStyles.itemText}>{name}</div>}
-    </div>
+    </button>
   );
 }
 
-function HandsRow() {
+function HandsRow({ handleTeaInteraction }) {
   const { playerData } = useSettings();
   const { registry, leftHand, rightHand } = playerData.ecsData;
 
@@ -65,8 +73,8 @@ function HandsRow() {
 
   return (
     <div className={ghostStyles.handsRow}>
-      <HandSlot items={leftHandItems} registry={registry} side="left" />
-      <HandSlot items={rightHandItems} registry={registry} side="right" />
+      <HandSlot items={leftHandItems} registry={registry} side="left" handleTeaInteraction={handleTeaInteraction} />
+      <HandSlot items={rightHandItems} registry={registry} side="right" handleTeaInteraction={handleTeaInteraction} />
     </div>
   );
 }
@@ -226,7 +234,9 @@ export function MinimapSidebar({
   itemDrops,
   scale,
   summonMob,
+  handleTeaInteraction,
   moveActions,
+  onInteract,
 }) {
   const [activeTab, setActiveTab] = useState("move");
 
@@ -267,7 +277,7 @@ export function MinimapSidebar({
           className={styles.canvas}
         />
       </div>
-      <HandsRow />
+      <HandsRow handleTeaInteraction={handleTeaInteraction} />
       <IngredientRow />
       <div className={styles.tabBar}>
         <button
@@ -285,7 +295,7 @@ export function MinimapSidebar({
       </div>
       <div className={styles.tabContent}>
         {activeTab === "move" && moveActions && (
-          <ArrowMovement moveActions={moveActions} />
+          <ArrowMovement moveActions={moveActions} onInteract={onInteract} />
         )}
         {activeTab === "summon" && metMobs.length > 0 && (
           <div className={styles.mobRoster}>
