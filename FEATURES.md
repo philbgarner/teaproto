@@ -29,7 +29,7 @@ Prototype built for Dungeon Crawler Jam 2026. All values are current as of the s
 |-----------|--------|
 | Survive 10 waves (`WIN_WAVES`) | Victory screen |
 | Player HP ≤ 0 | Game Over screen |
-| Adventurer walks onto a stove tile | Game Over ("smashed your tea station") |
+| Adventurer walks onto a stove tile | Game Over ("smashed your TeaOMatic") |
 
 Both screens display wave count and turn count, and offer a **Play Again** button that resets all state without regenerating the dungeon.
 

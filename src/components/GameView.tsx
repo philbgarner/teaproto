@@ -845,7 +845,7 @@ export function GameView({
     }
     if (facingTarget.type === "stove") {
       const state = gs.stoveStates.get(facingTarget.stoveKey);
-      if (!state?.brewing) return "Teaomatic — Press [space] to brew tea";
+      if (!state?.brewing) return "TeaOMatic — Press [space] to brew tea";
       if (state.brewing.ready)
         return `${state.brewing.recipe.name} is ready! — Press [space] to collect`;
       return `Brewing ${state.brewing.recipe.name}: ${state.brewing.stepsRemaining} steps — Press [space] for status`;

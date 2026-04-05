@@ -319,7 +319,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
           "This monster is suffering from red damage, which can only be healed by blue (ice) tea.\n" +
           "Red tea heals green damage, and green tea heals blue damage.\n" +
           "When your tea has brewed, interact with the monster to revive them.\n" +
-          "If all the monsters fall unconscious, adventurers will destroy the Teaomatic!",
+          "If all the monsters fall unconscious, adventurers will destroy the TeaOMatic!",
         true,
       );
     }
@@ -333,7 +333,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       firedTriggersRef.current.add("T5");
       gs.showMsg(
         "Some small plants grow in the dungeon — they're quite cute.\n" +
-          "I can harvest this and use it in the Teaomatic to brew different types of tea.",
+          "I can harvest this and use it in the TeaOMatic to brew different types of tea.",
         true,
       );
       // Unlock all other teas now that the player has seen a plant

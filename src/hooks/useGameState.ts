@@ -2093,7 +2093,7 @@ export function useGameState({
         dungeonStatsRef.current.teaomaticDestroyedBy = adv.name;
         setDungeonStats({ ...dungeonStatsRef.current });
         setGameState("gameover");
-        setGameOverReason(`The ${adv.name} smashed your tea station!`);
+        setGameOverReason(`The ${adv.name} smashed your TeaOMatic!`);
         return;
       }
     }
