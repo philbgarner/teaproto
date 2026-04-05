@@ -98,7 +98,7 @@ export type BspDungeonOptions = {
 export type BspDungeonOutputs = DungeonOutputs & {
   /** Room ID (matches regionId texture values) chosen as the dungeon exit. Has exactly 1 corridor connection. */
   endRoomId: number;
-  /** Room ID furthest from endRoomId — used as the player spawn room. */
+  /** Room ID furthest from endRoomId - used as the player spawn room. */
   startRoomId: number;
   /**
    * Map from regionId → RoomInfo for every carved room AND every corridor segment.
@@ -547,8 +547,8 @@ function buildRoomsMap(
 /**
  * Flood-fills corridor floor cells (regionId === 0) into unique connected
  * components, assigning IDs starting from `firstId`.  Returns:
- * - `fullRegionIds` — copy of `regionIdData` with corridor cells re-labelled
- * - `corridorRooms`  — a `RoomInfo` entry for every corridor segment, with
+ * - `fullRegionIds` - copy of `regionIdData` with corridor cells re-labelled
+ * - `corridorRooms`  - a `RoomInfo` entry for every corridor segment, with
  *    its bounding rect and the room IDs it borders in `connections`
  */
 function assignCorridorRegions(
@@ -558,7 +558,7 @@ function assignCorridorRegions(
   H: number,
   firstId: number,
 ): { fullRegionIds: Uint8Array; corridorRooms: RoomInfo[] } {
-  const full = new Uint8Array(regionIdData); // copy — room cells keep their IDs
+  const full = new Uint8Array(regionIdData); // copy - room cells keep their IDs
   const visited = new Uint8Array(W * H);
   const corridorRooms: RoomInfo[] = [];
   let nextId = firstId;
@@ -566,15 +566,18 @@ function assignCorridorRegions(
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
-      if (solidData[i] !== 0) continue;       // wall
-      if (regionIdData[i] !== 0) continue;    // room cell — keep original ID
-      if (visited[i]) continue;               // corridor cell already labelled
+      if (solidData[i] !== 0) continue; // wall
+      if (regionIdData[i] !== 0) continue; // room cell - keep original ID
+      if (visited[i]) continue; // corridor cell already labelled
 
       // Clamp to byte range (1-255); IDs wrap if somehow > 255
       const corridorId = ((nextId - 1) & 0xff) + 1;
       nextId++;
 
-      let minX = x, minY = y, maxX = x, maxY = y;
+      let minX = x,
+        minY = y,
+        maxX = x,
+        maxY = y;
       const adjacentRooms = new Set<number>();
       const queue: number[] = [i];
       visited[i] = 1;
@@ -590,14 +593,19 @@ function assignCorridorRegions(
         if (cy < minY) minY = cy;
         if (cy > maxY) maxY = cy;
 
-        for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        for (const [dx, dy] of [
+          [-1, 0],
+          [1, 0],
+          [0, -1],
+          [0, 1],
+        ] as const) {
           const nx = cx + dx;
           const ny = cy + dy;
           if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
           const ni = ny * W + nx;
           const nReg = regionIdData[ni];
           if (nReg !== 0) {
-            // Neighbour is a room floor cell — record the connection
+            // Neighbour is a room floor cell - record the connection
             if (solidData[ni] === 0) adjacentRooms.add(nReg);
             continue;
           }
@@ -632,7 +640,7 @@ function pickStartEndRooms(adjacency: Map<number, Set<number>>): {
   if (allRooms.length === 1)
     return { startRoomId: allRooms[0], endRoomId: allRooms[0] };
 
-  // Find rooms with exactly 1 connection (dead ends) — candidates for end room
+  // Find rooms with exactly 1 connection (dead ends) - candidates for end room
   const deadEnds = allRooms.filter(
     (id) => (adjacency.get(id)?.size ?? 0) === 1,
   );
@@ -640,7 +648,7 @@ function pickStartEndRooms(adjacency: Map<number, Set<number>>): {
 
   // BFS from each candidate to find the one that maximises the longest shortest path
   // For efficiency, pick the first dead-end, BFS to find the furthest room, then
-  // BFS back from that furthest room to confirm — a two-pass approach.
+  // BFS back from that furthest room to confirm - a two-pass approach.
 
   function bfsFurthest(startId: number): { id: number; dist: number } {
     const dist = new Map<number, number>();
@@ -971,7 +979,7 @@ export function generateBspDungeon(
   }
 
   const distanceToWall = computeDistanceToWall(solid, W, H);
-  const hazards = new Uint8Array(W * H); // all zeros — placed by content callback
+  const hazards = new Uint8Array(W * H); // all zeros - placed by content callback
 
   return {
     width: W,
@@ -992,13 +1000,33 @@ export function generateBspDungeon(
         "bsp_dungeon_distance_to_wall",
       ),
       hazards: maskToDataTextureR8(hazards, W, H, "bsp_dungeon_hazards"),
-      temperature: maskToDataTextureR8(temperature, W, H, "bsp_dungeon_temperature"),
+      temperature: maskToDataTextureR8(
+        temperature,
+        W,
+        H,
+        "bsp_dungeon_temperature",
+      ),
       floorType: maskToDataTextureR8(floorType, W, H, "bsp_dungeon_floor_type"),
       overlays: maskToDataTextureRGBA(overlays, W, H, "bsp_dungeon_overlays"),
       wallType: maskToDataTextureR8(wallType, W, H, "bsp_dungeon_wall_type"),
-      wallOverlays: maskToDataTextureRGBA(wallOverlays, W, H, "bsp_dungeon_wall_overlays"),
-      ceilingType: maskToDataTextureR8(ceilingType, W, H, "bsp_dungeon_ceiling_type"),
-      ceilingOverlays: maskToDataTextureRGBA(ceilingOverlays, W, H, "bsp_dungeon_ceiling_overlays"),
+      wallOverlays: maskToDataTextureRGBA(
+        wallOverlays,
+        W,
+        H,
+        "bsp_dungeon_wall_overlays",
+      ),
+      ceilingType: maskToDataTextureR8(
+        ceilingType,
+        W,
+        H,
+        "bsp_dungeon_ceiling_type",
+      ),
+      ceilingOverlays: maskToDataTextureRGBA(
+        ceilingOverlays,
+        W,
+        H,
+        "bsp_dungeon_ceiling_overlays",
+      ),
     },
   };
 }

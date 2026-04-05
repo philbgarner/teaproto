@@ -20,11 +20,24 @@ import hotkeys from "hotkeys-js";
  * }} props
  */
 
-const HELP_TEXT = `Welcome to Teaproto.
+const HELP_TEXT = `Welcome to Cutest Dungeon!
 
-Move with W/A/S/D or arrow keys. Interact with Space.
-Brew tea at the stove to warm adventurers and earn gold.
-Watch your ingredient stocks — restock from chests.
+You are a poltergeist hired by the Earl of Grey to refresh his dungeon.
+As a ghost, traps and residents won't harm you - and you can walk through walls.
+Be warned: you cannot phase through walls while carrying tea.
+
+Move with W/A/S/D, rotate with Q & E. Interact with Space.
+Use the minimap to navigate; the TeaOMatic is marked with an orange dot.
+Brew tea and bring it to your monsters to restore and protect them.
+
+Tea acts as armour - adventurers must burn through a monster's tea supply before dealing real damage.
+Each adventurer deals a different type of elemental damage, and only the matching tea colour heals it:
+  red damage is healed by blue (ice) tea, green by red, and blue by green.
+If all monsters fall unconscious, the adventurers will destroy the TeaOMatic.
+
+Adventurers drop gold when they leave - collect enough to persuade a dragon to move in.
+Secret passages let you move around the dungeon faster when your hands are full.
+Reset sprung traps and close open doors with Space so adventurers can enjoy them.
 
 Press M to open this menu at any time.
 Keybindings can be customised in Settings → Keys.`;
@@ -80,12 +93,12 @@ export function StatusBar({
         <span className={styles.roomTemp}>
           {(openMenuKeys?.[0] ?? "m").toUpperCase()}: Menu
         </span>
-          <span className={styles.roomTemp}>
+        <span className={styles.roomTemp}>
           {(discardLeftKeys?.[0] ?? "z").toUpperCase()}: Discard Left
-          </span>
-          <span className={styles.roomTemp}>
+        </span>
+        <span className={styles.roomTemp}>
           {(discardRightKeys?.[0] ?? "x").toUpperCase()}: Discard Right
-          </span>
+        </span>
         {summonMonsterKeys?.[0] && (
           <span className={styles.roomTemp}>
             {summonMonsterKeys[0].toUpperCase()}: Summon

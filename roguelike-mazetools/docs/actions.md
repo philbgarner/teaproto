@@ -1,6 +1,6 @@
-# Action Middleware — `src/actions.ts`
+# Action Middleware - `src/actions.ts`
 
-Pre-action interceptor pipeline. Lets the consuming game register middlewares (trap triggers, door auto-open, teleport pads, action vetoes) without forking the engine commit path. Pure middleware pattern — no dungeon or engine state dependencies.
+Pre-action interceptor pipeline. Lets the consuming game register middlewares (trap triggers, door auto-open, teleport pads, action vetoes) without forking the engine commit path. Pure middleware pattern - no dungeon or engine state dependencies.
 
 ---
 
@@ -157,7 +157,7 @@ if (result.pass) {
 
 ## Notes
 
-- Middlewares run in registration order. The first `{ pass: false }` result short-circuits all subsequent middlewares — later `use()` calls are not reached.
+- Middlewares run in registration order. The first `{ pass: false }` result short-circuits all subsequent middlewares - later `use()` calls are not reached.
 - Calling `next()` delegates to the next middleware; not calling it effectively vetoes the action silently (return `{ pass: false }` explicitly for clarity).
-- `result.state` is optional — middlewares that only observe (not transform) state should omit it or return it unchanged.
+- `result.state` is optional - middlewares that only observe (not transform) state should omit it or return it unchanged.
 - The pipeline is generic: swap `TAction`, `TActor`, `TState` to match your game's action and state types.

@@ -87,7 +87,7 @@ void main() {
 
 // How much the torch radius breathes (fraction of the fog range).
 const FLICKER_RADIUS = 0.03;
-// z-component of the bump tangent normal — larger = flatter bump effect.
+// z-component of the bump tangent normal - larger = flatter bump effect.
 const BUMP_DEPTH = 0.3;
 
 const fragmentShader = /* glsl */ `
@@ -402,12 +402,16 @@ export function InstancedTileMesh({
   }, [torchColor, material]);
 
   useEffect(() => {
-    if (torchIntensity !== undefined) material.uniforms.uTorchIntensity.value = torchIntensity;
+    if (torchIntensity !== undefined)
+      material.uniforms.uTorchIntensity.value = torchIntensity;
   }, [torchIntensity, material]);
 
   useEffect(() => {
     if (playerWorldPos) {
-      material.uniforms.uPlayerWorldPos.value.set(playerWorldPos.x, playerWorldPos.y);
+      material.uniforms.uPlayerWorldPos.value.set(
+        playerWorldPos.x,
+        playerWorldPos.y,
+      );
       material.uniforms.uUsePlayerDist.value = 1.0;
     } else {
       material.uniforms.uUsePlayerDist.value = 0.0;
@@ -489,7 +493,10 @@ export function InstancedTileMesh({
       for (let i = 0; i < count; i++) {
         const inst = instances[i];
         if (inst.cellX !== undefined && inst.cellZ !== undefined) {
-          passageAttr.setX(i, passageData[inst.cellZ * gridWidth + inst.cellX] ?? 0);
+          passageAttr.setX(
+            i,
+            passageData[inst.cellZ * gridWidth + inst.cellX] ?? 0,
+          );
         } else {
           passageAttr.setX(i, 0);
         }
@@ -516,7 +523,10 @@ export function InstancedTileMesh({
       for (let i = 0; i < count; i++) {
         const inst = instances[i];
         if (inst.cellX !== undefined && inst.cellZ !== undefined) {
-          hazardAttr.setX(i, hazardData[inst.cellZ * gridWidth + inst.cellX] ?? 0);
+          hazardAttr.setX(
+            i,
+            hazardData[inst.cellZ * gridWidth + inst.cellX] ?? 0,
+          );
         } else {
           hazardAttr.setX(i, 0);
         }

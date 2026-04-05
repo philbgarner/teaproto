@@ -1,4 +1,4 @@
-/** One entry in the atlas — UV coords of its tile in normalised 0‥1 space. */
+/** One entry in the atlas - UV coords of its tile in normalised 0‥1 space. */
 export type TileEntry = {
   id: number;
   /** Left edge of tile (0..1). */

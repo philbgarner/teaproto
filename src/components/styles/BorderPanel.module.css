@@ -10,7 +10,7 @@
 
 .borderPanelContainer .title {
     position: absolute;
-    top: 14px; /* content's margin-top — where the border begins */
+    top: 14px; /* content's margin-top - where the border begins */
     transform: translateY(-18px) translateX(-4px);
     left: 1rem;
     height: 14px;

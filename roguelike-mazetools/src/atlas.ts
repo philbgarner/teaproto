@@ -9,7 +9,7 @@ export type AtlasEntry = {
   uv: [number, number];
 };
 
-/** Sprite entry — may have a non-square size in pixels. */
+/** Sprite entry - may have a non-square size in pixels. */
 export type AtlasSpriteEntry = {
   id: number;
   name: string;
@@ -99,9 +99,15 @@ export function buildAtlasIndex(data: AtlasData): AtlasIndex {
   return {
     data,
     architecture: makeLookup(data.architecture),
-    floorTypes: makeLookup(data.floorTypes as (AtlasTypedEntry & { id: number; name: string })[]),
-    wallTypes: makeLookup(data.wallTypes as (AtlasTypedEntry & { id: number; name: string })[]),
-    ceilingTypes: makeLookup(data.ceilingTypes as (AtlasTypedEntry & { id: number; name: string })[]),
+    floorTypes: makeLookup(
+      data.floorTypes as (AtlasTypedEntry & { id: number; name: string })[],
+    ),
+    wallTypes: makeLookup(
+      data.wallTypes as (AtlasTypedEntry & { id: number; name: string })[],
+    ),
+    ceilingTypes: makeLookup(
+      data.ceilingTypes as (AtlasTypedEntry & { id: number; name: string })[],
+    ),
     overlays: makeLookup(data.overlays),
     wallOverlays: makeLookup(data.wallOverlays),
     ceilingOverlays: makeLookup(data.ceilingOverlays),

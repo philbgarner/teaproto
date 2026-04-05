@@ -172,7 +172,7 @@ export function loadAtlasTexture(): Promise<THREE.Texture> {
 }
 
 // ---------------------------------------------------------------------------
-// Door 3-D object — thin slab spanning full cell width and ceiling height
+// Door 3-D object - thin slab spanning full cell width and ceiling height
 // ---------------------------------------------------------------------------
 export function makeDoorProto(
   atlasTex: THREE.Texture,
@@ -209,7 +209,7 @@ export function makeDoorProto(
 }
 
 // ---------------------------------------------------------------------------
-// Teaomatic machine — atlas-textured BoxGeometry proto
+// Teaomatic machine - atlas-textured BoxGeometry proto
 // ---------------------------------------------------------------------------
 export function makeTeaomaticProto(atlasTex: THREE.Texture): THREE.Mesh {
   const uvEntry = atlasIndex.sprites.byName("teaomatic") as AtlasSpriteEntry;

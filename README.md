@@ -61,7 +61,7 @@ Open the URL shown in the terminal (usually `http://localhost:5173`) in your bro
 
 ### Overview
 
-You play as a tea keeper in a procedurally generated dungeon. Your goal is to brew and serve tea to friendly mobs to keep their satiation up. Every few turns, waves of hostile adventurers spawn and march through the dungeon — attacking your mobs and you. Keep your mobs conscious and well-fed so they can fight back.
+You play as a tea keeper in a procedurally generated dungeon. Your goal is to brew and serve tea to friendly mobs to keep their satiation up. Every few turns, waves of hostile adventurers spawn and march through the dungeon - attacking your mobs and you. Keep your mobs conscious and well-fed so they can fight back.
 
 ---
 
@@ -88,7 +88,7 @@ Two stoves are placed in the starting room. To brew tea:
 
 1. Face a stove and press `I` to open the recipe menu.
 2. Press a number key (`1`–`4`) to select a recipe.
-3. Walk around while the tea brews — each step counts down the brew timer.
+3. Walk around while the tea brews - each step counts down the brew timer.
 4. When the tea is ready, face the stove and press `I` to pick it up.
 
 Tea goes into your hands (left or right). You can hold up to two teas at once.
@@ -173,7 +173,7 @@ Adventurers use greedy pathfinding to move toward the nearest conscious mob or t
 - Player defense: 2, Player max HP: 30
 - Mob defense: 1
 
-When an adventurer attacks a mob, it reduces that mob's satiation — a well-fed mob that gets hit loses satiation toward unconsciousness.
+When an adventurer attacks a mob, it reduces that mob's satiation - a well-fed mob that gets hit loses satiation toward unconsciousness.
 
 **Conscious mobs counterattack:**
 - Each conscious mob attacks one adjacent adventurer per turn.
@@ -193,8 +193,8 @@ A minimap is displayed in the sidebar. Hover over mob icons for a tooltip showin
 
 A settings panel lets you tune difficulty:
 
-- **Seed / dimensions** — regenerate the dungeon
-- **Temperature drop per step** — how fast tea cools
-- **Satiation drop per step** — how fast mobs get thirsty
-- **Supersatiation bonus** — extra satiation awarded for preferred-recipe tea (as a percentage of the base 100)
-- **Turns per wave** — how often adventurer waves spawn
+- **Seed / dimensions** - regenerate the dungeon
+- **Temperature drop per step** - how fast tea cools
+- **Satiation drop per step** - how fast mobs get thirsty
+- **Supersatiation bonus** - extra satiation awarded for preferred-recipe tea (as a percentage of the base 100)
+- **Turns per wave** - how often adventurer waves spawn

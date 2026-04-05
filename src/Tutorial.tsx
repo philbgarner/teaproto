@@ -106,7 +106,7 @@ function LessonView({
             pointerEvents: "none",
           }}
         >
-          Tutorial — Lesson {lessonIndex + 1} / {LESSON_CONFIGS.length}
+          Tutorial - Lesson {lessonIndex + 1} / {LESSON_CONFIGS.length}
         </div>
       }
     />
@@ -193,7 +193,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
         );
       }
       gs.clearHands();
-      // Give the player one ice-tea ingredient — only ice tea is initially available
+      // Give the player one ice-tea ingredient - only ice tea is initially available
       const startIngredients: Record<string, number> = {
         "hot-pepper": 0,
         "frost-leaf": 1,
@@ -254,7 +254,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     }
   }, [gs.showRecipeMenu, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // T3b: A brew has been started — show timing hint and clear spare ingredients
+  // T3b: A brew has been started - show timing hint and clear spare ingredients
   useEffect(() => {
     if (lessonIndex !== 1 || firedTriggersRef.current.has("T3b")) return;
     let hasActiveBrew = false;
@@ -267,7 +267,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     if (!hasActiveBrew) return;
     firedTriggersRef.current.add("T3b");
     gs.showMsg(
-      "This brew will take time — 18 steps.\n" +
+      "This brew will take time - 18 steps.\n" +
         "Time only passes in the dungeon when you move from your current position.\n" +
         'Press "." to force time to advance if you prefer.\n' +
         "Come back later to collect your freshly brewed tea.",
@@ -282,15 +282,15 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     gs.applyIngredients(empty);
   }, [gs.stoveStates, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // T7: Monster revived — drop gold, explain the endgame condition
+  // T7: Monster revived - drop gold, explain the endgame condition
   useEffect(() => {
     if (lessonIndex !== 1 || firedTriggersRef.current.has("T7")) return;
     if (gs.mobSatiations[0] > 0) {
       firedTriggersRef.current.add("T7");
       gs.showMsg(
         "Here, an adventurer dropped this gold. They make such a mess leaving it lying around.\n" +
-          "It's no use to me — whoever heard of monsters carrying gold?\n" +
-          "But if you found enough of it, you could persuade a dragon to move in —\n" +
+          "It's no use to me - whoever heard of monsters carrying gold?\n" +
+          "But if you found enough of it, you could persuade a dragon to move in -\n" +
           "that would stop those adventurers once and for all.",
         true,
       );
@@ -332,7 +332,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
     ) {
       firedTriggersRef.current.add("T5");
       gs.showMsg(
-        "Some small plants grow in the dungeon — they're quite cute.\n" +
+        "Some small plants grow in the dungeon - they're quite cute.\n" +
           "I can harvest this and use it in the TeaOMatic to brew different types of tea.",
         true,
       );
@@ -365,7 +365,7 @@ export default function Tutorial({ onComplete }: { onComplete: () => void }) {
       firedTriggersRef.current.add("T8");
       gs.showMsg(
         "Wait, there's a button here. It must be a secret passage leading to another part of the dungeon.\n" +
-          "Walking through walls is great, but I can't do that while holding tea —\n" +
+          "Walking through walls is great, but I can't do that while holding tea -\n" +
           "if I interact with this passage I can move around the dungeon quicker.",
         true,
       );

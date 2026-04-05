@@ -1,4 +1,4 @@
-# mazegen — Engine Reference
+# mazegen - Engine Reference
 
 Engine-level dungeon generation, pathfinding, spatial utilities, and game-logic primitives for turn-based dungeon crawlers.
 
@@ -32,11 +32,11 @@ astar.ts        → bspHelpers.ts, bsp.ts
 content.ts      → bsp.ts
 cellular.ts     → bspHelpers.ts, three
 serialize.ts    → bsp.ts, three
-fov.ts          (no deps — pure geometry)
+fov.ts          (no deps - pure geometry)
 spatial.ts      → astar.ts (GridPos only)
-effects.ts      (no deps — pure data)
-factions.ts     (no deps — pure data)
-actions.ts      (no deps — pure middleware)
+effects.ts      (no deps - pure data)
+factions.ts     (no deps - pure data)
+actions.ts      (no deps - pure middleware)
 ```
 
 `fov.ts`, `effects.ts`, `factions.ts`, and `actions.ts` have zero internal dependencies and can be consumed standalone without pulling in the dungeon generator or Three.js.
@@ -49,8 +49,8 @@ The engine favours **callbacks over baked-in logic**:
 
 - `generateContent` visits every cell and delegates all decisions to the caller
 - `aStar8` exposes `isBlocked` and `cellCost` hooks for runtime overrides
-- `computeFov` calls `isOpaque` and `visit` per cell — no global state written
-- `tickEffects` returns deltas that the caller applies — the engine never touches actor stats
+- `computeFov` calls `isOpaque` and `visit` per cell - no global state written
+- `tickEffects` returns deltas that the caller applies - the engine never touches actor stats
 
 Every module follows this pattern so consuming games can compose engine pieces without forking the source.
 

@@ -123,7 +123,7 @@ export const DIRS: string[] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 export const LOS_RADIUS = 8;
 
 // ---------------------------------------------------------------------------
-// Camera hook — grid-locked movement with lerp animation
+// Camera hook - grid-locked movement with lerp animation
 // ---------------------------------------------------------------------------
 export const LERP_DURATION_MS = 150;
 
@@ -186,7 +186,7 @@ export const MOB_NAMES: string[] = MOB_TYPES.map((t) => t.name);
 
 // Dialog pools for when an adventurer first spots the ghost (player)
 export const GHOST_DIALOG: string[] = [
-  "A ghost! Good heavens — I wasn't expecting that.",
+  "A ghost! Good heavens - I wasn't expecting that.",
   "Is that... a ghost?! By all the teapots in the realm!",
   "Oh! Oh my. There's definitely a ghost right there.",
   "W-wait. Is that a spectre? This dungeon is stranger than I thought.",
@@ -198,11 +198,11 @@ export const GHOST_DIALOG: string[] = [
   "I wonder if ghosts prefer tea. I should ask, if it doesn't kill me first.",
 ];
 export const GHOST_DIALOG_WITH_TEA: string[] = [
-  "A ghost! And — wait, why is my cup floating?! Oh. Oh no.",
+  "A ghost! And - wait, why is my cup floating?! Oh. Oh no.",
   "Is that a ghost?! And it's... it appears to be drifting alongside my tea. Fascinating. Terrifying.",
-  "A ghost! Good heavens — now there's a disembodied cup tumbling through the air alongside it.",
+  "A ghost! Good heavens - now there's a disembodied cup tumbling through the air alongside it.",
   "W-what?! A ghost AND a levitating cup of tea? This dungeon has gone completely mad.",
-  "A ghost! By the kettle — my tea appears to be floating of its own accord now.",
+  "A ghost! By the kettle - my tea appears to be floating of its own accord now.",
   "There's a ghost, and my cup appears to be floating. I'm going to carry on.",
   "A ghost nearby... and a disembodied cup of tea hovering in the air. Perfectly normal dungeon.",
   "The ghost seems interested in the tea. Or maybe the cup is just haunted now. Hard to say.",
@@ -210,12 +210,12 @@ export const GHOST_DIALOG_WITH_TEA: string[] = [
   "My tea is levitating. There's a ghost. I am fine. Everything is fine.",
 ];
 export const ADVENTURER_SEEKING_DIALOG: string[] = [
-  "Enough plunder — now to find the heart of this place!",
+  "Enough plunder - now to find the heart of this place!",
   "Right, that'll do. Time to hunt down whatever keeps this pit warm.",
   "My pockets are full and my nerves are shot. The stove must be near!",
   "Loot? Check. Creeping dread? Absolutely. Let's finish this.",
   "Something cosy lurks deeper in. I can smell the tea from here.",
-  "That's enough loot. Now — where is that infernal warmth coming from?",
+  "That's enough loot. Now - where is that infernal warmth coming from?",
 ];
 
 export const GHOST_SIGHT_RADIUS = 8;

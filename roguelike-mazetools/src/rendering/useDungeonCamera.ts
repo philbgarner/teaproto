@@ -6,23 +6,23 @@
  *   - Yaw (radians; 0 = facing -Z / "north")
  *
  * Controls:
- *   - W / ArrowUp    — move forward
- *   - S / ArrowDown  — move backward
- *   - A / ArrowLeft  — strafe left
- *   - D / ArrowRight — strafe right
- *   - Q / <          — rotate left
- *   - E / >          — rotate right
- *   - Mouse drag on the container element — look around
+ *   - W / ArrowUp    - move forward
+ *   - S / ArrowDown  - move backward
+ *   - A / ArrowLeft  - strafe left
+ *   - D / ArrowRight - strafe right
+ *   - Q / <          - rotate left
+ *   - E / >          - rotate right
+ *   - Mouse drag on the container element - look around
  *
  * Collision uses a small circular margin around the player centre.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const MOVE_SPEED = 4.0;      // world units per second
-const TURN_SPEED = 2.2;      // radians per second (keyboard)
+const MOVE_SPEED = 4.0; // world units per second
+const TURN_SPEED = 2.2; // radians per second (keyboard)
 const MOUSE_SENSITIVITY = 0.003; // radians per pixel
-const MARGIN = 0.25;         // collision margin (world units)
-const TICK_MS = 16;          // ~60 fps movement loop
+const MARGIN = 0.25; // collision margin (world units)
+const TICK_MS = 16; // ~60 fps movement loop
 
 export type CameraState = {
   x: number;
@@ -141,8 +141,12 @@ export function useDungeonCamera(
 
     let dragging = false;
 
-    const onMouseDown = () => { dragging = true; };
-    const onMouseUp = () => { dragging = false; };
+    const onMouseDown = () => {
+      dragging = true;
+    };
+    const onMouseUp = () => {
+      dragging = false;
+    };
     const onMouseMove = (e: MouseEvent) => {
       if (!dragging) return;
       setCamera((prev) => ({
@@ -204,8 +208,10 @@ export function useDungeonCamera(
         moveX += rightX;
         moveZ += rightZ;
       }
-      if (keys.has("ArrowLeft") || keys.has("KeyQ")) turnDelta -= TURN_SPEED * dt;
-      if (keys.has("ArrowRight") || keys.has("KeyE")) turnDelta += TURN_SPEED * dt;
+      if (keys.has("ArrowLeft") || keys.has("KeyQ"))
+        turnDelta -= TURN_SPEED * dt;
+      if (keys.has("ArrowRight") || keys.has("KeyE"))
+        turnDelta += TURN_SPEED * dt;
 
       const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
       if (len > 0) {
@@ -214,7 +220,15 @@ export function useDungeonCamera(
       }
 
       if (moveX !== 0 || moveZ !== 0 || turnDelta !== 0) {
-        const { x: nx, z: nz } = tryMove(x, z, moveX, moveZ, solid, width, height);
+        const { x: nx, z: nz } = tryMove(
+          x,
+          z,
+          moveX,
+          moveZ,
+          solid,
+          width,
+          height,
+        );
         const newState = { x: nx, z: nz, yaw: yaw + turnDelta };
         cameraRef.current = newState;
         setCamera(newState);

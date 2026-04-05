@@ -1,4 +1,4 @@
-# BSP Dungeon Generator — `src/bsp.ts`
+# BSP Dungeon Generator - `src/bsp.ts`
 
 Binary space partitioning dungeon generator. Produces clean rectangular rooms connected by L-shaped or straight corridors, with structured room metadata and start/end room selection.
 
@@ -58,7 +58,7 @@ type BspDungeonOptions = {
   roomPadding?: number;           // default: 1
   minRoomSize?: number;           // default: 5
   maxRoomSize?: number;           // default: 14
-  roomFillLeafChance?: number;    // default: 0.08 — chance room fills entire BSP leaf
+  roomFillLeafChance?: number;    // default: 0.08 - chance room fills entire BSP leaf
 
   corridorWidth?: number;         // default: 1
   corridorStyle?: "straight-or-z"; // only supported style currently
@@ -72,9 +72,9 @@ Extends `DungeonOutputs` with room graph data.
 
 ```ts
 type BspDungeonOutputs = DungeonOutputs & {
-  /** Room chosen as the dungeon exit — always has exactly 1 corridor connection. */
+  /** Room chosen as the dungeon exit - always has exactly 1 corridor connection. */
   endRoomId: number;
-  /** Room furthest from endRoomId — used as the player spawn room. */
+  /** Room furthest from endRoomId - used as the player spawn room. */
   startRoomId: number;
   /**
    * Map from roomId → RoomInfo for every carved room.
@@ -132,5 +132,5 @@ const isWall = (x: number, y: number) => solidData[y * dungeon.width + x] !== 0;
 - `seed` can be a string or number; strings are hashed with FNV-1a to a uint32.
 - `regionId` values in `textures.regionId` are the same integers used as keys in the `rooms` map.
 - Corridor cells are floor (`solid = 0`) but have `regionId = 0` (not tagged to any room).
-- The `hazards` texture is zeroed on output — populate it via `generateContent`.
+- The `hazards` texture is zeroed on output - populate it via `generateContent`.
 - Textures use `THREE.RedFormat` / `THREE.UnsignedByteType` with nearest-filter sampling.

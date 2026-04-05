@@ -67,7 +67,7 @@ export type DamageNumberData = {
 };
 
 // ---------------------------------------------------------------------------
-// SpeechBubbleSprite — renders a single speech bubble via drei Html
+// SpeechBubbleSprite - renders a single speech bubble via drei Html
 // ---------------------------------------------------------------------------
 
 function SpeechBubbleSprite({
@@ -103,7 +103,7 @@ function SpeechBubbleSprite({
   const wy = bubble.inverted ? -0.5 : ceilingHeight + 0.5;
   const wz = (bubble.z + 0.5) * tileSize;
 
-  // Update opacity each frame based on distance — fades like fog, min 0.35 so
+  // Update opacity each frame based on distance - fades like fog, min 0.35 so
   // it stays legible even when the speaker is deep in shadow / behind geometry.
   useFrame(({ camera }) => {
     if (!divRef.current) return;
@@ -202,7 +202,7 @@ function SpeechBubbleSprite({
 }
 
 // ---------------------------------------------------------------------------
-// DamageNumberSprite — floating damage text that drifts up and fades
+// DamageNumberSprite - floating damage text that drifts up and fades
 // ---------------------------------------------------------------------------
 
 const DAMAGE_NUMBER_DURATION_MS = 1500;
@@ -272,7 +272,7 @@ export type SpriteAtlas = {
 };
 
 // ---------------------------------------------------------------------------
-// SceneObjects — renders placed objects via factory registry
+// SceneObjects - renders placed objects via factory registry
 // ---------------------------------------------------------------------------
 
 function SceneObjects({
@@ -437,7 +437,7 @@ function SceneObjects({
 }
 
 // ---------------------------------------------------------------------------
-// SceneMobiles — renders billboard sprites via InstancedMesh
+// SceneMobiles - renders billboard sprites via InstancedMesh
 // ---------------------------------------------------------------------------
 
 const MOBILE_VERT = /* glsl */ `
@@ -481,7 +481,7 @@ uniform sampler2D uAtlas;
 uniform float uColumns;
 uniform float uRows;
 uniform vec3  uFogColor;
-uniform vec2  uTexelSize;  // 1/atlasWidth, 1/atlasHeight — for outline sampling
+uniform vec2  uTexelSize;  // 1/atlasWidth, 1/atlasHeight - for outline sampling
 ${TORCH_UNIFORMS_GLSL}
 varying vec2  vUv;
 varying float vTileId;
@@ -532,7 +532,7 @@ void main() {
   } else if (bodyColor.a >= 0.5) {
     color = bodyColor;
   } else {
-    // Transparent fragment — draw a 2-texel silhouette outline if active.
+    // Transparent fragment - draw a 2-texel silhouette outline if active.
     if (vOutlineColor.a > 0.0) {
       vec2 o = uTexelSize * 2.0;
       bool edge = texture2D(uAtlas, bodyUv + vec2( o.x, 0.0)).a >= 0.5
@@ -556,7 +556,7 @@ void main() {
   float band = torchBand(0.03);
   vec3 lit = applyTorchLighting(color.rgb, band);
 
-  // White damage flash — alternate between lit colour and white at ~8 Hz
+  // White damage flash - alternate between lit colour and white at ~8 Hz
   float flashOn = step(0.5, fract(uTime * 8.0));
   lit = mix(lit, vec3(1.0, 1.0, 1.0), vIsDamaged * flashOn);
   gl_FragColor = vec4(mix(lit, uFogColor, step(4.0, band)), color.a);
@@ -1017,12 +1017,12 @@ function buildFaceInstances(
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Background sphere — shown when camera is inside a wall (ghost mode)
+// Background sphere - shown when camera is inside a wall (ghost mode)
 // ---------------------------------------------------------------------------
 
 // Bone icon UV in the 256×256 icons.png sheet (tileSize=32, bone at pixel [224,64])
 // ---------------------------------------------------------------------------
-// GhostWallMesh — ectoplasmic cyan proximity overlay on vertical wall faces
+// GhostWallMesh - ectoplasmic cyan proximity overlay on vertical wall faces
 // ---------------------------------------------------------------------------
 // Shown when the camera is within ghostRadius world units of a wall face and
 // the player is in ghost/wall-phase mode (no tea in hand).  The intersection
@@ -1048,7 +1048,7 @@ void main() {
   vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);
   vWorldPos = worldPos.xyz;
 
-  // Face normal in world space — PlaneGeometry default normal is +Z, rotated by instance.
+  // Face normal in world space - PlaneGeometry default normal is +Z, rotated by instance.
   mat3 normalMat = mat3(modelMatrix * instanceMatrix);
   vNormal = normalize(normalMat * vec3(0.0, 0.0, 1.0));
 
@@ -1431,7 +1431,7 @@ type SceneProps = {
   /** Static placed objects resolved via objectRegistry. */
   objects?: ObjectPlacement[];
   objectRegistry?: ObjectRegistry;
-  /** Occupied cell keys ("x_z") — objects whose type is "door" will animate open. */
+  /** Occupied cell keys ("x_z") - objects whose type is "door" will animate open. */
   objectOccupiedKeys?: Set<string>;
   /** Billboard sprite mobiles. */
   mobiles?: MobilePlacement[];
@@ -1597,7 +1597,7 @@ function DungeonScene({
   );
 
   // Stable splits so that SceneMobiles' geometry useMemo only rebuilds when
-  // mobiles content changes — not on every render caused by flash/attackDirs updates.
+  // mobiles content changes - not on every render caused by flash/attackDirs updates.
   const nonAdvs = useMemo(
     () => mobiles?.filter((p) => p.type !== "adventurer") ?? [],
     [mobiles],

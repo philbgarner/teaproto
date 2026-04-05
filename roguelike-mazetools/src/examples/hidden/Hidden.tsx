@@ -1,18 +1,18 @@
 /**
- * Hidden — secret passage traversal demo.
+ * Hidden - secret passage traversal demo.
  *
  * Hidden passages connect different rooms through short wall tunnels.
  * Each passage starts locked.  Stand at the passage mouth (cyan wall)
  * and press E to unlock it, then walk into the wall to traverse it.
  *
  * Controls:
- *   W / ArrowUp    — step forward
- *   S / ArrowDown  — step backward
- *   A              — turn left 90°
- *   D              — turn right 90°
- *   E              — toggle passage (when at passage mouth)
- *   Space / .      — wait a turn
- *   R              — regenerate dungeon
+ *   W / ArrowUp    - step forward
+ *   S / ArrowDown  - step backward
+ *   A              - turn left 90°
+ *   D              - turn right 90°
+ *   E              - toggle passage (when at passage mouth)
+ *   Space / .      - wait a turn
+ *   R              - regenerate dungeon
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -212,14 +212,14 @@ export default function Hidden() {
     Math.floor(Math.random() * 0x7fffffff),
   );
 
-  // Game data ref — mutable (passages.enabled toggled in place for mask updates)
+  // Game data ref - mutable (passages.enabled toggled in place for mask updates)
   const gameRef = useRef<GameData | null>(null);
   const [turnState, setTurnState] = useState<TurnSystemState | null>(null);
 
-  // Passage mask as React state — new array ref on each toggle triggers rerender
+  // Passage mask as React state - new array ref on each toggle triggers rerender
   const [passageMask, setPassageMask] = useState<Uint8Array | null>(null);
 
-  // Passage traversal — both state (for triggering step-loop) and ref (for isWalkable closure)
+  // Passage traversal - both state (for triggering step-loop) and ref (for isWalkable closure)
   const [passageTraversal, _setPassageTraversal] =
     useState<PassageTraversalState>({ kind: "idle" });
   const passageTraversalRef = useRef<PassageTraversalState>({ kind: "idle" });
@@ -228,12 +228,12 @@ export default function Hidden() {
     _setPassageTraversal(s);
   }
 
-  // Traversal speed factor — player speed multiplier applied per step inside a passage.
+  // Traversal speed factor - player speed multiplier applied per step inside a passage.
   // Factor 1 = normal speed; 2 = twice as fast (costs half the turn time per step).
   const [traversalFactor, setTraversalFactor] = useState(1.0);
   const traversalFactorRef = useRef(1.0);
 
-  // Passage length filter — controls min/max wall-cell count for generated passages.
+  // Passage length filter - controls min/max wall-cell count for generated passages.
   const [minPassageLength, setMinPassageLength] = useState(1);
   const [maxPassageLength, setMaxPassageLength] = useState(8);
 
@@ -275,7 +275,7 @@ export default function Hidden() {
   const minimapRef = useRef<HTMLCanvasElement>(null);
 
   // ---------------------------------------------------------------------------
-  // Build TurnSystemDeps — uses refs so isWalkable always has fresh data
+  // Build TurnSystemDeps - uses refs so isWalkable always has fresh data
   // ---------------------------------------------------------------------------
 
   // fromTraversal=true applies the traversal speed factor to this step's action cost.
@@ -412,7 +412,7 @@ export default function Hidden() {
       const { totalSteps, factor } = traversalStartRef.current;
       const turns = Math.round(totalSteps / factor);
       pushLog({
-        text: `Passage traversed — ${turns} turn${turns !== 1 ? "s" : ""} elapsed (passage length = ${totalSteps}).`,
+        text: `Passage traversed - ${turns} turn${turns !== 1 ? "s" : ""} elapsed (passage length = ${totalSteps}).`,
         passage: true,
       });
     }
@@ -712,15 +712,15 @@ export default function Hidden() {
           />
           <div className={styles.minimapLegend}>
             <div>
-              ■ <span style={{ color: "#00ffff" }}>cyan</span> — passage
+              ■ <span style={{ color: "#00ffff" }}>cyan</span> - passage
               (unlocked)
             </div>
             <div>
-              ■ <span style={{ color: "#006666" }}>dark cyan</span> — passage
+              ■ <span style={{ color: "#006666" }}>dark cyan</span> - passage
               (locked)
             </div>
             <div>
-              ■ <span style={{ color: "#f80" }}>orange</span> — player
+              ■ <span style={{ color: "#f80" }}>orange</span> - player
             </div>
           </div>
           <div className={styles.sliderGroup}>
