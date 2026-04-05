@@ -9,6 +9,7 @@ import SettingsTabs from "../SettingsTabs";
 import Credits from "./Credits";
 import ModalPanel from "./ModalPanel";
 import styles from "./styles/TitleScreen.module.css";
+import settingsStyles from "./styles/SettingsTabs.module.css";
 
 const BASE = import.meta.env.BASE_URL;
 const T = (name) => `${BASE}textures/title/${name}.png`;
@@ -986,11 +987,13 @@ export function TitleScreen({ onNewGame, onTutorial }) {
           }}
           placeholder="Enter a seed number"
           autoFocus
-          style={{ width: "100%", boxSizing: "border-box", marginBottom: "12px" }}
+          className={settingsStyles.seedInput}
+          style={{ marginBottom: "12px" }}
         />
         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-          <button onClick={() => setShowSeedEntry(false)}>Cancel</button>
+          <button className={settingsStyles.seedBtn} onClick={() => setShowSeedEntry(false)}>Cancel</button>
           <button
+            className={settingsStyles.seedBtn}
             disabled={seedInput === ""}
             onClick={() => {
               setShowSeedEntry(false);
