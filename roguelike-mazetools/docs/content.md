@@ -1,6 +1,6 @@
-# Content Placement — `src/content.ts`
+# Content Placement - `src/content.ts`
 
-Per-cell content placement system. Visits every grid cell and calls a consumer-supplied callback that decides what to place. No placement logic is baked in — the engine only provides mask accessors, a seeded RNG, and game logic helpers.
+Per-cell content placement system. Visits every grid cell and calls a consumer-supplied callback that decides what to place. No placement logic is baked in - the engine only provides mask accessors, a seeded RNG, and game logic helpers.
 
 ---
 
@@ -21,7 +21,7 @@ interface CellMasks {
   getSolid(x: number, y: number): SolidState;
   setSolid(x: number, y: number, state: SolidState): void;
 
-  /** Raw numeric value — use for custom states beyond "wall"/"floor". */
+  /** Raw numeric value - use for custom states beyond "wall"/"floor". */
   getSolidRaw(x: number, y: number): number;
   setSolidRaw(x: number, y: number, value: number): void;
 
@@ -111,7 +111,7 @@ function generateContent(dungeon: DungeonOutputs, options: ContentOptions): void
 
 Iterate over every cell in `dungeon` (row-major, top-to-bottom) and call `options.callback` once per cell. Mutates `dungeon.textures.solid` and `dungeon.textures.hazards` in place; marks both as `needsUpdate = true` for Three.js after the pass completes.
 
-Accepts any `DungeonOutputs`-compatible value — both `BspDungeonOutputs` (BSP) and `CellularDungeonOutputs` (cellular) work.
+Accepts any `DungeonOutputs`-compatible value - both `BspDungeonOutputs` (BSP) and `CellularDungeonOutputs` (cellular) work.
 
 ---
 
@@ -171,6 +171,6 @@ generateContent(dungeon, {
 
 ## Notes
 
-- The callback args object is **reused** across all cells to avoid per-cell allocation. Do not store a reference to `args` — copy the values you need.
+- The callback args object is **reused** across all cells to avoid per-cell allocation. Do not store a reference to `args` - copy the values you need.
 - `rng` state is shared across the entire pass. Call order is row-major (left→right, top→bottom).
 - Out-of-bounds coordinates return safe defaults: `getSolid` → `"wall"`, `getRegionId` / `getHazard` / `getDistanceToWall` → `0`.

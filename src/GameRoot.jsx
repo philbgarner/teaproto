@@ -53,7 +53,7 @@ export function GameRoot() {
           background: "#000",
         }}
       >
-        {/* Game — rendered beneath, fades in */}
+        {/* Game - rendered beneath, fades in */}
         {(phase === "game" || phase === "transitioning") && (
           <div
             style={{
@@ -72,7 +72,7 @@ export function GameRoot() {
           <Tutorial onComplete={handleTutorialComplete} />
         )}
 
-        {/* Title screen — rendered on top, fades out */}
+        {/* Title screen - rendered on top, fades out */}
         {phase !== "game" && phase !== "tutorial" && (
           <div
             style={{

@@ -314,7 +314,9 @@ export default function Cave() {
       <div className={styles.uiHeaderBar}>
         <span className={styles.title}>CAVE</span>
         <span className={styles.seed}>seed: {DUNGEON_SEED}</span>
-        <button className={styles.backBtn} onClick={() => navigate("/")}>← Menu</button>
+        <button className={styles.backBtn} onClick={() => navigate("/")}>
+          ← Menu
+        </button>
       </div>
 
       {/* ── Main area ── */}
@@ -363,8 +365,8 @@ export default function Cave() {
               type="checkbox"
               checked={debugEdges}
               onChange={(e) => setDebugEdges(e.target.checked)}
-            />
-            {" "}Debug edges
+            />{" "}
+            Debug edges
           </label>
           <select
             className={styles.minimapSelect}
@@ -393,8 +395,8 @@ export default function Cave() {
           {cardinalDir(camera.yaw)}
         </span>
         <span className={styles.controls}>
-          WASD / Arrows — move &nbsp;|&nbsp; Q/E / ←/→ — turn &nbsp;|&nbsp; drag
-          — look
+          WASD / Arrows - move &nbsp;|&nbsp; Q/E / ←/→ - turn &nbsp;|&nbsp; drag
+          - look
         </span>
       </div>
     </div>

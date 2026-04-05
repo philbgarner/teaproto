@@ -1,11 +1,11 @@
 /**
- * EotB — Eye of the Beholder style dungeon viewer.
+ * EotB - Eye of the Beholder style dungeon viewer.
  *
  * Movement is grid-locked:
- *   W / ArrowUp    — step forward one cell (lerp animated)
- *   S / ArrowDown  — step backward one cell (lerp animated)
- *   A              — turn left 90° (lerp animated)
- *   D              — turn right 90° (lerp animated)
+ *   W / ArrowUp    - step forward one cell (lerp animated)
+ *   S / ArrowDown  - step backward one cell (lerp animated)
+ *   A              - turn left 90° (lerp animated)
+ *   D              - turn right 90° (lerp animated)
  *
  * Dungeon generated via BSP (rectangular rooms + corridors).
  *
@@ -42,7 +42,7 @@ import { UseSystem } from "./Systems";
 import styles from "./ECS.module.css";
 
 // ---------------------------------------------------------------------------
-// Extended content outputs — developers can add more typed fields here.
+// Extended content outputs - developers can add more typed fields here.
 // ---------------------------------------------------------------------------
 export interface ObjectsContentOutputs extends ContentOutputs {
   // extensible: add typed fields as needed
@@ -55,7 +55,7 @@ type SlotInfo = {
   count: number;
 };
 // ---------------------------------------------------------------------------
-// Tile atlas — padded sheet: tiles are 16×16 px, first tile at (16,16),
+// Tile atlas - padded sheet: tiles are 16×16 px, first tile at (16,16),
 // step = 24px (16px tile + 8px gap).
 // We repack the 3 needed tiles into a clean 3×1 atlas at load time.
 // ---------------------------------------------------------------------------
@@ -242,7 +242,7 @@ function cardinalDir(yaw: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// EotB camera hook — grid-locked movement with lerp animation
+// EotB camera hook - grid-locked movement with lerp animation
 // ---------------------------------------------------------------------------
 
 type CameraState = { x: number; z: number; yaw: number };
@@ -259,7 +259,7 @@ function useObjectsCamera(
   camera: CameraState;
   containerRef: React.RefObject<HTMLDivElement>;
 } {
-  // Logical (target) state — always grid-aligned
+  // Logical (target) state - always grid-aligned
   const logicalRef = useRef<CameraState>({ x: startX, z: startZ, yaw: 0 });
 
   // Animation state
@@ -304,7 +304,7 @@ function useObjectsCamera(
     setCamera(state);
   }, [startX, startZ]);
 
-  // Keyboard input — only accepts input when not animating
+  // Keyboard input - only accepts input when not animating
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (animRef.current.animating) return;
@@ -312,7 +312,7 @@ function useObjectsCamera(
       const { x, z, yaw } = logicalRef.current;
       const solid = solidRef.current;
 
-      // Forward unit vector — yaw is always a multiple of π/2 so sin/cos ≈ 0 or ±1
+      // Forward unit vector - yaw is always a multiple of π/2 so sin/cos ≈ 0 or ±1
       const fdx = Math.round(-Math.sin(yaw));
       const fdz = Math.round(-Math.cos(yaw));
 
@@ -468,7 +468,7 @@ export default function Ecs() {
   // GLB column model loading
   // ---------------------------------------------------------------------------
   // GLB column dimensions (from the accessor bounds in column.glb).
-  // max.y=4 — scale so the cap exactly meets the ceiling; the plinth base
+  // max.y=4 - scale so the cap exactly meets the ceiling; the plinth base
   // (min.y=0.5) will sit just above the floor, which is architecturally correct.
   const COLUMN_MAX_Y = 4;
 
@@ -493,7 +493,7 @@ export default function Ecs() {
           }
         });
 
-        // Torchlight shader — same band-lighting as the chest, but samples the
+        // Torchlight shader - same band-lighting as the chest, but samples the
         // column's baked texture instead of a flat base colour.
         const columnMat = new THREE.ShaderMaterial({
           vertexShader: /* glsl */ `
@@ -580,7 +580,7 @@ export default function Ecs() {
           if (mesh.isMesh) mesh.material = columnMat;
         });
 
-        // Do NOT shift model.position.y here — offsetY in each ObjectPlacement
+        // Do NOT shift model.position.y here - offsetY in each ObjectPlacement
         // accounts for the min-y offset after the container scale is applied,
         // so the column base stays flush with the floor regardless of scale.
         const container = new THREE.Group();
@@ -637,7 +637,7 @@ export default function Ecs() {
                 float diffuse = clamp(dot(vNormal, lightDir), 0.0, 1.0);
                 float shade = 0.65 + 0.35 * diffuse;
 
-                // Candlelight flicker — same co-prime sines as the wall shader.
+                // Candlelight flicker - same co-prime sines as the wall shader.
                 float raw = sin(uTime * 7.0)  * 0.45
                           + sin(uTime * 13.7) * 0.35
                           + sin(uTime * 3.1)  * 0.20;
@@ -648,7 +648,7 @@ export default function Ecs() {
                 float curved = pow(flickeredDist, 0.75);
                 float band = floor(curved * 5.0);
 
-                // Spatial turbulence — snaps like the wall tiles.
+                // Spatial turbulence - snaps like the wall tiles.
                 float timeSlot = floor(uTime * 1.5);
                 vec2 cell = floor(vWorldPos * 0.5);
                 float spatialNoise = hash(cell + vec2(timeSlot * 7.3, timeSlot * 3.1));
@@ -712,7 +712,7 @@ export default function Ecs() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Object registry & placements — chests in end room + a few other rooms
+  // Object registry & placements - chests in end room + a few other rooms
   // ---------------------------------------------------------------------------
 
   // ECS part - use useMemo to prevent re-creation on every render
@@ -877,7 +877,7 @@ export default function Ecs() {
     // Columns are always placed in mirrored pairs (or quads) so they match
     // real-world architectural logic: you wouldn't build a single column.
     // Scale so the column cap (local y=4) meets the ceiling exactly.
-    // The plinth base (local y=0.5*scale) sits just above the floor — correct for a column.
+    // The plinth base (local y=0.5*scale) sits just above the floor - correct for a column.
     const colScale = ceilingHeight / COLUMN_MAX_Y;
 
     for (const [id, room] of dungeon.rooms) {
@@ -1346,8 +1346,8 @@ export default function Ecs() {
           {cardinalDir(camera.yaw)}
         </span>
         <span className={styles.controls}>
-          W/S — move &nbsp;|&nbsp; A/D — turn 90° &nbsp;|&nbsp; I — inventory
-          &nbsp;|&nbsp; E — open chest
+          W/S - move &nbsp;|&nbsp; A/D - turn 90° &nbsp;|&nbsp; I - inventory
+          &nbsp;|&nbsp; E - open chest
         </span>
       </div>
     </div>

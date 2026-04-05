@@ -12,7 +12,7 @@ export type EffectTick = {
   /**
    * Called at the start of each affected actor's turn (or on each world tick).
    * Return a partial update to apply to the host, or undefined for no change.
-   * The engine does not interpret the returned delta — the game applies it.
+   * The engine does not interpret the returned delta - the game applies it.
    */
   onTick?: (effect: ActiveEffect, stepIndex: number) => EffectDelta | undefined;
   /** Called when stepsRemaining reaches 0. */
@@ -32,7 +32,7 @@ export type ActiveEffect = {
 /**
  * Advance all effects by one step. Returns updated effects list and
  * an array of deltas to apply (from onTick + onExpire for expired entries).
- * Pure function — does not mutate input.
+ * Pure function - does not mutate input.
  */
 export function tickEffects(
   effects: ActiveEffect[],
@@ -93,7 +93,10 @@ export function applyEffect(
     updated = { ...existing, stepsRemaining: incoming.stepsRemaining };
   } else {
     // "extend"
-    updated = { ...existing, stepsRemaining: existing.stepsRemaining + incoming.stepsRemaining };
+    updated = {
+      ...existing,
+      stepsRemaining: existing.stepsRemaining + incoming.stepsRemaining,
+    };
   }
 
   return [

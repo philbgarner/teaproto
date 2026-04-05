@@ -42,14 +42,14 @@ export type CellularDungeonOutputs = DungeonOutputs & {
    */
   textures: {
     solid: THREE.DataTexture;
-    /** Region flood-fill ID per cell — 0 = wall, 1 = the single remaining region. */
+    /** Region flood-fill ID per cell - 0 = wall, 1 = the single remaining region. */
     regionId: THREE.DataTexture;
     distanceToWall: THREE.DataTexture;
     hazards: THREE.DataTexture;
     /** Per-cell temperature, 0 = coldest, 255 = hottest. Default: 127 for all floor cells. */
     temperature: THREE.DataTexture;
   };
-  /** Floor cell closest to the centroid of the largest region — good spawn point. */
+  /** Floor cell closest to the centroid of the largest region - good spawn point. */
   startPos: GridPos;
 };
 
@@ -103,7 +103,7 @@ function countWallNeighbours(solid: Uint8Array, x: number, y: number, W: number,
   return count;
 }
 
-// BFS flood fill — returns array of all cell indices in the connected floor region.
+// BFS flood fill - returns array of all cell indices in the connected floor region.
 function floodFill(
   solid: Uint8Array,
   W: number,
@@ -293,13 +293,13 @@ export function generateCellularDungeon(options: CellularOptions): CellularDunge
     solid[i] = 0;
   }
 
-  // Step 5: build regionId — 1 for all cells in the surviving region, 0 for walls
+  // Step 5: build regionId - 1 for all cells in the surviving region, 0 for walls
   const regionId = new Uint8Array(W * H);
   for (const i of largestRegion) {
     regionId[i] = 1;
   }
 
-  // Step 6: find startPos — floor cell closest to the centroid of the largest region
+  // Step 6: find startPos - floor cell closest to the centroid of the largest region
   let cx = 0;
   let cy = 0;
   for (const i of largestRegion) {
@@ -312,7 +312,7 @@ export function generateCellularDungeon(options: CellularOptions): CellularDunge
   // Find the nearest floor cell to centroid (BFS from centroid outward)
   let startPos: GridPos = { x: cx, y: cy };
   if (solid[idx(cx, cy, W)] !== 0) {
-    // Centroid is in a wall — scan nearby cells
+    // Centroid is in a wall - scan nearby cells
     let bestDist = Infinity;
     for (const i of largestRegion) {
       const fx = i % W;

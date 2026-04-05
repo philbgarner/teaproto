@@ -41,7 +41,7 @@ export type MonsterActor = ActorBase & {
   name: string;
   /** Single ASCII glyph for rendering. */
   glyph: string;
-  /** 0–10 scale — influences detection radius and persistence. */
+  /** 0–10 scale - influences detection radius and persistence. */
   danger: number;
   hp: number;
   maxHp: number;

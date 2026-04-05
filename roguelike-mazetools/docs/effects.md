@@ -1,4 +1,4 @@
-# Status Effects — `src/effects.ts`
+# Status Effects - `src/effects.ts`
 
 Active buff and debuff system. Pure functions with no engine or dungeon dependencies. The consuming game holds `ActiveEffect[]` on each actor and calls `tickEffects` from the turn scheduler's time-advance hook.
 
@@ -27,7 +27,7 @@ type EffectTick = {
   /**
    * Called at the start of each affected actor's turn (or each world tick).
    * Return a delta to apply, or undefined for no change.
-   * The engine does not interpret the delta — the game applies it.
+   * The engine does not interpret the delta - the game applies it.
    */
   onTick?: (effect: ActiveEffect, stepIndex: number) => EffectDelta | undefined;
 
@@ -81,8 +81,8 @@ function tickEffects(
 ```
 
 Advance all effects by one step. Returns:
-- `updatedEffects` — effects with `stepsRemaining > 0` after decrement (pure, does not mutate input)
-- `deltas` — all `onTick` and `onExpire` deltas collected in order
+- `updatedEffects` - effects with `stepsRemaining > 0` after decrement (pure, does not mutate input)
+- `deltas` - all `onTick` and `onExpire` deltas collected in order
 
 ### `applyEffect(effects, incoming, stackMode?)`
 
@@ -94,7 +94,7 @@ function applyEffect(
 ): ActiveEffect[]
 ```
 
-Apply a new effect to a list, merging stacks when an effect with the same `id` already exists. Pure — returns a new array.
+Apply a new effect to a list, merging stacks when an effect with the same `id` already exists. Pure - returns a new array.
 
 ---
 
@@ -167,7 +167,7 @@ actor.effects = applyEffect(actor.effects, BLEED, "stack"); // adds a new instan
 
 ## Notes
 
-- `tickEffects` is pure — it never mutates the input array. Always reassign `actor.effects = updatedEffects`.
+- `tickEffects` is pure - it never mutates the input array. Always reassign `actor.effects = updatedEffects`.
 - `deltas` from `onTick` run **before** `onExpire` in the output array. The game applies them in order.
-- The engine never interprets `EffectDelta` values — the game maps key names to actor fields.
+- The engine never interprets `EffectDelta` values - the game maps key names to actor fields.
 - Recommended integration: call `tickEffects` from the turn scheduler's `onTimeAdvanced` hook (before AI/action logic runs for that actor's turn).

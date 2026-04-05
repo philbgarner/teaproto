@@ -244,7 +244,7 @@ export function useGameState({
     playerInventory: playerInventory,
   } = playerData.ecsData;
 
-  // Version counter — incremented whenever ECS hand state mutates so React re-renders.
+  // Version counter - incremented whenever ECS hand state mutates so React re-renders.
   const [handsVersion, setHandsVersion] = useState(0);
   const [playerInvVersion, setPlayerInvVersion] = useState(0);
 
@@ -262,12 +262,12 @@ export function useGameState({
    * Apply a new ingredient map as the single source of truth.
    *
    * Ingredients are stored in three places that must stay in sync:
-   *   1. `ingredientsRef`  — a mutable ref used for synchronous reads inside
+   *   1. `ingredientsRef`  - a mutable ref used for synchronous reads inside
    *      event handlers and game-step callbacks where a React state read would
    *      return a stale closure value.
-   *   2. `ingredients` (React state) — the reactive copy that triggers UI
+   *   2. `ingredients` (React state) - the reactive copy that triggers UI
    *      re-renders (e.g. RecipeMenu showing current quantities).
-   *   3. ECS inventory slots — the game-world representation that drives the
+   *   3. ECS inventory slots - the game-world representation that drives the
    *      3D inventory display and any ECS systems that inspect item quantities.
    *
    * Historically these were updated at each call site independently, which led
@@ -431,7 +431,7 @@ export function useGameState({
   const ruinedNotifiedRef = useRef(new Set<string>());
 
   // ---------------------------------------------------------------------------
-  // Speech bubbles — keyed by entity id; position looked up from live state
+  // Speech bubbles - keyed by entity id; position looked up from live state
   // ---------------------------------------------------------------------------
   const [speechBubbles, setSpeechBubbles] = useState<
     Record<string, { text: string }>
@@ -476,7 +476,7 @@ export function useGameState({
     },
     [initialMobs, logDialog],
   );
-  // Map<regionId, cumulativeRise> — only regions containing cozy objects heat up
+  // Map<regionId, cumulativeRise> - only regions containing cozy objects heat up
   const [roomTempRise, setRoomTempRise] = useState<Map<number, number>>(
     () => new Map(),
   );
@@ -653,7 +653,7 @@ export function useGameState({
   const roomTempRiseRef = useRef<Map<number, number>>(new Map());
   roomTempRiseRef.current = roomTempRise;
 
-  // Explored mask — Uint8Array(W*H), 1 = cell has been seen by the player
+  // Explored mask - Uint8Array(W*H), 1 = cell has been seen by the player
   const exploredMaskRef = useRef<Uint8Array | null>(null);
   const firstTeaDeliveredRef = useRef(false);
 
@@ -805,7 +805,7 @@ export function useGameState({
 
     sounds.mainThemeDungeon.play();
     showMsg(
-      "You have an Iced Tea in hand — find the thirsty monsters and deliver it! (Press [space] Key)",
+      "You have an Iced Tea in hand - find the thirsty monsters and deliver it! (Press [space] Key)",
     );
   }, [dungeon]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -975,7 +975,7 @@ export function useGameState({
     [adventurerSpawnRooms, dungeonHeight, dungeonWidth, solidData],
   );
 
-  // logicalRef is provided by useEotBCamera — we need a ref to it here so onStep can
+  // logicalRef is provided by useEotBCamera - we need a ref to it here so onStep can
   // read the player position. We forward this via a ref that App.tsx will wire up.
   const logicalRef = useRef<{ x: number; z: number; yaw: number }>({
     x: spawnX,
@@ -1249,7 +1249,7 @@ export function useGameState({
       }
     }
 
-    // Phase 1 — compute intended moves (adventurers are transparent to each other)
+    // Phase 1 - compute intended moves (adventurers are transparent to each other)
     console.log(
       "[onStep] Phase 1: adventurer AI, count:",
       newAdventurers.filter((a) => a.alive).length,
@@ -1272,7 +1272,7 @@ export function useGameState({
           inCombat: false,
         };
 
-      // Positions of all other alive adventurers — used as high-cost cells so
+      // Positions of all other alive adventurers - used as high-cost cells so
       // adventurers spread out instead of stacking on the same tile.
       const otherAdvOccupied = new Set(
         newAdventurers
@@ -1567,10 +1567,10 @@ export function useGameState({
                 inCombat: false,
               };
             }
-            // Chest unreachable (locked door, no key) — wander to find accessible loot
+            // Chest unreachable (locked door, no key) - wander to find accessible loot
           }
 
-          // No reachable chests — count the stuck turn and wander
+          // No reachable chests - count the stuck turn and wander
           const newNoLootTurns = (adv.noLootTurns ?? 0) + 1;
           const nonEndRoomsArray = [...dungeon.rooms.entries()].filter(
             ([id]: any) => id !== dungeon.endRoomId,
@@ -1637,7 +1637,7 @@ export function useGameState({
           };
         }
 
-        // State just switched to seeking — fall through to seeking logic below
+        // State just switched to seeking - fall through to seeking logic below
         adv = { ...adv, dread: newDread, loot: newLoot, state: "seeking" };
         stepMessage = `The ${adv.name} is heading for the TeaOMatic!`;
       }
@@ -1708,7 +1708,7 @@ export function useGameState({
     console.log("[onStep] Phase 1 done, anyInCombat:", anyInCombat);
 
     if (anyInCombat) {
-      // Phase 2 — detect swap pairs
+      // Phase 2 - detect swap pairs
       const swapSet = new Set<number>(); // indices of adventurers in a direct swap
       for (let i = 0; i < intendedMoves.length; i++) {
         const mi = intendedMoves[i];
@@ -1729,7 +1729,7 @@ export function useGameState({
         }
       }
 
-      // Phase 3 — resolve final positions with collision
+      // Phase 3 - resolve final positions with collision
       const committed = new Set(mobPlayerOccupied);
       // Pre-commit swap destinations (guaranteed to execute)
       for (const idx of swapSet) {
@@ -1759,23 +1759,23 @@ export function useGameState({
           return { ...adv, debugPath: [] };
         }
 
-        // Swap pair — guaranteed move
+        // Swap pair - guaranteed move
         if (swapSet.has(i)) {
           return { ...adv, x: intendedX, z: intendedZ, debugPath };
         }
 
-        // Non-swap mover — greedy claim
+        // Non-swap mover - greedy claim
         const targetKey = `${intendedX}_${intendedZ}`;
         if (!committed.has(targetKey)) {
           committed.add(targetKey);
           return { ...adv, x: intendedX, z: intendedZ, debugPath };
         }
-        // Blocked — stay; commit current position so no one else moves here
+        // Blocked - stay; commit current position so no one else moves here
         committed.add(`${adv.x}_${adv.z}`);
         return { ...adv, debugPath: [] };
       });
     } else {
-      // No monsters in LOS — adventurers can path through each other freely,
+      // No monsters in LOS - adventurers can path through each other freely,
       // but cannot end their turn on the same square as another adventurer,
       // conscious mob, or player.
       const committed = new Set(mobPlayerOccupied);
@@ -1799,7 +1799,7 @@ export function useGameState({
           committed.add(targetKey);
           return { ...adv, x: intendedX, z: intendedZ, debugPath };
         }
-        // Blocked — stay; commit current position so no one else moves here
+        // Blocked - stay; commit current position so no one else moves here
         committed.add(`${adv.x}_${adv.z}`);
         return { ...adv, debugPath: [] };
       });
@@ -1852,7 +1852,7 @@ export function useGameState({
       if (hazardData[trapIdx] !== 1 || disarmedTrapsRef.current.has(key))
         continue;
 
-      // Armed trap — trigger it
+      // Armed trap - trigger it
       const newDisarmed = new Set(disarmedTrapsRef.current);
       newDisarmed.add(key);
       disarmedTrapsRef.current = newDisarmed;
@@ -1950,14 +1950,14 @@ export function useGameState({
           }
         }
         if (!chaseTarget) continue;
-        // Already adjacent — counterattack section handles damage
+        // Already adjacent - counterattack section handles damage
         if (Math.abs(pos.x - chaseTarget.x) + Math.abs(pos.z - chaseTarget.z) === 1)
           continue;
         targetX = chaseTarget.x;
         targetZ = chaseTarget.z;
       }
 
-      // Pathfind — other mobs are only impassable at the destination itself
+      // Pathfind - other mobs are only impassable at the destination itself
       const mobPath = aStar8(
         { width: dungeonWidth, height: dungeonHeight },
         (x: number, y: number) => isWalkable(x, y),
@@ -2000,7 +2000,7 @@ export function useGameState({
             curZ = nz;
             newMobPositions[i] = { x: curX, z: curZ };
             hasSwapped = true;
-            // Continue — mob gets one more step after the swap
+            // Continue - mob gets one more step after the swap
           } else {
             // Already swapped once this turn; stop here
             break;
@@ -2268,7 +2268,7 @@ export function useGameState({
     if (stepMessage) showMsg(stepMessage);
 
     // Don't emit new auto speech bubbles if any active bubble entity is already within
-    // visible range of the player — prevents bubble spam when multiple NPCs are nearby.
+    // visible range of the player - prevents bubble spam when multiple NPCs are nearby.
     const activeBubbleIds = Object.keys(speechBubblesRef.current);
     const hasNearbyActiveBubble = activeBubbleIds.some((id) => {
       if (id.startsWith("mob_")) {
@@ -2345,7 +2345,7 @@ export function useGameState({
       return;
     }
 
-    // Not co-located with anyone — reset
+    // Not co-located with anyone - reset
     danceStateRef.current = { mobIdx: null, advId: null, count: 0 };
   }, [gameState, mobPositionsRef, adventurersRef, mobSatiationsRef]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -2372,7 +2372,7 @@ export function useGameState({
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // facingTarget depends on logicalRef (from camera) — it's computed in App.tsx
+  // facingTarget depends on logicalRef (from camera) - it's computed in App.tsx
   // We expose a helper that App.tsx calls after getting logicalRef from useEotBCamera
   const getFacingTarget = useCallback(
     (logRef: { current: { x: number; z: number; yaw: number } }) => {
@@ -2410,7 +2410,7 @@ export function useGameState({
     [stovePlacements, mobPositions, hazardData, dungeonWidth],
   );
 
-  // Passage traversal step-loop — needs doMove from camera; exposed via ref
+  // Passage traversal step-loop - needs doMove from camera; exposed via ref
   const doMoveRef = useRef<((dx: number, dz: number) => void) | null>(null);
 
   useEffect(() => {
@@ -2423,12 +2423,12 @@ export function useGameState({
       const { totalSteps, factor } = traversalStartRef.current;
       const turns = Math.round(totalSteps / factor);
       showMsg(
-        `Secret passage traversed — ${totalSteps} step${totalSteps !== 1 ? "s" : ""} (${turns} turn${turns !== 1 ? "s" : ""} at ${factor}×).`,
+        `Secret passage traversed - ${totalSteps} step${totalSteps !== 1 ? "s" : ""} (${turns} turn${turns !== 1 ? "s" : ""} at ${factor}×).`,
       );
     }
   }, [passageTraversal]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // togglePassage key — toggle passage at player position
+  // togglePassage key - toggle passage at player position
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       e.preventDefault();
@@ -2469,9 +2469,10 @@ export function useGameState({
     };
   }, [passageTraversal, passageMask, dungeonWidth, showMsg, keybindings]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // interact / recipe menu navigation — needs facingTarget from camera
+  // interact / recipe menu navigation - needs facingTarget from camera
   // We accept a facingTarget parameter via a ref so the useEffect can pick it up
   const facingTargetRef = useRef<any>(null);
+  const interactActionRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     function doInteract() {
@@ -2530,7 +2531,7 @@ export function useGameState({
         // if (tea && !isUnconscious && mobStatus === "ecstatic") {
         //   showSpeechBubble(
         //     mobBubbleId,
-        //     "Oh, I couldn't possibly! I'm far too full right now — perhaps later.",
+        //     "Oh, I couldn't possibly! I'm far too full right now - perhaps later.",
         //   );
         //   return;
         // }
@@ -2568,7 +2569,7 @@ export function useGameState({
           );
           setTimeout(() => {
             showMsg(
-              "With empty hands you can pass through walls — explore the dungeon!",
+              "With empty hands you can pass through walls - explore the dungeon!",
             );
           }, 5500);
         }
@@ -2609,7 +2610,7 @@ export function useGameState({
           );
           showSpeechBubble(
             mobBubbleId,
-            `This ${tea.name} is exactly what I needed — I feel so much better!`,
+            `This ${tea.name} is exactly what I needed - I feel so much better!`,
           );
         } else {
           applyMobSatiation(teaSatiationAmount);
@@ -2618,7 +2619,7 @@ export function useGameState({
           );
           showSpeechBubble(
             mobBubbleId,
-            `Ahh, thank you! This ${tea.name} is perfectly brewed — most refreshing!`,
+            `Ahh, thank you! This ${tea.name} is perfectly brewed - most refreshing!`,
           );
         }
         sounds.twinkle.play();
@@ -2647,8 +2648,7 @@ export function useGameState({
       }
     }
 
-    const interactHandler = (e: KeyboardEvent) => {
-      e.preventDefault();
+    const interactAction = () => {
       if (showRecipeMenu) {
         setShowRecipeMenu(false);
         return;
@@ -2658,6 +2658,11 @@ export function useGameState({
         return;
       }
       doInteract();
+    };
+    interactActionRef.current = interactAction;
+    const interactHandler = (e: KeyboardEvent) => {
+      e.preventDefault();
+      interactAction();
     };
     const waitHandler = (e: KeyboardEvent) => {
       if (showRecipeMenu || showSummonMenu) return;
@@ -2675,7 +2680,7 @@ export function useGameState({
           firstTeaDeliveredRef.current = true;
           setTimeout(() => {
             showMsg(
-              "With empty hands you can pass through walls — explore the dungeon!",
+              "With empty hands you can pass through walls - explore the dungeon!",
             );
           }, 1500);
         }
@@ -2694,7 +2699,7 @@ export function useGameState({
           firstTeaDeliveredRef.current = true;
           setTimeout(() => {
             showMsg(
-              "With empty hands you can pass through walls — explore the dungeon!",
+              "With empty hands you can pass through walls - explore the dungeon!",
             );
           }, 1500);
         }
@@ -2831,17 +2836,17 @@ export function useGameState({
       const pgx = Math.floor(px);
       const pgz = Math.floor(pz);
       if (solidData[pgz * dungeonWidth + pgx] !== 0) {
-        showMsg("Can't summon here — you're standing on a wall.");
+        showMsg("Can't summon here - you're standing on a wall.");
         return;
       }
       if (
         mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)
       ) {
-        showMsg("Can't summon here — a monster is already here.");
+        showMsg("Can't summon here - a monster is already here.");
         return;
       }
       if (chestsRef.current.some((c: any) => c.x === pgx && c.z === pgz)) {
-        showMsg("Can't summon here — there's a chest here.");
+        showMsg("Can't summon here - there's a chest here.");
         return;
       }
       if (!mobHasMetRef.current[summonMenuCursor]) {
@@ -2862,17 +2867,17 @@ export function useGameState({
         const pgx = Math.floor(px);
         const pgz = Math.floor(pz);
         if (solidData[pgz * dungeonWidth + pgx] !== 0) {
-          showMsg("Can't summon here — you're standing on a wall.");
+          showMsg("Can't summon here - you're standing on a wall.");
           return;
         }
         if (
           mobPositionsRef.current.some((p: any) => p.x === pgx && p.z === pgz)
         ) {
-          showMsg("Can't summon here — a monster is already here.");
+          showMsg("Can't summon here - a monster is already here.");
           return;
         }
         if (chestsRef.current.some((c: any) => c.x === pgx && c.z === pgz)) {
-          showMsg("Can't summon here — there's a chest here.");
+          showMsg("Can't summon here - there's a chest here.");
           return;
         }
         if (!mobHasMetRef.current[num - 1]) {
@@ -2968,7 +2973,7 @@ export function useGameState({
     characterSpriteAtlas,
     iconTexture,
     objectRegistry,
-    // game state — hand items via ECS
+    // game state - hand items via ECS
     leftHandTea,
     rightHandTea,
     clearHands,
@@ -3077,6 +3082,7 @@ export function useGameState({
     logicalRef,
     doMoveRef,
     facingTargetRef,
+    interact: () => interactActionRef.current(),
     // computed
     mobiles,
     activeSpeechBubbles,

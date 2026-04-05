@@ -1,4 +1,4 @@
-# Spatial Queries — `src/spatial.ts`
+# Spatial Queries - `src/spatial.ts`
 
 Pure geometric spatial query functions. No dungeon state required. All functions operate in grid coordinates; callers are responsible for clamping results to valid dungeon bounds.
 
@@ -14,9 +14,9 @@ type SpatialShape = "chebyshev" | "euclidean" | "manhattan";
 
 | Shape | Description | Use case |
 |-------|-------------|----------|
-| `"chebyshev"` | Square neighbourhood — max of |dx|, |dy| | Standard roguelike range check |
-| `"euclidean"` | Circular neighbourhood — Pythagorean distance | Explosion radii, AoE spells |
-| `"manhattan"` | Diamond neighbourhood — |dx| + |dy| | Grid-locked movement range |
+| `"chebyshev"` | Square neighbourhood - max of |dx|, |dy| | Standard roguelike range check |
+| `"euclidean"` | Circular neighbourhood - Pythagorean distance | Explosion radii, AoE spells |
+| `"manhattan"` | Diamond neighbourhood - |dx| + |dy| | Grid-locked movement range |
 
 ---
 
@@ -33,7 +33,7 @@ function tilesInRadius(
 ): GridPos[]
 ```
 
-Returns all grid positions within `radius` of `(cx, cy)`. Does **not** bounds-check — clamp to dungeon dimensions if needed.
+Returns all grid positions within `radius` of `(cx, cy)`. Does **not** bounds-check - clamp to dungeon dimensions if needed.
 
 ### `tilesInCone(ox, oy, directionRad, halfAngle, range)`
 
@@ -69,7 +69,7 @@ function visitTilesInRadius(
 ): void
 ```
 
-Callback variant of `tilesInRadius` — avoids allocating an array. Return `false` from `visit` to stop early.
+Callback variant of `tilesInRadius` - avoids allocating an array. Return `false` from `visit` to stop early.
 
 ---
 
@@ -150,4 +150,4 @@ const path = aStar8(dungeon, isWalkable, start, goal, {
 - `tilesInRadius` and `visitTilesInRadius` include the centre cell `(cx, cy)` itself.
 - `tilesInCone` excludes the origin cell.
 - Results are unordered (row-major scan order internally).
-- None of these functions perform bounds checking — always clamp `x`/`y` against `dungeon.width` / `dungeon.height` before reading textures.
+- None of these functions perform bounds checking - always clamp `x`/`y` against `dungeon.width` / `dungeon.height` before reading textures.

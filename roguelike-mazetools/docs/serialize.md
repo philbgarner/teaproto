@@ -1,4 +1,4 @@
-# Serialization — `src/serialize.ts`
+# Serialization - `src/serialize.ts`
 
 Save and restore BSP dungeon state to/from JSON-safe plain objects. Textures hold all mutable state (solid mask, hazards, etc.); the BSP room graph is reconstructed deterministically from the seed when needed.
 
@@ -42,7 +42,7 @@ Snapshot all mutable texture data into a JSON-safe object. Call **after** `gener
 function deserializeDungeon(data: SerializedDungeon): BspDungeonOutputs
 ```
 
-Reconstruct a `BspDungeonOutputs` from a snapshot. The returned object is fully usable with `generateContent`, `aStar8`, `computeFov`, etc. The `rooms` map is **empty** — use `rehydrateDungeon()` if room graph data is needed.
+Reconstruct a `BspDungeonOutputs` from a snapshot. The returned object is fully usable with `generateContent`, `aStar8`, `computeFov`, etc. The `rooms` map is **empty** - use `rehydrateDungeon()` if room graph data is needed.
 
 ### `rehydrateDungeon(data, originalOptions)`
 
@@ -92,7 +92,7 @@ import { dungeonFromJson } from "./src/serialize";
 const saved = localStorage.getItem("saved_dungeon");
 if (saved) {
   const dungeon = dungeonFromJson(saved);
-  // dungeon.rooms is empty — only texture data is restored
+  // dungeon.rooms is empty - only texture data is restored
 }
 ```
 
@@ -133,7 +133,7 @@ console.assert(
 
 ## Notes
 
-- Texture data is Base64-encoded using `btoa`/`atob` — available in all modern browsers and Node.js ≥ 16.
+- Texture data is Base64-encoded using `btoa`/`atob` - available in all modern browsers and Node.js ≥ 16.
 - `deserializeDungeon` skips BSP re-running and is faster than `rehydrateDungeon`. Use it when you don't need room metadata (e.g. rendering only).
 - `serializeDungeon` captures the texture state at call time. Call it after all `generateContent` passes have run to include placed hazards and modified solid cells.
 - Only `BspDungeonOutputs` is supported for serialization. `CellularDungeonOutputs` does not have a serialization function yet.

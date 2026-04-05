@@ -1,13 +1,13 @@
 /**
- * Mobs — turn-based dungeon with 3-D first-person view and billboard monsters.
+ * Mobs - turn-based dungeon with 3-D first-person view and billboard monsters.
  *
  * Controls:
- *   W / ArrowUp    — step forward (commits player turn)
- *   S / ArrowDown  — step backward (commits player turn)
- *   A              — turn left 90° (free, no turn cost)
- *   D              — turn right 90° (free, no turn cost)
- *   Space / .      — wait a turn
- *   R              — regenerate dungeon
+ *   W / ArrowUp    - step forward (commits player turn)
+ *   S / ArrowDown  - step backward (commits player turn)
+ *   A              - turn left 90° (free, no turn cost)
+ *   D              - turn right 90° (free, no turn cost)
+ *   Space / .      - wait a turn
+ *   R              - regenerate dungeon
  */
 import {
   useCallback,
@@ -389,7 +389,15 @@ function buildDeps(
   return {
     isWalkable,
     monsterDecide: (state, monsterId) =>
-      decideChasePlayer(state, monsterId, dungeon, isWalkable, isOpaque, 8, true),
+      decideChasePlayer(
+        state,
+        monsterId,
+        dungeon,
+        isWalkable,
+        isOpaque,
+        8,
+        true,
+      ),
     computeCost: (actorId, action: TurnAction) => {
       const actor = actors[actorId];
       return { time: actionDelay(actor?.speed ?? 10, action) };
@@ -561,7 +569,7 @@ export default function Mobs() {
   const [floatNums, setFloatNums] = useState<FloatNum[]>([]);
   const floatIdRef = useRef(0);
 
-  // Camera — logical (grid-aligned) target and lerp animation
+  // Camera - logical (grid-aligned) target and lerp animation
   const logicalRef = useRef({ x: 1.5, z: 1.5, yaw: 0 });
   const animRef = useRef({
     fromX: 1.5,
@@ -586,7 +594,7 @@ export default function Mobs() {
     shake: false,
   });
 
-  // Static assets — created once
+  // Static assets - created once
   const atlas = useMemo(
     () => buildTileAtlas(TILE_PX * 3, TILE_PX, TILE_PX, TILE_PX),
     [],
@@ -962,8 +970,10 @@ export default function Mobs() {
             {alertCount} monster{alertCount !== 1 ? "s" : ""} alerted
           </span>
         )}
-        {gameOver && <span className={styles.dead}>DEAD — press R</span>}
-        <button className={styles.backBtn} onClick={() => navigate("/")}>← Menu</button>
+        {gameOver && <span className={styles.dead}>DEAD - press R</span>}
+        <button className={styles.backBtn} onClick={() => navigate("/")}>
+          ← Menu
+        </button>
       </div>
 
       {/* ── Main area ── */}
@@ -1032,8 +1042,8 @@ export default function Mobs() {
       <div className={styles.statusPanel}>
         <span>Facing: {cardinalDir(camera.yaw)}</span>
         <span className={styles.controls}>
-          W/S — move &nbsp;·&nbsp; A/D — turn 90° &nbsp;·&nbsp; Space — wait
-          &nbsp;·&nbsp; R — new dungeon
+          W/S - move &nbsp;·&nbsp; A/D - turn 90° &nbsp;·&nbsp; Space - wait
+          &nbsp;·&nbsp; R - new dungeon
         </span>
       </div>
     </div>

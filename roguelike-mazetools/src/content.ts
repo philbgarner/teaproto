@@ -137,7 +137,7 @@ export type SolidState = "wall" | "floor";
 export interface CellMasks {
   getSolid(x: number, y: number): SolidState;
   setSolid(x: number, y: number, state: SolidState): void;
-  /** Raw numeric value — use for custom states beyond "wall"/"floor". */
+  /** Raw numeric value - use for custom states beyond "wall"/"floor". */
   getSolidRaw(x: number, y: number): number;
   setSolidRaw(x: number, y: number, value: number): void;
   getRegionId(x: number, y: number): number;
@@ -228,7 +228,7 @@ function bresenhamLos(
 
   while (true) {
     if (x === x2 && y === y2) return true;
-    // Check intermediate cells only — destination is always visible.
+    // Check intermediate cells only - destination is always visible.
     if ((x !== x1 || y !== y1) && isBlocked(x, y)) return false;
     const e2 = 2 * err;
     if (e2 > -dy) {
@@ -359,9 +359,9 @@ export interface HiddenPassageOptions {
 /**
  * Find short wall tunnels that connect two different regions of the dungeon.
  * Returns passage definitions with `enabled: false`; callers activate via levers.
- * Does NOT modify the solid mask — passage cells remain walls.
+ * Does NOT modify the solid mask - passage cells remain walls.
  *
- * At most one passage per room (region) is generated — no room will be an
+ * At most one passage per room (region) is generated - no room will be an
  * endpoint of more than one passage.
  */
 export function generateHiddenPassages(
@@ -389,7 +389,7 @@ export function generateHiddenPassages(
   // Precompute which pairs of rooms are already connected via corridor floor cells.
   // BFS through each connected component of corridor cells (solid=0, regionId=0).
   // Any two rooms whose cells are adjacent to the same corridor component are
-  // considered directly connected — no hidden passage should link them.
+  // considered directly connected - no hidden passage should link them.
   const corridorConnected = new Map<number, Set<number>>();
   {
     const visited = new Uint8Array(W * H);
@@ -410,9 +410,9 @@ export function generateHiddenPassages(
           const cx = idx % W;
           const cy = (idx / W) | 0;
           const neighbors = [
-            cx > 0     ? idx - 1 : -1,
+            cx > 0 ? idx - 1 : -1,
             cx < W - 1 ? idx + 1 : -1,
-            cy > 0     ? idx - W : -1,
+            cy > 0 ? idx - W : -1,
             cy < H - 1 ? idx + W : -1,
           ];
           for (const ni of neighbors) {
@@ -420,7 +420,7 @@ export function generateHiddenPassages(
             if (solidData[ni] !== 0) continue; // wall
             const nr = regionData[ni];
             if (nr !== 0) {
-              touchedRooms.add(nr); // adjacent room — don't BFS into it
+              touchedRooms.add(nr); // adjacent room - don't BFS into it
               continue;
             }
             if (!visited[ni]) {
@@ -453,8 +453,13 @@ export function generateHiddenPassages(
   const candidates: Candidate[] = [];
   const seen = new Set<string>();
 
-  // 4 cardinal directions only — ensures straight passages
-  const DIRS: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  // 4 cardinal directions only - ensures straight passages
+  const DIRS: [number, number][] = [
+    [0, -1],
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+  ];
 
   for (let fy = 1; fy < H - 1; fy++) {
     for (let fx = 1; fx < W - 1; fx++) {
@@ -471,7 +476,10 @@ export function generateHiddenPassages(
         while (
           wallCells.length < maxLength &&
           isSolid(wx, wy) &&
-          wx > 0 && wy > 0 && wx < W - 1 && wy < H - 1
+          wx > 0 &&
+          wy > 0 &&
+          wx < W - 1 &&
+          wy < H - 1
         ) {
           wallCells.push({ x: wx, y: wy });
           wx += dx;
@@ -491,12 +499,19 @@ export function generateHiddenPassages(
         // This prevents the passage running beside a corridor (visible blue glow).
         const startKey = `${fx},${fy}`;
         const endKey = `${wx},${wy}`;
-        const tunnelTouchesFloor = wallCells.some(wc => {
-          for (const [ndx, ndy] of [[0,-1],[1,0],[0,1],[-1,0]] as const) {
-            const nx = wc.x + ndx, ny = wc.y + ndy;
+        const tunnelTouchesFloor = wallCells.some((wc) => {
+          for (const [ndx, ndy] of [
+            [0, -1],
+            [1, 0],
+            [0, 1],
+            [-1, 0],
+          ] as const) {
+            const nx = wc.x + ndx,
+              ny = wc.y + ndy;
             if (isSolid(nx, ny)) continue;
             // Passage's own endpoints are fine; any other floor cell rejects this candidate.
-            if (`${nx},${ny}` !== startKey && `${nx},${ny}` !== endKey) return true;
+            if (`${nx},${ny}` !== startKey && `${nx},${ny}` !== endKey)
+              return true;
           }
           return false;
         });
@@ -542,13 +557,20 @@ export function generateHiddenPassages(
   for (const cand of pool) {
     if (passages.length >= wantCount) break;
     // One passage per room: skip if either endpoint region already has a passage.
-    if (usedRegions.has(cand.regionA) || usedRegions.has(cand.regionB)) continue;
-    const overlap = cand.cells.some(c => usedCells.has(`${c.x},${c.y}`));
+    if (usedRegions.has(cand.regionA) || usedRegions.has(cand.regionB))
+      continue;
+    const overlap = cand.cells.some((c) => usedCells.has(`${c.x},${c.y}`));
     if (overlap) continue;
     usedRegions.add(cand.regionA);
     usedRegions.add(cand.regionB);
     for (const c of cand.cells) usedCells.add(`${c.x},${c.y}`);
-    passages.push({ id: id++, start: cand.start, end: cand.end, cells: cand.cells, enabled: false });
+    passages.push({
+      id: id++,
+      start: cand.start,
+      end: cand.end,
+      cells: cand.cells,
+      enabled: false,
+    });
   }
 
   return { passages };
@@ -564,7 +586,7 @@ export function generateHiddenPassages(
  *
  * @param x       Grid column of the cell.
  * @param y       Grid row of the cell.
- * @param context The full BSP dungeon output — use its textures to write
+ * @param context The full BSP dungeon output - use its textures to write
  *                floor/wall types, overlays, etc.
  */
 export type ThemedRoomCallback = (

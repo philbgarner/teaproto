@@ -46,7 +46,7 @@ export function RecipeMenu({
   keybindings,
 }) {
   const fmtKeys = (keys) =>
-    (keys ?? []).map((k) => formatKey(k, KEY_DISPLAY)).join("/") || "—";
+    (keys ?? []).map((k) => formatKey(k, KEY_DISPLAY)).join("/") || "-";
   return (
     <div
       style={{

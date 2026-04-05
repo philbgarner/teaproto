@@ -16,7 +16,7 @@ function easeOut(t) {
   return 1 - (1 - t) ** 3;
 }
 
-// All texture paths — preloaded as a batch. Index maps to `ti` in layer defs.
+// All texture paths - preloaded as a batch. Index maps to `ti` in layer defs.
 const ALL_TEXTURE_PATHS = [
   T("sky_dark"), // 0
   T("sky_lite"), // 1
@@ -148,7 +148,7 @@ const SEQUENCE = [
 // Each "jerk" entry: [t_arrive, x_fraction]
 // x_fraction is relative to viewport width (0=centre, 1=one full width right).
 // The cloud quick-slides to each position in JERK_DUR seconds, then holds still
-// until the next one — like a stage flat being jerked along a wire.
+// until the next one - like a stage flat being jerked along a wire.
 
 const JERK_DUR = 0.1; // seconds per jerk slide
 
@@ -183,7 +183,7 @@ function driftX(t, positions, W, loop = false) {
   return positions[positions.length - 1][1] * W;
 }
 
-// Storm clouds — drift linearly between positions.
+// Storm clouds - drift linearly between positions.
 // x values are absolute fractions of viewport width (0 = centre), staying small
 // so each cloud drifts ±0.05–0.12 around its home position.
 // Dark underlayer (ro 2) and gray overlay (ro 3) have different timing
@@ -192,7 +192,7 @@ function driftX(t, positions, W, loop = false) {
 const STORM_CLOUD_DELAY = 0.3; // Gray clouds follow dark clouds by this delay
 
 const STORM_CLOUD_DEFS = [
-  // ── Dark/black underlayer — slower, broader movements ─────────
+  // ── Dark/black underlayer - slower, broader movements ─────────
   {
     id: "dc0",
     ti: 6,
@@ -245,7 +245,7 @@ const STORM_CLOUD_DEFS = [
       [5.3, 0.36],
     ],
   },
-  // ── Gray overlay — follows dark clouds with delay ─
+  // ── Gray overlay - follows dark clouds with delay ─
   {
     id: "gc0",
     ti: 8,
@@ -303,12 +303,12 @@ const STORM_CLOUD_DEFS = [
   },
 ];
 
-// White clouds — gentle independent drift in the cleared lite sky.
+// White clouds - gentle independent drift in the cleared lite sky.
 // Each has a dark underlayer (darkTi) that follows the same movement sequence
 // but delayed by LITE_FOLLOW_DELAY seconds, so it lags then catches up.
 const LITE_FOLLOW_DELAY = 0.5;
 
-// Flowers — appear with white clouds and turn continuously
+// Flowers - appear with white clouds and turn continuously
 const FLOWER_DEFS = [
   {
     id: "flower0",
@@ -455,7 +455,7 @@ function SceneContent({
       }
     }
 
-    // ── Storm clouds — dark clouds drift, gray clouds follow with delay ──────────
+    // ── Storm clouds - dark clouds drift, gray clouds follow with delay ──────────
     // Storm clouds fade out after lite transition, before castle appears
     let stormCloudOpacity;
     if (t < T_LITE + DUR_LITE) {
@@ -521,7 +521,7 @@ function SceneContent({
       }
     }
 
-    // ── Flowers — appear with white clouds and turn continuously ─────────────
+    // ── Flowers - appear with white clouds and turn continuously ─────────────
     for (const {
       id,
       xFac,
@@ -565,7 +565,7 @@ function SceneContent({
       playBirds();
     }
 
-    // ── Lightning flash — binary on/off ───────────────────────────────────────
+    // ── Lightning flash - binary on/off ───────────────────────────────────────
     const boltMesh = refs.current["bolt"];
     const fbMesh = refs.current["flash_bg"];
     const ffMesh = refs.current["flash_fg"];
@@ -590,7 +590,7 @@ function SceneContent({
     if (fbMesh) fbMesh.material.opacity = fbOn ? 1 : 0;
     if (ffMesh) ffMesh.material.opacity = ffOn ? 1 : 0;
 
-    // ── Castle + front hill parallax — slide left when menu fires ───────────────
+    // ── Castle + front hill parallax - slide left when menu fires ───────────────
     if (menuFiredT.current !== null) {
       const p = easeOut(
         Math.min(1, (t - menuFiredT.current) / CASTLE_SLIDE_DUR),
@@ -655,20 +655,20 @@ function SceneContent({
       {/* Static sequence layers */}
       {SEQUENCE.map(({ id, ti, ro }) => fullMesh(id, ti, ro))}
 
-      {/* Storm clouds — two layers, both behind hills */}
+      {/* Storm clouds - two layers, both behind hills */}
       {STORM_CLOUD_DEFS.map(({ id, ti, ro }) => fullMesh(id, ti, ro))}
 
-      {/* Dark underlayers for lite clouds — same ro, drawn first so white is on top */}
+      {/* Dark underlayers for lite clouds - same ro, drawn first so white is on top */}
       {LITE_CLOUD_DEFS.map(({ id, darkTi, ro }) =>
         fullMesh(id + "_dark", darkTi, ro),
       )}
-      {/* White clouds — lite sky */}
+      {/* White clouds - lite sky */}
       {LITE_CLOUD_DEFS.map(({ id, ti, ro }) => fullMesh(id, ti, ro))}
 
-      {/* Flowers — appear with white clouds */}
+      {/* Flowers - appear with white clouds */}
       {FLOWER_DEFS.map(({ id, ti, ro }) => flowerMesh(id, ti, ro))}
 
-      {/* Lightning bolt — visible briefly before each screen flash */}
+      {/* Lightning bolt - visible briefly before each screen flash */}
       {fullMesh("bolt", 3, 15)}
       {/* Full-screen flash frames */}
       {fullMesh("flash_bg", 16, 20)}
@@ -689,7 +689,7 @@ function PreloadedScene({ onMenuReady, onMusicReady, onLoad, skipRef }) {
     onMusicReady({
       fadeOutMusic: sounds.mainTheme.fadeOut,
       fadeOutBirds: sounds.birds.fadeOut,
-      fadeInSafeZone: sounds.safeZoneMusic.fadeIn
+      fadeInSafeZone: sounds.safeZoneMusic.fadeIn,
     });
   }, [sounds]);
 
@@ -782,7 +782,9 @@ export function TitleScreen({ onNewGame, onTutorial }) {
     if (menuFading) return;
     const level = selectedDifficulty;
     const preset = DIFFICULTY_PRESETS[level];
-    settings.setDungeonSeed(seed === 42 ? 42 : Math.floor(Math.random() * 1_000_000));
+    settings.setDungeonSeed(
+      seed === 42 ? 42 : Math.floor(Math.random() * 1_000_000),
+    );
     settings.setTempDropPerStep(preset.tempDropPerStep);
     settings.setHeatingPerStep(preset.heatingPerStep);
     settings.setSatiationDropPerStep(preset.satiationDropPerStep);
@@ -820,7 +822,9 @@ export function TitleScreen({ onNewGame, onTutorial }) {
           <ambientLight color={"0xffffff"} intensity={2} />
           <PreloadedScene
             onMenuReady={() => setMenuVisible(true)}
-            onMusicReady={(fns) => { musicRef.current = fns; }}
+            onMusicReady={(fns) => {
+              musicRef.current = fns;
+            }}
             onLoad={() => setLoading(false)}
             skipRef={skipRef}
           />
@@ -828,24 +832,28 @@ export function TitleScreen({ onNewGame, onTutorial }) {
       </Canvas>
 
       {loading && (
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(18, 71, 179, 1)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-        }}>
-          <p style={{
-            color: "rgba(255,255,255,0.7)",
-            fontFamily: "system-ui, sans-serif",
-            fontSize: "18px",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            animation: "ctb-pulse 2s ease-in-out infinite",
-            margin: 0,
-          }}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(18, 71, 179, 1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <p
+            style={{
+              color: "rgba(255,255,255,0.7)",
+              fontFamily: "system-ui, sans-serif",
+              fontSize: "18px",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              animation: "ctb-pulse 2s ease-in-out infinite",
+              margin: 0,
+            }}
+          >
             Loading…
           </p>
           <style>{`
@@ -873,7 +881,7 @@ export function TitleScreen({ onNewGame, onTutorial }) {
           </>
         ) : choosingDifficulty ? (
           <>
-            <MenuItem
+            {/* <MenuItem
               label="Tutorial"
               onClick={() => {
                 if (menuFading) return;
@@ -883,7 +891,7 @@ export function TitleScreen({ onNewGame, onTutorial }) {
                 musicRef.current.fadeOutBirds?.(FADE);
                 setTimeout(() => onTutorial?.(), FADE * 2);
               }}
-            />
+            />*/}
             <MenuItem label="Easy" onClick={() => handleDifficulty("easy")} />
             <MenuItem
               label="Normal"
@@ -893,8 +901,14 @@ export function TitleScreen({ onNewGame, onTutorial }) {
           </>
         ) : (
           <>
-            <MenuItem label="The Earl of Grey's Dungeon" onClick={() => handleSeed(42)} />
-            <MenuItem label="A Random Dungeon" onClick={() => handleSeed(null)} />
+            <MenuItem
+              label="The Earl of Grey's Dungeon"
+              onClick={() => handleSeed(42)}
+            />
+            <MenuItem
+              label="A Random Dungeon"
+              onClick={() => handleSeed(null)}
+            />
           </>
         )}
       </div>
@@ -920,7 +934,11 @@ export function TitleScreen({ onNewGame, onTutorial }) {
               <SettingsTabs
                 {...settings}
                 onResetToDefaults={() => {
-                  try { localStorage.clear(); } catch { /* */ }
+                  try {
+                    localStorage.clear();
+                  } catch {
+                    /* */
+                  }
                   settings.setTempDropPerStep(0.5);
                   settings.setHeatingPerStep(2.0);
                   settings.setSatiationDropPerStep(0.5);

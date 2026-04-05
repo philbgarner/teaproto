@@ -47,7 +47,7 @@ const MENU_ITEMS: MenuItem[] = [
     label: "Objects",
     subtitle: "Interactive Objects",
     description:
-      "Dungeon filled with interactive objects — chests, levers, doors, and spawning mechanics. Demonstrates the object interaction layer.",
+      "Dungeon filled with interactive objects - chests, levers, doors, and spawning mechanics. Demonstrates the object interaction layer.",
     path: "/objects",
     icon: "📦",
   },
@@ -107,10 +107,34 @@ export default function AppMenu() {
 
       // Layered radial glows that follow mouse with parallax
       const glows = [
-        { ox: 0.3, oy: 0.25, r: 0.55, color: "rgba(20,55,110,0.55)",  parallax: 0.12 },
-        { ox: 0.7, oy: 0.6,  r: 0.5,  color: "rgba(15,80,130,0.45)",  parallax: 0.08 },
-        { ox: 0.5, oy: 0.5,  r: 0.35, color: "rgba(40,80,120,0.3)",   parallax: 0.05 },
-        { ox: 0.2, oy: 0.8,  r: 0.4,  color: "rgba(60,80,80,0.28)",   parallax: 0.1  },
+        {
+          ox: 0.3,
+          oy: 0.25,
+          r: 0.55,
+          color: "rgba(20,55,110,0.55)",
+          parallax: 0.12,
+        },
+        {
+          ox: 0.7,
+          oy: 0.6,
+          r: 0.5,
+          color: "rgba(15,80,130,0.45)",
+          parallax: 0.08,
+        },
+        {
+          ox: 0.5,
+          oy: 0.5,
+          r: 0.35,
+          color: "rgba(40,80,120,0.3)",
+          parallax: 0.05,
+        },
+        {
+          ox: 0.2,
+          oy: 0.8,
+          r: 0.4,
+          color: "rgba(60,80,80,0.28)",
+          parallax: 0.1,
+        },
       ];
 
       for (const g of glows) {
@@ -140,7 +164,14 @@ export default function AppMenu() {
       ctx.restore();
 
       // Soft vignette
-      const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.2, w / 2, h / 2, h * 0.85);
+      const vig = ctx.createRadialGradient(
+        w / 2,
+        h / 2,
+        h * 0.2,
+        w / 2,
+        h / 2,
+        h * 0.85,
+      );
       vig.addColorStop(0, "transparent");
       vig.addColorStop(1, "rgba(0,0,0,0.65)");
       ctx.fillStyle = vig;
@@ -171,7 +202,9 @@ export default function AppMenu() {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-        setSelected((prev) => (prev - 1 + MENU_ITEMS.length) % MENU_ITEMS.length);
+        setSelected(
+          (prev) => (prev - 1 + MENU_ITEMS.length) % MENU_ITEMS.length,
+        );
       } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
         setSelected((prev) => (prev + 1) % MENU_ITEMS.length);
       } else if (e.key === "Enter" || e.key === " ") {
@@ -190,7 +223,7 @@ export default function AppMenu() {
       <canvas ref={canvasRef} className={s.canvas} />
 
       <div className={s.layout}>
-        {/* Left panel — title + menu list */}
+        {/* Left panel - title + menu list */}
         <div className={s.leftPanel}>
           <div className={s.titleBlock}>
             <div className={s.titleEyebrow}>mazegen</div>
@@ -222,7 +255,7 @@ export default function AppMenu() {
           <div className={s.hint}>↑↓ / W S · Enter to launch</div>
         </div>
 
-        {/* Right panel — description card */}
+        {/* Right panel - description card */}
         <div className={s.rightPanel}>
           <div className={s.descCard}>
             <div className={s.descIcon}>{activeItem.icon}</div>
@@ -230,7 +263,10 @@ export default function AppMenu() {
             <div className={s.descSubtitle}>{activeItem.subtitle}</div>
             <div className={s.descDivider} />
             <div className={s.descBody}>{activeItem.description}</div>
-            <button className={s.launchBtn} onClick={() => navigate(activeItem.path)}>
+            <button
+              className={s.launchBtn}
+              onClick={() => navigate(activeItem.path)}
+            >
               Launch →
             </button>
           </div>

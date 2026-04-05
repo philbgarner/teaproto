@@ -9,7 +9,7 @@ import * as THREE from "three";
  *   varying vec2  vWorldPos;
  */
 
-/** Uniform declarations — paste before main(). */
+/** Uniform declarations - paste before main(). */
 export const TORCH_UNIFORMS_GLSL = /* glsl */ `
 uniform float uFogNear;
 uniform float uFogFar;
@@ -23,7 +23,7 @@ uniform vec3  uTorchColor;     // additive torch tint
 uniform float uTorchIntensity; // global scale for the additive torch (0–2)
 `;
 
-/** Spatial hash helper — required by TORCH_FNS_GLSL. */
+/** Spatial hash helper - required by TORCH_FNS_GLSL. */
 export const TORCH_HASH_GLSL = /* glsl */ `
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -38,7 +38,7 @@ float hash(vec2 p) {
  *
  *   vec3 lit = applyTorchLighting(baseColor, band);
  *     Multiply grayscale distance falloff + additive yellow torch fill.
- *     Does NOT apply fog — caller finishes with:
+ *     Does NOT apply fog - caller finishes with:
  *       mix(lit, uFogColor, step(4.0, band))
  *
  * Pass baseColor with any surface shading (e.g. bumpShade) already folded in.

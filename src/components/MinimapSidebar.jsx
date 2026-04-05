@@ -227,6 +227,7 @@ export function MinimapSidebar({
   scale,
   summonMob,
   moveActions,
+  onInteract,
 }) {
   const [activeTab, setActiveTab] = useState("move");
 
@@ -285,7 +286,7 @@ export function MinimapSidebar({
       </div>
       <div className={styles.tabContent}>
         {activeTab === "move" && moveActions && (
-          <ArrowMovement moveActions={moveActions} />
+          <ArrowMovement moveActions={moveActions} onInteract={onInteract} />
         )}
         {activeTab === "summon" && metMobs.length > 0 && (
           <div className={styles.mobRoster}>
